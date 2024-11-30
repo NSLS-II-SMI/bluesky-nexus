@@ -1,0 +1,444 @@
+import asyncio
+from enum import Enum, auto
+from typing import Callable, Dict, Any
+
+from bluesky.preprocessors import SupplementalData, inject_md_wrapper, plan_mutator
+from bluesky.run_engine import Msg
+
+from bluesky_nexus.bluesky_nexus_const import (
+    NX_MD_KEY,
+    NOT_AVAILABLE_LABEL,
+    PRE_RUN_CPT_LABEL,
+    PRE_RUN_MD_LABEL,
+    DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME,
+)
+
+from bluesky_nexus.bluesky_nexus_device_model import assign_pydantic_model_instance
+
+
+class SupplementalMetadata(SupplementalData):
+    """
+    A class to manage and inject supplemental metadata into a Bluesky plan.
+
+    This class checks the devices participating in the plan and generates
+    metadata for the specified type (DEVICE_MD or NEXUS_MD). It ensures
+    that devices in the 'devices_dictionary' are either used in the plan
+    or are part of the baseline, and injects metadata accordingly.
+    """
+
+    class MetadataType(Enum):
+        DEVICE_MD = auto()
+        NEXUS_MD = auto()
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes the SupplementalMetadata instance.
+
+        Args:
+            *args: Positional arguments passed to the parent constructor.
+            **kwargs: Keyword arguments passed to the parent constructor.
+        """
+
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, plan):
+        if not hasattr(self, "devices_dictionary"):
+            raise AttributeError(
+                "The 'devices_dictionary' attribute must be set before calling the instance."
+            )
+
+        if not hasattr(self, "baseline"):
+            raise AttributeError(
+                "The 'baseline' attribute must be set before calling the instance."
+            )
+
+        if not hasattr(self, "md_type"):
+            raise AttributeError(
+                "The 'md_type' attribute must be set before calling the instance."
+            )
+
+        # Dictionary to map MetadataType to their respective metadata creation functions
+        metadata_functions = {
+            self.MetadataType.DEVICE_MD: create_device_md,
+            self.MetadataType.NEXUS_MD: create_nexus_md,
+        }
+
+        # Retrieve the correct function based on md_type
+        create_metadata: callable = metadata_functions.get(self.md_type)
+        if not create_metadata:
+            raise ValueError(f"Invalid metadata type: {self.md_type}")
+
+        # We have to cache the plan, otherwise the PlanDeviceChecker would exhaust the plan
+        replayable_plan = cache_plan(
+            plan
+        )  # 'replayable_plan' can be reused as many times as we want, it is not exhaustible
+
+        # Check if all devices of self.devices_dictionary are participating in the plan.
+        checker = PlanDeviceChecker(self.devices_dictionary)
+        checker_result = checker.validate_plan_devices(replayable_plan())
+
+        # Define a dictionary of devices taking part in the plan or devices subscribed to the baseline.
+        devices_for_metadata: dict = {
+            name: dev
+            for name, dev in self.devices_dictionary.items()
+            if dev not in checker_result["unused_devices"].values()
+            or dev in self.baseline
+        }
+
+        # Assign to all the devices contained in 'devices_for_metadata' instances of pydantic models
+        assign_pydantic_model_instance(devices_for_metadata)
+
+        # Create metadata and inject it into the plan
+        metadata: dict = create_metadata(devices_for_metadata)
+        plan = inject_md_wrapper(replayable_plan(), metadata)
+        return (yield from plan)
+
+
+# Create device metadata
+def create_device_md(devices_dictionary: dict) -> dict:
+    """
+    Generate a device metadata dictionary for a collection of device instances.
+
+    This function extracts metadata from each device instance in `devices_dictionary` by calling
+    the `get_attributes()` method on each device's `md` attribute. The extracted metadata is
+    organized under a common metadata key.
+
+    Args:
+        devices_dictionary (dict): A dictionary where keys are device names or identifiers and
+                                   values are device instances. Each device instance is expected
+                                   to have an `md` attribute with a `get_attributes()` method
+                                   for extracting its metadata.
+
+    Returns:
+        dict: A dictionary containing all device metadata under a top-level key specified by
+              `metadata_key` ("device_md"). The structure is as follows:
+              {
+                  "device_md": {
+                      device_name_1: metadata_from_device_1,
+                      device_name_2: metadata_from_device_2,
+                      ...
+                  }
+              }
+
+    Example:
+        devices = {
+            "device1": device1_instance,
+            "device2": device2_instance,
+            ...
+        }
+
+        device_metadata = create_device_md(devices)
+        # device_metadata would be structured with metadata from each device's `get_attributes()` method.
+
+    Notes:
+        - The function `create_metadata` is used to handle the metadata extraction and structuring.
+        - This function assumes that `devices_dictionary` is well-formed, with each device having an
+          `md` attribute and that `md` has a `get_attributes()` method.
+    """
+
+    # The extraction of the md dict from device instance made by means of the function: get_attributes().
+
+    metadata_key: str = "device_md"
+    return create_metadata(
+        devices_dictionary,
+        lambda device: device.md.get_attributes(),
+        metadata_key,
+    )
+
+
+# Create nexus metadata
+def create_nexus_md(devices_dictionary: dict) -> dict:
+    """
+    Create a dictionary of metadata with resolved placeholders. If a placeholder cannot
+    be resolved, the entire NXfield containing it is removed.
+
+    Args:
+        devices_dictionary (dict): A dictionary mapping device names to device instances.
+
+    Returns:
+        dict: The metadata dictionary with placeholders resolved.
+    """
+
+    metadata_key: str = NX_MD_KEY
+
+    def get_nx_model_metadata(device):
+        if not hasattr(device, DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME):
+            raise AttributeError(
+                f"Device {device.name} does not have {DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME} attribute."
+            )
+        return getattr(device, DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME).model_dump(
+            exclude_none=True
+        )
+
+    metadata: dict = create_metadata(
+        devices_dictionary,
+        lambda device: get_nx_model_metadata(device),
+        metadata_key,
+    )
+
+    # Resolve placeholders in metadata
+    resolve_pre_run_placeholders(metadata[metadata_key], devices_dictionary)
+
+    # Remove parent keys of: "value":NOT_AVAILABLE_LABEL.
+    # This is the case if component value could not be read.
+    metadata = process_value_not_available(metadata)
+
+    return metadata
+
+
+def create_metadata(
+    devices_dictionary: Dict[str, object],
+    extract_fn: Callable,
+    metadata_key: str,
+) -> dict:
+    """
+    Generalized function to create metadata for devices using the provided extraction function.
+
+    Args:
+        devices_dictionary (dict): A dictionary mapping device instance names to device instances objects.
+        extract_fn (function): A function to extract metadata from a device.
+        metadata_key (str): The key to be used for storing the metadata in the dictionary.
+
+    Returns:
+        dict: A dictionary containing the metadata, structured as follows:
+              {
+                  metadata_key: {
+                      "<device_name>": <metadata>,
+                      ...
+                  }
+              }
+    """
+
+    metadata: dict = {metadata_key: {}}
+    for device_name, device_obj in devices_dictionary.items():
+        metadata[metadata_key][device_name] = extract_fn(device_obj)
+    return metadata
+
+
+def process_value_not_available(data: dict) -> dict:
+    """
+    Recursively remove parent dictionaries that contain 'value': NOT_AVAILABLE_LABEL.
+    """
+    # Iterate over a copy of the dictionary items
+    for key in list(data.keys()):
+        value = data[key]
+
+        # If the current value is a dictionary, check its contents
+        if isinstance(value, dict):
+            # If 'value': NOT_AVAILABLE_LABEL is in this dictionary, mark the parent key for deletion
+            if NOT_AVAILABLE_LABEL == value.get("value"):
+                print(f"WARNING_MSG: The key: '{key}' removed from nexus metadata.")
+                del data[key]
+            else:
+                # Otherwise, recursively check deeper levels
+                data[key] = process_value_not_available(value)
+    return data
+
+
+def resolve_pre_run_placeholders(metadata: dict, devices_dictionary: dict):
+    """
+    Recursively resolve all $pre-run placeholders in a metadata dictionary for each device.
+    If a placeholder cannot be resolved, removes the entire NXfield containing it.
+
+    Args:
+        metadata (dict): A dictionary containing metadata for each device, with device instance
+                         names as keys and sub-dictionaries containing metadata.
+        devices_dictionary (dict): A dictionary mapping device instance names to device instances.
+    """
+    for device_name, device_metadata in metadata.items():
+        # Get the device instance object by device name
+        device_obj = devices_dictionary.get(device_name)
+
+        # Recursively resolve placeholders in the device's metadata dictionary
+        _resolve_pre_run_placeholders_for_device(device_metadata, device_obj)
+
+
+def _resolve_pre_run_placeholders_for_device(device_metadata: dict, device_obj: object):
+    """
+    Helper function to recursively resolve $pre-run placeholders in the metadata dictionary
+    for a specific device. If a placeholder cannot be resolved, removes the entire NXfield.
+
+    Args:
+        device_metadata (dict): Metadata dictionary for a specific device instance object.
+        device_obj (object): The device instance object associated with the current metadata.
+    """
+
+    for key, value in device_metadata.items():
+        if isinstance(value, dict):
+            # Recursively process nested dictionaries
+            _resolve_pre_run_placeholders_for_device(value, device_obj)
+        elif isinstance(value, str) and (
+            value.startswith(PRE_RUN_CPT_LABEL) or value.startswith(PRE_RUN_MD_LABEL)
+        ):
+            # Attempt to resolve the placeholder
+            device_metadata[key] = resolve_pre_run_placeholder_value(value, device_obj)
+
+
+def resolve_pre_run_placeholder_value(placeholder: str, device_obj: object) -> Any:
+    """
+    Resolve a $pre-run-cpt or $pre-run-md placeholder for a specific device by dynamically fetching a nested component value.
+
+    Args:
+        placeholder (str): The placeholder string, e.g. "$pre-run-cpt:obj1: ... objN-1:objN:component". This is a chain telling how to access a component of a device instance. Delimiter is ':'.
+                                                        "$pre-run-md:key1: ... keyN-1:keyN". This is the chain telling how to access the key in a nested dictionary accessible over attribute md of the device instance. Delimiter is ':'.
+        device_obj: The device instance to use for resolving the placeholder.
+
+    Returns:
+        The resolved value retrieved from the nested component path.
+
+    Raises:
+        AttributeError: If the component cannot be found or does not have a valid accessor.
+    """
+
+    placeholder_splitted: list = placeholder.split(":")
+    prefix: str = placeholder_splitted[0]
+
+    # Get the nested path, ignoring "$pre-run-cpt" or "$pre-run-md" prefix
+    parts: list = placeholder_splitted[
+        1:
+    ]  # Ignore the "$pre-run-cpt" or "$pre-run-md" part
+    if not parts:
+        raise ValueError(
+            f"Invalid placeholder format: {placeholder} detected in a schema yml file associated with the device instance: {device_obj.name}. Valid placeholder structure: '$pre-run-md:key1: ... keyN-1:keyN' or '$pre-run-cpt:obj1: ... objN-1:objN'"
+        )
+
+    # Resolve placeholder by asking device instance metadata for its value
+    if PRE_RUN_MD_LABEL == prefix:
+        data: dict = device_obj.md.get_attributes()
+        value = get_nested_dict_value(data, parts)
+        if value is None:
+            print(
+                f"WARNING_MSG: The key (key sequence) '{':'.join(parts)}' not found in the metadata of the device instance: '{device_obj.name}'. The associated NeXus metadata will be automatically removed."
+            )
+            return NOT_AVAILABLE_LABEL
+        return value
+
+    # Resolve placeholder by asking device instance component for its value
+    elif PRE_RUN_CPT_LABEL == prefix:
+        # Navigate through the component path within the device instance
+        component = device_obj
+        for attribute in parts:
+            component = getattr(component, attribute, None)
+            if component is None:
+                print(
+                    f"WARNING_MSG: Attribute '{'.'.join(parts)}' not found in device instance '{device_obj.name}'. The associated NeXus metadata will be automatically removed."
+                )
+                return NOT_AVAILABLE_LABEL
+
+        # Retrieve the final component value, assuming it has a `get()` or `get_value()` method
+        if hasattr(component, "get"):
+            return component.get()
+        elif hasattr(component, "get_value"):
+            loop = asyncio.get_running_loop()
+            return loop.run_until_complete(component.get_value())
+        else:
+            raise AttributeError(
+                f"Attribute '{'.'.join(parts)}' of device '{device_obj.name}' does not have a method 'get_value()' or 'get()' to retrieve a value."
+            )
+    else:
+        raise ValueError(
+            f"Invalid prefix: '{prefix}' found in the placeholder: '{placeholder}'. Valid placeholder structure: '$pre-run-md:key1: ... keyN-1:keyN' or '$pre-run-cpt:obj1: ... objN-1:objN'"
+        )
+
+
+def get_nested_dict_value(data: dict, key_path: list):
+    """
+    Retrieve the value of a nested dictionary based on a list of keys representing the path.
+
+    Args:
+        data (dict): The nested dictionary to search.
+        key_path (list): A list of keys representing the path to the desired value.
+                         Each key corresponds to a level in the nested dictionary.
+
+    Returns:
+        The value associated with the final key in `key_path` if the path is valid, or `None` if any key is missing.
+
+    Example:
+        data = {
+            "a": {
+                "b": {
+                    "c": 42
+                }
+            }
+        }
+
+        key_path = ["a", "b", "c"]
+        result = get_nested_value(data, key_path)  # Returns 42
+    """
+    current_level = data
+    for key in key_path:
+        if isinstance(current_level, dict) and key in current_level:
+            current_level = current_level[key]
+        else:
+            return None  # Return None if the path is invalid
+    return current_level
+
+
+class PlanDeviceChecker:
+    """ "
+    Check which ao the devices listed in devices_dictionary participate in the plan
+    Returns:
+        - all_devices_used: bool
+        - unused_devices: dict
+        - used_devices: dict
+    """
+
+    def __init__(self, devices_dictionary):
+        self.devices_dictionary = devices_dictionary
+
+    def devices_used_in_plan(self, plan) -> dict:
+        """
+        Extract devices used in a Bluesky plan by inspecting its messages.
+        The result will be a dictionary of used devices (device instance name -> device instance).
+        """
+        used_devices: dict = {}
+
+        # A helper to inspect each message
+        def collect_devices(msg):
+            # Check if the object in the message is one of the devices
+            if msg.obj and msg.obj.name in self.devices_dictionary:
+                used_devices[msg.obj.name] = self.devices_dictionary[msg.obj.name]
+            return None, None  # No modifications to the plan
+
+        # Use a plan_mutator to iterate through the plan
+        list(plan_mutator(plan, collect_devices))
+        return used_devices
+
+    def validate_plan_devices(self, plan) -> dict:
+        """
+        Check if all devices in the dictionary are used in the plan.
+        Returns a dictionary with 'all_devices_used' (bool), 'used_devices' (dict), and 'unused_devices' (dict).
+        """
+        used_devices: dict = self.devices_used_in_plan(plan)
+        all_devices: dict = self.devices_dictionary
+
+        # Find unused devices by comparing the keys (names) in used_devices and all_devices
+        unused_devices = {
+            name: device
+            for name, device in all_devices.items()
+            if name not in used_devices
+        }
+
+        return {
+            "all_devices_used": len(unused_devices) == 0,
+            "unused_devices": unused_devices,
+            "used_devices": used_devices,
+        }
+
+
+def cache_plan(plan):
+    """
+    Cache all messages from the given plan.
+    """
+    cached_messages: list[Msg] = list(
+        plan
+    )  # Consume and store all messages, plan is going to be exhausted
+
+    def replay_plan():
+        """
+        Replay the cached messages as a generator.
+        """
+        for msg in cached_messages:
+            yield msg
+
+    return replay_plan
