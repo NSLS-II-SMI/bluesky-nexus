@@ -1,3 +1,50 @@
+"""
+NexusWriter Module
+===================
+
+This module provides a `NexusWriter` class for writing NeXus-format files, a standard format for scientific data.
+The module integrates with the Bluesky framework and extends the `CollectThenCompute` callback. It captures
+Bluesky start, descriptor, event, and stop documents and uses their metadata to produce NeXus files that comply
+with the hierarchical structure and metadata standards of the NeXus format.
+
+Classes:
+--------
+- NexusWriter:
+    A Bluesky callback that writes NeXus files at the end of data acquisition. The class handles data extraction,
+    transformation, and formatting of hierarchical data structures. It supports metadata placeholders to dynamically
+    populate values based on events and descriptors in a run.
+
+Functions:
+----------
+- process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
+    Processes and populates NeXus metadata placeholders using data from Bluesky descriptors and events.
+
+- extract_run_info(start: dict, stop: dict) -> dict:
+    Extracts run-level metadata such as plan name, start/stop times, and other relevant details from the start and stop documents.
+
+- create_nexus_file(file_path: str, data_dict: dict):
+    Creates a NeXus-format HDF5 file based on a given hierarchical dictionary structure.
+
+- create_nexus_group(parent_group: h5py.Group, name: str, data: dict, create_subgroup: bool):
+    Recursively creates NeXus groups and datasets within an HDF5 file from hierarchical input data.
+
+Key Features:
+-------------
+- Automatic NeXus file generation from Bluesky run metadata.
+- Placeholder replacement with real-time data from events and descriptors.
+- Hierarchical metadata handling for NeXus standards compliance.
+- Supports user-defined or automatically generated file names.
+- Handles time zone transformations for consistent time representation.
+
+Dependencies:
+-------------
+- `h5py` for HDF5 file operations.
+- `numpy` for efficient data handling.
+- `pytz` for time zone support.
+- `Bluesky` for integration with scientific data acquisition workflows.
+
+"""
+
 import copy
 import os
 import re
@@ -11,14 +58,13 @@ import numpy as np
 import pytz
 from bluesky.callbacks.core import CollectThenCompute
 
-from bluesky_nexus.bluesky_nexus_def import _NX_FILE_DIR_PATH
-
 from bluesky_nexus.bluesky_nexus_const import (
     NX_FILE_EXTENSION,
     NX_MD_KEY,
     TIME_ZONE,
     VALID_NXFIELD_DTYPES,
 )
+from bluesky_nexus.bluesky_nexus_def import _NX_FILE_DIR_PATH
 
 
 class NexusWriter(CollectThenCompute):

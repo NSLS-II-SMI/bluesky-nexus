@@ -1,8 +1,16 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Union, Dict, Any, Tuple, Type
-import numpy.typing as npt
+"""
+Module: nexusformat_models.py
+
+This module defines Pydantic models for NeXus data structures, which are commonly used in scientific data formats
+for representing hierarchical datasets. These models provide structure, validation, and utilities for NeXus objects,
+fields, groups, links, and attributes.
+"""
+
+from typing import Any, Dict, Optional, Tuple, Union
+
 import numpy as np
-from pydantic import model_validator
+import numpy.typing as npt
+from pydantic import BaseModel, Field, model_validator
 
 __all__ = [
     "Field",

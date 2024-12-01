@@ -1,16 +1,30 @@
-"""Module: pydantic_models_hzb.py
+"""
+Module: nexusformat_models_hzb.py
 
-1) Definitions of pydantic models designed for device classes used at HZB bessyii.
+This module defines Pydantic models tailored for device classes used at HZB's BESSY II facility. The models ensure
+structured validation and organization of data for different device types.
 
-    - Monitor, Monochromator, Detector are suposed to have their own pydantic models defined in this file
-    - NXgeneralModel is to be applied for all device classes but not Monitor, Monochromator, Detector
+Classes:
+    - NXgratingModel: A model for grating components, used in monochromators.
+    - NXmonochromatorModel: A model representing a monochromator, including energy and grating details.
+    - NXgeneralModel: A generic model applicable to all device classes except Monitor, Monochromator, and Detector.
 
-2) Definition of a mapping between model_name and class definition
+Mappings:
+    MODEL_NAME_TO_CLASS_MAPPING: A dictionary mapping model names to their respective class definitions, allowing
+    dynamic resolution of models by name.
 """
 
 from typing import Optional
 
-from bluesky_nexus.models.nexusformat_models import *
+from bluesky_nexus.models.nexusformat_models import (
+    Field,
+    NXattrModel,
+    NXattrModelWithString,
+    NXfieldModelWithFloat,
+    NXfieldModelWithInt,
+    NXfieldModelWithString,
+    NXgroupModel,
+)
 
 __all__ = ["NXmonochromatorModel", "NXgeneralModel", "MODEL_NAME_TO_CLASS_MAPPING"]
 

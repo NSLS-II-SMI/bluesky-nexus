@@ -1,7 +1,19 @@
-"""Module:  bluesky_nexus_device_model
-Module for:
-- instantiation of the pydantic model
-- assignment of the pydantic model to the 'nx_model' attribute of a device instance
+"""Module: bluesky_nexus_device_model
+
+This module is responsible for instantiating Pydantic models and assigning them to device instances within the Bluesky Nexus framework. The module facilitates the dynamic creation of Pydantic model instances based on schema files, and assigns the resulting model instances to the 'nx_model' attribute of device objects.
+
+Functions:
+    - assign_pydantic_model_instance(devices_dictionary: dict): For each device in the provided dictionary, this function assigns a Pydantic model instance based on the device's associated schema file. The schema file is read, and the model is created and assigned dynamically to the device's nx_model attribute.
+    - create_model_instance(model_name: str, schema_content: dict) -> object: This function creates a Pydantic model instance based on the given model name and schema content (typically read from a YAML file). The model is instantiated by mapping the model name to the appropriate Pydantic class and passing the schema content as initialization arguments.
+    - read_attribute(device, attribute_name: str): This function retrieves the value of a specified attribute from a device instance. If the attribute does not exist, it returns None and logs an error message.
+
+Modules and Constants:
+
+    Imports various utilities, constants, and models related to the Nexus schema and device management, such as DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME, NX_SCHEMA_FILE_EXTENSIONS, and Pydantic models.
+
+Error Handling:
+
+    Raises ValueError for missing or invalid schema files, missing keys in the schema, or unrecognized model names in the schema content.
 """
 
 import os

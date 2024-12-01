@@ -1,18 +1,56 @@
+"""Module supplemental_metadata
+
+Module for Managing and Injecting Supplemental Metadata in Bluesky Plans
+
+This module provides utilities to manage, validate, and inject supplemental metadata into Bluesky plans. The primary feature is the SupplementalMetadata class, which extends the functionality of Bluesky's SupplementalData to dynamically generate and inject metadata based on device-specific attributes. It includes support for two types of metadata: device metadata (DEVICE_MD) and NeXus metadata (NEXUS_MD).
+
+Key Features:
+
+    Dynamically generate metadata for devices participating in a plan.
+    Validate and filter devices based on their usage in the plan or baseline subscription.
+    Support for placeholder resolution in NeXus metadata, handling missing data gracefully.
+    Caching of plans to ensure non-exhaustible replayable plans.
+    Utilities for metadata extraction, processing, and validation.
+
+Classes:
+
+    SupplementalMetadata: Extends SupplementalData to manage device metadata injection.
+    PlanDeviceChecker: Utility to validate which devices in a dictionary are used in a plan.
+
+Functions:
+
+    create_device_md: Generates a device metadata dictionary using device attributes.
+    create_nexus_md: Generates NeXus-compliant metadata with placeholder resolution.
+    create_metadata: A generic function for extracting metadata using a provided extraction function.
+    process_value_not_available: Removes keys with values marked as "NOT_AVAILABLE".
+    resolve_pre_run_placeholders: Recursively resolves placeholders in metadata dictionaries.
+    get_nested_dict_value: Fetches values from nested dictionaries using a key path.
+    cache_plan: Caches Bluesky plans to make them replayable.
+
+Dependencies:
+
+    asyncio: For asynchronous operations during metadata resolution.
+    bluesky.preprocessors: For plan manipulation and metadata injection.
+    bluesky.run_engine.Msg: For working with Bluesky plans.
+    enum: For defining metadata types as an enumeration.
+    typing: For type hints (e.g., Callable, Dict).
+    bluesky_nexus: Constants and device model utilities for NeXus metadata handling.
+"""
+
 import asyncio
 from enum import Enum, auto
-from typing import Callable, Dict, Any
+from typing import Any, Callable, Dict
 
 from bluesky.preprocessors import SupplementalData, inject_md_wrapper, plan_mutator
 from bluesky.run_engine import Msg
 
 from bluesky_nexus.bluesky_nexus_const import (
-    NX_MD_KEY,
+    DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME,
     NOT_AVAILABLE_LABEL,
+    NX_MD_KEY,
     PRE_RUN_CPT_LABEL,
     PRE_RUN_MD_LABEL,
-    DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME,
 )
-
 from bluesky_nexus.bluesky_nexus_device_model import assign_pydantic_model_instance
 
 
