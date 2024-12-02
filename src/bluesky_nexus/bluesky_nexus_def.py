@@ -9,7 +9,7 @@ Directory Paths:
                                 If the environment variable is not set, a ValueError is raised with a message indicating that the content
                                 of the ~/.bluesky_config file should be checked.
 
-    _NX_SCHEMA_FILE_DIR_PATH:   Extracted from the environment variable _NX_SCHEMA_FILE_DIR_PATH, this variable stores the path to
+    _NX_SCHEMA_DIR_PATH:   Extracted from the environment variable _NX_SCHEMA_DIR_PATH, this variable stores the path to
                                 the Nexus schema file directory. If the environment variable is not set, a ValueError is raised with a message indicating
                                 that the content of the ~/.bluesky_config file should be checked.
 
@@ -23,14 +23,10 @@ import os
 # Extract from env variable nexus file dir path (in container)
 _NX_FILE_DIR_PATH = os.environ.get("_NX_FILE_DIR_PATH")
 if _NX_FILE_DIR_PATH is None:
-    raise ValueError(
-        "_NX_FILE_DIR_PATH is None. Check content of ~/.bluesky_config file."
-    )
+    raise ValueError("_NX_FILE_DIR_PATH is None. Check content of ~/etc/environment.")
 
 # Extract from env variable nexus schema file dir path (in container)
-_NX_SCHEMA_FILE_DIR_PATH = os.environ.get("_NX_SCHEMA_FILE_DIR_PATH")
-if _NX_SCHEMA_FILE_DIR_PATH is None:
-    raise ValueError(
-        "_NX_SCHEMA_FILE_DIR_PATH is None. Check content of ~/.bluesky_config file."
-    )
+_NX_SCHEMA_DIR_PATH = os.environ.get("_NX_SCHEMA_DIR_PATH")
+if _NX_SCHEMA_DIR_PATH is None:
+    raise ValueError("_NX_SCHEMA_DIR_PATH is None. Check content of ~/etc/environment.")
 # -------------------------------- END OF DIR PATHS  --------------------------------

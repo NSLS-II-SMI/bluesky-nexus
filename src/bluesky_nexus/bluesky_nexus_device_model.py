@@ -9,7 +9,7 @@ Functions:
 
 Modules and Constants:
 
-    Imports various utilities, constants, and models related to the Nexus schema and device management, such as DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME, NX_SCHEMA_FILE_EXTENSIONS, and Pydantic models.
+    Imports various utilities, constants, and models related to the Nexus schema and device management, such as DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME, NX_SCHEMA_EXTENSIONS, and Pydantic models.
 
 Error Handling:
 
@@ -21,10 +21,10 @@ import os
 from bluesky_nexus.bluesky_nexus_const import (
     DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME,
     DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME,
-    NX_SCHEMA_FILE_EXTENSIONS,
+    NX_SCHEMA_EXTENSIONS,
     NX_SCHEMA_MODEL_NAME_KEY,
 )
-from bluesky_nexus.bluesky_nexus_def import _NX_SCHEMA_FILE_DIR_PATH
+from bluesky_nexus.bluesky_nexus_def import _NX_SCHEMA_DIR_PATH
 from bluesky_nexus.common.yaml_utils import read_yaml
 from bluesky_nexus.models.nexusformat_models_hzb import *
 
@@ -45,11 +45,11 @@ def assign_pydantic_model_instance(devices_dictionary: dict):
             )
 
         # Define schema file path
-        if any(schema_name.endswith(ext) for ext in NX_SCHEMA_FILE_EXTENSIONS):
-            file_path: str = os.path.join(_NX_SCHEMA_FILE_DIR_PATH, schema_name)
+        if any(schema_name.endswith(ext) for ext in NX_SCHEMA_EXTENSIONS):
+            file_path: str = os.path.join(_NX_SCHEMA_DIR_PATH, schema_name)
         else:
             file_path: str = os.path.join(
-                _NX_SCHEMA_FILE_DIR_PATH, schema_name + NX_SCHEMA_FILE_EXTENSIONS[0]
+                _NX_SCHEMA_DIR_PATH, schema_name + NX_SCHEMA_EXTENSIONS[0]
             )
 
         # Read content of the schema file

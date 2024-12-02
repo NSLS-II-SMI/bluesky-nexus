@@ -9,7 +9,7 @@ Constants:
     PRE_RUN_MD_LABEL (str): Label for pre-run metadata placeholders ($pre-run-md).
     NX_MD_KEY (str): The key used for Nexus metadata ("nexus_md").
     NX_FILE_EXTENSION (str): The file extension for Nexus files (".nxs").
-    NX_SCHEMA_FILE_EXTENSIONS (list): List of valid file extensions for Nexus schema files (".yml", ".yaml").
+    NX_SCHEMA_EXTENSIONS (list): List of valid file extensions for Nexus schema files (".yml", ".yaml").
     NX_SCHEMA_MODEL_NAME_KEY (str): Key for the Nexus schema model name ("nx_model").
     DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME (str): Attribute name for the Nexus schema in the device class ("nx_schema").
     DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME (str): Attribute name for the Nexus model in the device instance ("nx_model").
@@ -27,7 +27,7 @@ PRE_RUN_MD_LABEL: str = "$pre-run-md"
 
 NX_MD_KEY: str = "nexus_md"
 NX_FILE_EXTENSION: str = ".nxs"
-NX_SCHEMA_FILE_EXTENSIONS = [".yml", ".yaml"]
+NX_SCHEMA_EXTENSIONS = [".yml", ".yaml"]
 NX_SCHEMA_MODEL_NAME_KEY: str = "nx_model"
 DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME: str = "nx_schema"
 DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME: str = "nx_model"
