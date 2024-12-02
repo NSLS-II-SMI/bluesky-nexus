@@ -51,8 +51,14 @@ class PrePostRunString(str):
     def validate(cls, value: Any, *args, **kwargs) -> "PrePostRunString":
         if not isinstance(value, str):
             raise ValueError("string required")
-        if not (value.startswith("$pre-run") or value.startswith("$post-run")):
-            raise ValueError('string must start with "$pre-run" or "$post-run"')
+        if not (
+            value.startswith("$pre-run-cpt")
+            or value.startswith("$pre-run-md")
+            or value.startswith("$post-run:events")
+        ):
+            raise ValueError(
+                'string must start with "$pre-run-cpt" or $pre-run-md or "$post-run:events"'
+            )
         return cls(value)
 
 
