@@ -48,6 +48,7 @@ from bluesky_nexus.bluesky_nexus_const import (
     DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME,
     NOT_AVAILABLE_LABEL,
     NX_MD_KEY,
+    DEVICE_MD_KEY,
     PRE_RUN_CPT_LABEL,
     PRE_RUN_MD_LABEL,
 )
@@ -176,7 +177,7 @@ def create_device_md(devices_dictionary: dict) -> dict:
 
     # The extraction of the md dict from device instance made by means of the function: get_attributes().
 
-    metadata_key: str = "device_md"
+    metadata_key: str = DEVICE_MD_KEY
     return create_metadata(
         devices_dictionary,
         lambda device: device.md.get_attributes(),

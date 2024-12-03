@@ -26,6 +26,7 @@ PRE_RUN_CPT_LABEL: str = "$pre-run-cpt"
 PRE_RUN_MD_LABEL: str = "$pre-run-md"
 
 NX_MD_KEY: str = "nexus_md"
+DEVICE_MD_KEY: str = "device_md"
 NX_FILE_EXTENSION: str = ".nxs"
 NX_SCHEMA_EXTENSIONS = [".yml", ".yaml"]
 NX_SCHEMA_MODEL_NAME_KEY: str = "nx_model"
