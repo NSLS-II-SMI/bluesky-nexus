@@ -33,9 +33,6 @@ NX_SCHEMA_MODEL_NAME_KEY: str = "nx_model"
 DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME: str = "nx_schema"
 DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME: str = "nx_model"
 
-TIME_ZONE: str = "Europe/Berlin"
-
-
 VALID_NXFIELD_DTYPES = [
     "float32",
     "float64",
