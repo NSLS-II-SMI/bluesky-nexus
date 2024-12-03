@@ -49,19 +49,16 @@ import copy
 import os
 import re
 from collections import deque
-from datetime import datetime
-from functools import partial
 from typing import Optional, Union
 
 import h5py
 import numpy as np
-import pytz
 from bluesky.callbacks.core import CollectThenCompute
 
 from bluesky_nexus.bluesky_nexus_const import (
+    DEVICE_MD_KEY,
     NX_FILE_EXTENSION,
     NX_MD_KEY,
-    TIME_ZONE,
     VALID_NXFIELD_DTYPES,
 )
 from bluesky_nexus.bluesky_nexus_def import _NX_FILE_DIR_PATH
@@ -153,23 +150,56 @@ class NexusWriter(CollectThenCompute):
 # Define processing of the nexus md
 def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
     """
-    DOCSTRING TO BO DONE
-    Process nexus md from the start doc. I.e. fill all placeholders with data from the events and descriptors
+    Process the nexus metadata from the 'start' document by replacing placeholders with data
+    from the 'events' and 'descriptors' documents. This function is used to fill in the values
+    of placeholders ($post-run) with corresponding data from the events of the run.
+
+    Args:
+        nexus_md (dict): The dictionary representing the Nexus metadata, which may contain placeholders
+                            for device values that need to be filled in with actual data.
+        descriptors (dict): A dictionary or deque of descriptors, which contains metadata describing
+                            the devices and their corresponding data keys.
+        events (dict): A dictionary representing events, containing data associated with the run,
+                        including the actual values for the placeholders.
+
+    Returns:
+        None: This function modifies the input `nexus_md` dictionary in place, replacing the placeholders
+                with the corresponding data from the events.
+
+    Notes:
+        - The `$post-run` placeholders are replaced with data based on descriptors and events.
+        - This function assumes that the descriptors contain metadata on the devices being used in the run.
     """
 
     def process_post_run():
         """
-        DOCSTRING: TO BE DONE
+        Processes post-run placeholders within the Nexus metadata, replacing them with actual
+        data from the event logs and descriptors.
+
+        This inner function contains several helper functions to:
+        - Select the appropriate descriptor based on the device name.
+        - Extract the component name from the placeholder.
+        - Replace the placeholders in the Nexus metadata with actual event data.
         """
 
         def select_descriptor(descriptors: deque, cpt_name: str) -> Optional[dict]:
             """
-            Select an appropriate descriptor for the 'cpt_name':
+            Select an appropriate descriptor for the given component name 'cpt_name'
                 - If cpt_name is found in any other descriptor than the 'baseline' descriptor read from this descriptor
                 - elif cpt_name is found only in the 'baseline' descriptor read from 'baseline' descriptor
                 - else raise exception
                 This means taht each instantiated device whose schema contains '$post-run' placeholder has to be included into a baseline.
                 Otherwise if such an instantiated device is not used in a plan, the descriptor will not be found and exception will be raised
+
+            Args:
+                descriptors (deque): The deque of descriptors.
+                cpt_name (str): The component name to look for in the descriptors.
+
+            Returns:
+                dict: The selected descriptor.
+
+            Raises:
+                ValueError: If no descriptor with the specified component name is found.
             """
 
             # If the deque 'descriptors' is empty, raise an exception
@@ -198,12 +228,21 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
         # Define a few helper functions to parse the Nexus tree and replace values with data from the events of the run
         def get_cpt_name_from_placeholder(value: str) -> Optional[str]:
             """
-            # Pattern matches
-            # $post-run:events:a_b_c
-            # $post-run:events:a-b-c-d
-            # $post-run:events:a_b-c_d-e
-            # $post-run:events:a
+            Extracts the component name from the placeholder string, typically in the form
+            of `$post-run:events:<component_name>`.
+
+            Args:
+                value (str): The placeholder string, e.g., "$post-run:events:a_b_c".
+                Pattern matches:
+                    $post-run:events:a_b_c
+                    $post-run:events:a-b-c-d
+                    $post-run:events:a_b-c_d-e
+                    $post-run:events:a
+            Returns:
+                str: The component name extracted from the placeholder (e.g., "a_b_c").
+                None: If the placeholder does not match the expected pattern.
             """
+
             POST_RUN_LABEL: str = "$post-run"
             DELIMITER: str = ":"
             PATTERN: str = r"^\$post-run:events:[a-zA-Z0-9_-]+$"
@@ -219,7 +258,17 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
 
         def replace_func(dev_name: str, obj: dict) -> dict:
             """
-            DOCSTRING TO DO
+            Replace the placeholder in the given object with actual data from the events.
+
+            This function looks for the `$post-run` placeholders within the object and replaces
+            them with actual values extracted from the events and descriptors.
+
+            Args:
+                dev_name (str): The name of the device from the Nexus metadata.
+                obj (dict): The object to replace the placeholder in.
+
+            Returns:
+                dict: The object with the placeholder replaced with the actual data.
             """
 
             if "value" in obj:
@@ -311,6 +360,19 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                 return obj
 
         def replace_values(dev_name: str, tree: Union[dict, list], func: callable):
+            """
+            Recursively replace placeholders in a tree (dictionary or list) structure by applying the
+            provided function.
+
+            Args:
+                dev_name (str): The name of the device.
+                tree (dict or list): The tree structure containing placeholders to replace.
+                func (callable): The function to apply for replacement.
+
+            Returns:
+                dict or list: The tree with placeholders replaced.
+            """
+
             if isinstance(tree, dict):
                 for key, value in tree.items():
                     if (
@@ -336,112 +398,41 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
 # Define extraction of run info
 def extract_run_info(start: dict, stop: dict) -> dict:
     """
-    DOCSTRING: TO BE DONE
-    Aux function:
-    Get from the start and stop document some run info and return them as a dictionary
+    Extract relevant information from the 'start' and 'stop' documents and return a dictionary
+    with the extracted data.
+
+    Args:
+        start (dict): A dictionary representing the start document containing metadata for a run.
+        stop (dict): A dictionary representing the stop document containing metadata for a run.
+
+    Returns:
+        dict: A dictionary with two keys, 'start' and 'stop', each containing the relevant data.
+            The 'start' key will include data from the start document, excluding the 'nexus_md'
+            and 'device_md' keys. The 'stop' key will include the entire stop document.
+
+    Notes:
+        - The 'nexus_md' and 'device_md' keys are intentionally excluded from the 'start' document
+            in the resulting dictionary.
     """
 
-    result: dict = {}
+    START_LABEL: str = "start"
+    STOP_LABEL: str = "stop"
 
-    def set(
-        result: dict,
-        doc: dict,
-        doc_key: str,
-        entry_key: str,
-        transform_func=None,
-        *args,
-        **kwargs,
-    ):
-        """
-        start: dict start document
-        stop: dict stop document
-        """
+    # Define result dictionary
+    result: dict = {START_LABEL: dict(), STOP_LABEL: dict()}
 
-        try:
-            value = doc[doc_key]  # Get the value from start dictionary
-            if transform_func:
-                value = transform_func(
-                    value, *args, **kwargs
-                )  # Apply the transformation with extra arguments
-            result[entry_key] = value  # Assign to the entry
-        except KeyError:
-            if doc == start:  # Assuming 'start' is the start dictionary
-                doc_name = "start"
-            elif doc == stop:  # Assuming 'stop' is the stop dictionary
-                doc_name = "stop"
-            else:
-                doc_name = "unknown"  # Fallback for unexpected cases
+    # Insert into the 'result[START_LABEL]' dictionary the data from the start document but not 'nexus_md' or 'device_md'
+    for key in start.keys():
+        if (
+            NX_MD_KEY == key or DEVICE_MD_KEY == key
+        ):  # Do not add subdictionary of the key 'nexus_md'. Do not add subdictionary of the key 'device_md'
+            continue
+        result[START_LABEL][key] = start[key]
 
-            print(
-                f"WARNING_MSG: The key '{doc_key}' not found in the {doc_name} document."
-            )
-        except Exception as e:
-            print(
-                f"ERROR_MSG: An error occurred when processing the key '{doc_key}': {e}"
-            )
+    # Insert into the 'result[STOP_LABEL]' dictionary all the data from the stop document
+    result[STOP_LABEL] = stop
 
-    def transform_timestamp(timestamp, timezone_str):
-        """
-        Auxiliary time convertion function
-        """
-        # Convert the Unix timestamp to an ISO 8601 formatted string in the given timezone
-        tz = pytz.timezone(timezone_str)
-        return datetime.fromtimestamp(timestamp, tz=tz).isoformat()
-
-    # ----------- Insert into the 'result' dictionary the selected data from the start document -----------
-
-    # 'plan_name'
-    key: str = "plan_name"
-    set(result, start, key, key)
-
-    # 'scan_id'
-    key: str = "scan_id"
-    set(result, start, key, key)
-
-    # 'uid'
-    start_key: str = "uid"
-    entry_key: str = "start_uid"
-    set(result, start, start_key, entry_key)
-
-    # 'title'
-    key: str = "title"
-    set(result, start, key, key)
-
-    # 'definition'
-    key: str = "definition"
-    set(result, start, key, key)
-
-    # 'time'
-    transform_func = partial(
-        transform_timestamp, timezone_str=TIME_ZONE
-    )  # Prepare a partial function with the required timezone as an argument
-    start_key: str = "time"
-    entry_key: str = "start_time"
-    set(result, start, start_key, entry_key, transform_func=transform_func)
-
-    # ----------- Insert into the 'result' dictionary the selected data from the stop document -----------
-
-    # 'uid'
-    stop_key: str = "uid"
-    entry_key: str = "stop_uid"
-    set(result, stop, stop_key, entry_key)
-
-    # 'time'
-    transform_func = partial(
-        transform_timestamp, timezone_str=TIME_ZONE
-    )  # Prepare a partial function with the required timezone as an argument
-    stop_key: str = "time"
-    entry_key: str = "stop_time"
-    set(result, stop, stop_key, entry_key, transform_func=transform_func)
-
-    # 'exit_status'
-    key: str = "exit_status"
-    set(result, stop, key, key)
-
-    # 'reason'
-    key: str = "reason"
-    set(result, stop, key, key)
-
+    # Return the result
     return result
 
 
@@ -463,8 +454,7 @@ def create_nexus_file(file_path, data_dict):
             elif key == "run_info":
                 group = entry.create_group(key)
                 group.attrs["NX_class"] = "NXcollection"
-                for subkey, subvalue in value.items():
-                    group.create_dataset(subkey, data=subvalue)
+                write_collection(group, value)
             else:
                 # Treat everything else as entry metadata
                 if isinstance(value, (str, int, float)):
@@ -475,7 +465,92 @@ def create_nexus_file(file_path, data_dict):
         print(f"NeXus file '{file_path}' created successfully.")
 
 
+def write_collection(group, data: dict):
+    """
+    Recursively writes a collection of data (nested dictionaries, lists, and primitive values)
+    to a given group in a hierarchical storage structure.
+
+    The function processes the input data dictionary and handles different types of data as follows:
+    - Nested dictionaries are stored as subgroups.
+    - Primitive values (int, float, str, bool) are directly stored as datasets.
+    - Lists or tuples are stored as datasets, with special handling for nested structures or strings within the list.
+
+    Args:
+        group (h5py.Group): The group where the data will be stored. It could represent a group in an HDF5 file or any similar hierarchical storage.
+        data (dict): The data dictionary to be written. It can contain nested dictionaries, lists, tuples, or primitive values.
+
+    Raises:
+        TypeError: If the function encounters an unsupported data type during processing.
+
+    Notes:
+        - Nested dictionaries are recursively written as subgroups.
+        - Non-nested lists or tuples containing primitive values are converted into datasets with appropriate types.
+        - Lists or tuples containing other lists or tuples are serialized into strings.
+    """
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            # Create a subgroup for nested data dictionaries
+            subgroup = group.create_group(key)
+            write_collection(subgroup, value)
+
+        elif isinstance(value, (float, int, str, bool)):
+            group.create_dataset(key, data=value)
+
+        elif isinstance(value, (list, tuple)):
+            # Check for nested lists/tuples
+            if any(isinstance(item, (list, tuple)) for item in value):
+                # Serialize nested structure into a single string
+                serialized_value = str(value)  # Convert entire list/tuple to string
+                group.create_dataset(key, data=serialized_value)
+            else:
+                # Non-nested lists
+                if any(
+                    isinstance(item, str) for item in value
+                ):  # Check if there is a str inside of the list or tuple
+                    normalized_value = [str(item) for item in value]
+                    group.create_dataset(
+                        key, data=np.array(normalized_value, dtype="S")
+                    )
+                else:
+                    normalized_value = list(value)
+                    group.create_dataset(key, data=np.array(normalized_value))
+        else:
+            print(f"Unsupported type {type(value)} for key '{key}'")
+            raise TypeError(f"ERROR: Unsupported type {type(value)} for key '{key}'")
+
+
 def create_nexus_group(parent_group, name, data, create_subgroup):
+    """
+    Recursively creates a NeXus group (subgroup) in the parent group and populates it with metadata
+    and data based on the provided dictionary.
+
+    This function processes the given `data` dictionary to create a NeXus-compatible group structure
+    within the `parent_group`. It handles attributes, datasets, and subgroups, and assigns them
+    according to the NeXus format.
+
+    Args:
+        parent_group (h5py.Group): The parent group where the new NeXus group will be created.
+        name (str): The name of the new group or dataset to be created.
+        data (dict): A dictionary containing the metadata and data for the group. This can include:
+            - "nxclass": NeXus class for the group.
+            - "attrs": A dictionary of attributes to be set on the group.
+            - "default": Default settings for the group, including a value field.
+            - "value": The dataset to be created, which should be assigned a valid dtype.
+        create_subgroup (bool): A flag indicating whether to create a new subgroup. If False, the function
+                                    will populate the existing `parent_group` instead of creating a new subgroup.
+
+    Raises:
+        ValueError: If an invalid dtype is detected in the provided data for the "value" key.
+
+    Notes:
+        - The function checks if the `data` contains a "nxclass" and sets it as an attribute.
+        - If the `data` contains "attrs", it sets the corresponding attributes on the group.
+        - If the `data` contains "value", it creates a dataset with the corresponding dtype, and
+            attaches any associated attributes, such as "units".
+        - This function is designed to create and populate NeXus groups following the NeXus conventions.
+    """
+
     if create_subgroup:
         subgroup = parent_group.create_group(name)
     else:
