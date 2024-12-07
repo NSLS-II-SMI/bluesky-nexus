@@ -55,7 +55,7 @@ class NXgeneralModel(NXgroupModel):
         extra = "allow"
 
 
-# Define a mapping between model_name and classes
+# Define a mapping between model name and class name
 MODEL_NAME_TO_CLASS_MAPPING = {
     "NXmonochromatorModel": NXmonochromatorModel,
     "NXgeneralModel": NXgeneralModel,
