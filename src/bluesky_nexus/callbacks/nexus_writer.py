@@ -421,11 +421,11 @@ def extract_run_info(start: dict, stop: dict) -> dict:
     # Define result dictionary
     result: dict = {START_LABEL: dict(), STOP_LABEL: dict()}
 
-    # Insert into the 'result[START_LABEL]' dictionary the data from the start document but not 'nexus_md' or 'device_md'
+    # Insert into the 'result[START_LABEL]' dictionary the data from the start document but not 'nexus_md'
     for key in start.keys():
         if (
-            NX_MD_KEY == key or DEVICE_MD_KEY == key
-        ):  # Do not add subdictionary of the key 'nexus_md'. Do not add subdictionary of the key 'device_md'
+            NX_MD_KEY == key
+        ):  # Do not add subdictionary of the key 'nexus_md'. Do not add subdictionary of the key 'nexus_md'
             continue
         result[START_LABEL][key] = start[key]
 
