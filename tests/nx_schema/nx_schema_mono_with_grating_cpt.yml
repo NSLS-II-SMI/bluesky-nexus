@@ -1,0 +1,17 @@
+nx_model: NXmonochromatorModel
+energy:
+  nxclass: NXfield
+  value: $post-run:events:engry
+  dtype: float64
+  attrs:
+    units: ""
+grating:
+  nxclass: NXgrating
+  diffraction_order:
+    nxclass: NXfield
+    value: $post-run:events:grating_diffraction_order
+    dtype: int32
+  substrate_material:
+    nxclass: NXfield
+    value: $pre-run-md:grating_substrate_material
+    dtype: str
