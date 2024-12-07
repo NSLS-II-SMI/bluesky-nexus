@@ -56,7 +56,6 @@ import numpy as np
 from bluesky.callbacks.core import CollectThenCompute
 
 from bluesky_nexus.bluesky_nexus_const import (
-    DEVICE_MD_KEY,
     NX_FILE_EXTENSION,
     NX_MD_KEY,
     VALID_NXFIELD_DTYPES,
