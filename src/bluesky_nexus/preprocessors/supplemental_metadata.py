@@ -125,7 +125,8 @@ class SupplementalMetadata(SupplementalData):
         }
 
         # Assign to all the devices contained in 'devices_for_metadata' instances of pydantic models
-        assign_pydantic_model_instance(devices_for_metadata)
+        if self.MetadataType.NEXUS_MD == self.md_type:
+            assign_pydantic_model_instance(devices_for_metadata)
 
         # Create metadata and inject it into the plan
         metadata: dict = create_metadata(devices_for_metadata)
