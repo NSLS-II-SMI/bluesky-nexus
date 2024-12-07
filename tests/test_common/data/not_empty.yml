@@ -1,0 +1,15 @@
+nx_model: NXmonochromatorModel
+nx_schema: nx_test_mono_schema
+
+energy:
+  nxclass: NXfield
+  value: $post-run:events:en
+  dtype: float64
+  attrs:
+    units: eV
+grating:
+  nxclass: NXgrating
+  diffraction_order:
+    nxclass: NXfield
+    value: $pre-run-cpt:grating
+    dtype: int64
