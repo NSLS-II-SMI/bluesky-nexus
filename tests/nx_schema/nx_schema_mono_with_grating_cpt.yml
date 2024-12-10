@@ -5,7 +5,7 @@ energy:
   value: $post-run:events:engry
   dtype: float64
   attrs:
-    units: ""
+    units: "keV"
 grating:
   nxclass: NXgrating
   diffraction_order:
