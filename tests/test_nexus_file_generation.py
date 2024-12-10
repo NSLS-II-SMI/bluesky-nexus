@@ -205,11 +205,13 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
                 expected_data_value = expected_value.get("value")
                 expected_dtype = expected_value.get("dtype")
                 expected_shape = expected_value.get("shape")
+                expected_attrs = expected_value.get("attrs", {})
             else:
                 # If expected_value is not a dictionary, it represents just the value to check
                 expected_data_value = expected_value
                 expected_dtype = None
                 expected_shape = None
+                expected_attrs = {}
 
             keys = dataset_path.split("/")
             current = f
@@ -260,6 +262,17 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
                         assert (
                             actual_value == expected_data_value
                         ), f"Mismatch in dataset '{dataset_path}': Expected {expected_data_value}, Found {actual_value}"
+
+                # Validate attributes
+                for attr_name, expected_attr_value in expected_attrs.items():
+                    assert (
+                        attr_name in current.attrs
+                    ), f"Missing attribute '{attr_name}' in dataset '{dataset_path}'"
+                    assert current.attrs[attr_name] == expected_attr_value, (
+                        f"Mismatch in attribute '{attr_name}' for '{dataset_path}': "
+                        f"Expected {expected_attr_value}, Found {current.attrs[attr_name]}"
+                    )
+
             else:
                 raise TypeError(f"'{dataset_path}' is not a dataset")
 
@@ -352,6 +365,9 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
             "value": [0, 0, 0, 0, 0],
             "dtype": "float64",
             "shape": (5,),
+            "attrs": {
+                "units": "keV",  # Expected units
+            },
         },
         "entry/instrument/mono/grating/diffraction_order/diffraction_order": {
             "value": 0,
@@ -515,6 +531,9 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
             "value": [0, 0, 0, 0, 0],
             "dtype": "float64",
             "shape": (5,),
+            "attrs": {
+                "units": "keV",  # Expected units
+            },
         },
         "entry/instrument/mono/grating/diffraction_order/diffraction_order": {
             "value": 0,
@@ -668,6 +687,9 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
             "value": [0, 0, 0, 0, 0],
             "dtype": "float64",
             "shape": (5,),
+            "attrs": {
+                "units": "keV",  # Expected units
+            },
         },
         "entry/instrument/mono/grating/diffraction_order/diffraction_order": {
             "value": 0,
@@ -831,6 +853,9 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
             "value": [0, 0, 0, 0, 0],
             "dtype": "float64",
             "shape": (5,),
+            "attrs": {
+                "units": "keV",  # Expected units
+            },
         },
         "entry/instrument/mono/grating/diffraction_order/diffraction_order": {
             "value": 0,
