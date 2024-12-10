@@ -442,7 +442,7 @@ def create_nexus_file(file_path, data_dict):
         # Create the NXentry group
         entry = f.create_group("entry")
         entry.attrs["NX_class"] = "NXentry"
-        entry.attrs["default"] = "data"
+        # entry.attrs["default"] = "data"
 
         # Process data_dict
         for key, value in data_dict.items():
