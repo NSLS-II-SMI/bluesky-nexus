@@ -54,6 +54,7 @@ from typing import Optional, Union
 import h5py
 import numpy as np
 from bluesky.callbacks.core import CollectThenCompute
+from h5py import Group
 
 from bluesky_nexus.bluesky_nexus_const import (
     NX_FILE_EXTENSION,
@@ -65,16 +66,38 @@ from bluesky_nexus.bluesky_nexus_def import _NX_FILE_DIR_PATH
 
 class NexusWriter(CollectThenCompute):
     """
-    DOC: TO BO DONE
-    A callback that writes a Nexus file at the end of a run.
-    The Nexus file is created from the start document, descriptors and events of the run.
-    The 'nexus' key must be present in the start document.
+    A class responsible for writing NeXus files using information from start, stop, event, and descriptor documents.
+
+    Methods:
+        create_nx_file_path(dir_path: str, file_name: str) -> str:
+            Creates and validates the file path for the NeXus file based on the directory path and file name.
+
+        compute():
+            Processes the input documents, extracts metadata, and creates a NeXus file.
     """
 
     def create_nx_file_path(self, dir_path: str, file_name: str) -> str:
         """
-        DOCSTRING: TO BO DONE
+        Creates a valid file path for the NeXus file, ensuring the directory exists
+        and the file name adheres to the expected format.
+
+        Parameters:
+            dir_path (str): The directory path where the NeXus file will be saved.
+            file_name (str): The desired name of the NeXus file. If None or empty, a name will
+                             be auto-generated using the UID from the start document.
+
+        Returns:
+            str: The complete file path for the NeXus file.
+
+        Raises:
+            ValueError: If the provided directory path is not a valid directory.
+
+        Notes:
+            - If the file name is not provided, it defaults to a generated name based on the UID
+              in the start document with the proper NeXus file extension.
+            - If the file name contains "{uid}", it is replaced with the UID from the start document.
         """
+
         # Check if 'dir_path' is pointing to existing directory
         if not os.path.isdir(dir_path):
             raise ValueError(
@@ -105,8 +128,27 @@ class NexusWriter(CollectThenCompute):
 
     def compute(self):
         """
-        DOCSTRING TO BO DONE
+        Processes the NeXus metadata and writes a NeXus file based on the start, stop,
+        event, and descriptor documents.
+
+        Workflow:
+            1. Checks if the start document contains the necessary NeXus metadata key.
+            2. Retrieves the NeXus directory path from the environment.
+            3. Generates the NeXus file path using the directory and file name.
+            4. Extracts run information from the start and stop documents.
+            5. Creates a deep copy of the start document to safely process placeholders.
+            6. Processes the NeXus metadata by applying events and descriptors.
+            7. Combines extracted instrument data and run information into a single dictionary.
+            8. Creates a NeXus file with the combined data.
+
+        Raises:
+            Exception: If an error occurs during the deepcopy of the start document.
+
+        Notes:
+            - Logs errors or warnings if essential metadata is missing.
+            - Uses environment variables for configuration, such as the NeXus directory path.
         """
+
         # Check if NEXUS_MD_KEY is contained in the start document
         if NX_MD_KEY not in self._start_doc:
             print(
@@ -377,7 +419,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     if (
                         isinstance(value, dict)
                         and "nxclass" in value
-                        and value["nxclass"] == "NXfield"
+                        and "value" in value
                     ):
                         tree[key] = func(dev_name, value)
                     tree[key] = replace_values(dev_name, value, func)
@@ -436,32 +478,163 @@ def extract_run_info(start: dict, stop: dict) -> dict:
 
 
 def create_nexus_file(file_path, data_dict):
+    """
+    Creates a NeXus file at the specified file path using the provided data dictionary.
+
+    Parameters:
+        file_path (str): The path where the NeXus file will be created.
+        data_dict (dict): A dictionary containing the data to populate the NeXus file.
+                          Keys represent group or dataset names, and values represent
+                          their corresponding data or attributes. Special keys like
+                          "instrument" or "run_info" are treated as specific NeXus groups.
+
+    Raises:
+        ValueError: If invalid data types are detected for certain groups or fields.
+
+    Example:
+        data = {
+            "instrument": {"mono": {"nxclass": "NXmonochromator", "value": 123.4}},
+            "run_info": {"start_time": "2023-12-01T12:00:00"},
+        }
+        create_nexus_file("example.nxs", data)
+    """
+
     with h5py.File(file_path, "w") as f:
-        f.attrs["default"] = "entry"  # File-level attribute
+        # Create file level attribute
+        f.attrs["default"] = "entry"
 
         # Create the NXentry group
-        entry = f.create_group("entry")
+        entry: Group = f.create_group("entry")
         entry.attrs["NX_class"] = "NXentry"
-        # entry.attrs["default"] = "data"
+        entry.attrs["default"] = "data"
 
-        # Process data_dict
         for key, value in data_dict.items():
-            if key in ["instrument"]:
-                group = entry.create_group(key)
-                group.attrs["NX_class"] = f"NX{key}"
-                create_nexus_group(group, key, value, False)
-            elif key == "run_info":
-                group = entry.create_group(key)
-                group.attrs["NX_class"] = "NXcollection"
-                write_collection(group, value)
+            # Create instrument group under 'entry' group
+            if "instrument" == key:
+                # Create instrument group
+                instrument_group: Group = entry.create_group(key)
+                # Add attribute
+                instrument_group.attrs["NX_class"] = "NXinstrument"
+
+                # Add group or fieled to instrument_group
+                add_group_or_field(instrument_group, value)
+
+            # Create run_info group under 'entry' group
+            elif "run_info" == key:
+                # Create run_info group
+                run_info_group = entry.create_group(key)
+                # Add attribute
+                run_info_group.attrs["NX_class"] = "NXcollection"
+                # Write data to the run_info_group
+                write_collection(run_info_group, value)
+
+            # Treat everything else as entry metadata
             else:
-                # Treat everything else as entry metadata
                 if isinstance(value, (str, int, float)):
                     entry.create_dataset(key, data=value)
                 elif isinstance(value, (list, np.ndarray)):
                     entry.create_dataset(key, data=np.array(value))
 
         print(f"NeXus file '{file_path}' created successfully.")
+
+
+def add_group_or_field(group, data):
+    """
+    Recursively adds groups or datasets to a NeXus file based on the provided data.
+
+    Parameters:
+        group (h5py.Group): The parent group to which fields or subgroups will be added.
+        data (dict): A dictionary describing the NeXus structure. Keys represent names
+                     of groups or fields, and values provide detailed metadata such as
+                     `nxclass`, `value`, `dtype`, and attributes.
+
+    Raises:
+        ValueError: If invalid `dtype` is encountered for a dataset.
+
+    Example:
+        data = {
+            "mono": {
+                "nxclass": "NXmonochromator",
+                "value": 123.4,
+                "dtype": "float64",
+                "attrs": {"units": "keV"}
+            }
+        }
+        add_group_or_field(parent_group, data)
+    """
+    for key, value in data.items():
+        if isinstance(value, dict):
+            ###
+            ### Handle NeXus fields
+            ###
+            if "nxclass" in value and "value" in value:
+                dtype = value.get("dtype", None)
+
+                if dtype in VALID_NXFIELD_DTYPES:
+                    if "str" == dtype or "char" == dtype:
+                        dtype = h5py.string_dtype(encoding="utf-8")
+                    dataset = group.create_dataset(
+                        key, data=value["value"], dtype=dtype
+                    )
+
+                    dataset.attrs["nxclass"] = value["nxclass"]
+
+                    # Add attributes to the dataset
+                    for attr_name, attr_value in value.get("attrs", {}).items():
+                        # Convert non-compatible types to strings
+                        if isinstance(attr_value, (dict, list)):
+                            attr_value = str(attr_value)
+                        dataset.attrs[attr_name] = attr_value
+
+                    if "shape" in value.keys():
+                        dataset.attrs["shape"] = value["shape"]
+
+                    # Handle any additional keys in the dictionary as attributes
+                    for extra_key, extra_value in value.items():
+                        if extra_key not in {
+                            "value",
+                            "dtype",
+                            "attrs",
+                            "nxclass",
+                            "shape",
+                        }:
+                            # Convert non-compatible types to strings
+                            if isinstance(extra_value, (dict, list)):
+                                extra_value = str(extra_value)
+                            dataset.attrs[extra_key] = extra_value
+                else:
+                    raise ValueError(
+                        f"Invalid dtype: {dtype} detected in one of the schema files while processing the group: {group.name}."
+                    )
+
+            ###
+            ### Handle NeXus groups
+            ###
+            elif "nxclass" in value:
+                subgroup = group.create_group(key)
+
+                subgroup.attrs["NX_class"] = value["nxclass"]
+
+                if "default" in value:
+                    subgroup.attrs["default"] = value["default"]["value"]
+
+                if "attrs" in value:
+                    for attr_key, attr_value in value["attrs"].items():
+                        subgroup.attrs[attr_key] = attr_value
+
+                # Recursively add fields or subgroups
+                add_group_or_field(
+                    subgroup,
+                    {
+                        k: v
+                        for k, v in value.items()
+                        if k != "nxclass" and k != "default" and k != "attrs"
+                    },
+                )
+
+        else:
+            # Handle as attribute of the group
+            group.attrs[key] = value
 
 
 def write_collection(group, data: dict):
@@ -517,67 +690,3 @@ def write_collection(group, data: dict):
         else:
             print(f"Unsupported type {type(value)} for key '{key}'")
             raise TypeError(f"ERROR: Unsupported type {type(value)} for key '{key}'")
-
-
-def create_nexus_group(parent_group, name, data, create_subgroup):
-    """
-    Recursively creates a NeXus group (subgroup) in the parent group and populates it with metadata
-    and data based on the provided dictionary.
-
-    This function processes the given `data` dictionary to create a NeXus-compatible group structure
-    within the `parent_group`. It handles attributes, datasets, and subgroups, and assigns them
-    according to the NeXus format.
-
-    Args:
-        parent_group (h5py.Group): The parent group where the new NeXus group will be created.
-        name (str): The name of the new group or dataset to be created.
-        data (dict): A dictionary containing the metadata and data for the group. This can include:
-            - "nxclass": NeXus class for the group.
-            - "attrs": A dictionary of attributes to be set on the group.
-            - "default": Default settings for the group, including a value field.
-            - "value": The dataset to be created, which should be assigned a valid dtype.
-        create_subgroup (bool): A flag indicating whether to create a new subgroup. If False, the function
-                                    will populate the existing `parent_group` instead of creating a new subgroup.
-
-    Raises:
-        ValueError: If an invalid dtype is detected in the provided data for the "value" key.
-
-    Notes:
-        - The function checks if the `data` contains a "nxclass" and sets it as an attribute.
-        - If the `data` contains "attrs", it sets the corresponding attributes on the group.
-        - If the `data` contains "value", it creates a dataset with the corresponding dtype, and
-            attaches any associated attributes, such as "units".
-        - This function is designed to create and populate NeXus groups following the NeXus conventions.
-    """
-
-    if create_subgroup:
-        subgroup = parent_group.create_group(name)
-    else:
-        subgroup = parent_group
-
-    if "nxclass" in data:
-        subgroup.attrs["NX_class"] = data["nxclass"]
-    if "attrs" in data:
-        for attr_key, attr_value in data["attrs"].items():
-            subgroup.attrs[attr_key] = attr_value
-    if "default" in data:
-        subgroup.attrs["default"] = data["default"]["value"]
-
-    for key, value in data.items():
-        if isinstance(value, dict):
-            if key not in ["attrs", "default"]:
-                create_nexus_group(subgroup, key, value, True)
-        elif key == "value":
-            dtype = data.get("dtype", None)
-            if dtype in VALID_NXFIELD_DTYPES:
-                if "str" == dtype or "char" == dtype:
-                    dtype = h5py.string_dtype(encoding="utf-8")
-                ds = subgroup.create_dataset(name, data=value, dtype=dtype)
-                if "units" in data.get("attrs", {}):
-                    ds.attrs["units"] = data["attrs"]["units"]
-            else:
-                raise ValueError(
-                    f"Invalid dtype: {dtype} detected in the subgroup: {subgroup.name}."
-                )
-        else:
-            subgroup.attrs[key] = value
