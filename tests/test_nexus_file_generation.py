@@ -319,20 +319,20 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {"NX_class": "NXfield"},
+        "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono/grating/diffraction_order": {"NX_class": "NXfield"},
+        "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
         # ---
         "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono_with_grating_cpt/energy": {"NX_class": "NXfield"},
+        "entry/instrument/mono_with_grating_cpt/energy": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono_with_grating_cpt/grating": {"NX_class": "NXgrating"},
         "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
-            "NX_class": "NXfield"
+            "nxclass": "NX_INT"
         },
         "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
-            "NX_class": "NXfield"
+            "nxclass": "NX_CHAR"
         },
         # ---
         # --- entry/run_info ---
@@ -361,7 +361,7 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         # ---
         # --- entry/instrument/mono ---
         # ---
-        "entry/instrument/mono/energy/energy": {
+        "entry/instrument/mono/energy": {
             "value": [0, 0, 0, 0, 0],
             "dtype": "float64",
             "shape": (5,),
@@ -369,7 +369,7 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
                 "units": "keV",  # Expected units
             },
         },
-        "entry/instrument/mono/grating/diffraction_order/diffraction_order": {
+        "entry/instrument/mono/grating/diffraction_order": {
             "value": 0,
             "dtype": "float32",
             "shape": (),  # Scalar
@@ -377,17 +377,17 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
         # ---
-        "entry/instrument/mono_with_grating_cpt/energy/energy": {
+        "entry/instrument/mono_with_grating_cpt/energy": {
             "value": [0, 0],
             "dtype": "float64",
             "shape": (2,),
         },
-        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order/diffraction_order": {
+        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
             "value": [0, 0],
             "dtype": "int32",
             "shape": (2,),
         },
-        "entry/instrument/mono_with_grating_cpt/grating/substrate_material/substrate_material": {
+        "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
             "value": b"leadless",
             "dtype": "S8",  # The dtype for the string with 8 characters
             "shape": (8,),  # Adjust the shape to match the actual string length
@@ -453,7 +453,7 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
     validate_nexus_file(nx_file_path, expected_structure, expected_data)
 
     # Remove the nexus file after successful validation
-    clean_up(nx_file_path)
+    # clean_up(nx_file_path)
 
 
 # Test function
@@ -498,9 +498,9 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {"NX_class": "NXfield"},
+        "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono/grating/diffraction_order": {"NX_class": "NXfield"},
+        "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
         # ---
         # --- entry/run_info ---
         # ---
@@ -527,7 +527,7 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
         # ---
         # --- entry/instrument/mono ---
         # ---
-        "entry/instrument/mono/energy/energy": {
+        "entry/instrument/mono/energy": {
             "value": [0, 0, 0, 0, 0],
             "dtype": "float64",
             "shape": (5,),
@@ -535,7 +535,7 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
                 "units": "keV",  # Expected units
             },
         },
-        "entry/instrument/mono/grating/diffraction_order/diffraction_order": {
+        "entry/instrument/mono/grating/diffraction_order": {
             "value": 0,
             "dtype": "float32",
             "shape": (),  # Scalar
@@ -641,20 +641,20 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {"NX_class": "NXfield"},
+        "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono/grating/diffraction_order": {"NX_class": "NXfield"},
+        "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
         # ---
         "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono_with_grating_cpt/energy": {"NX_class": "NXfield"},
+        "entry/instrument/mono_with_grating_cpt/energy": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono_with_grating_cpt/grating": {"NX_class": "NXgrating"},
         "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
-            "NX_class": "NXfield"
+            "nxclass": "NX_INT"
         },
         "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
-            "NX_class": "NXfield"
+            "nxclass": "NX_CHAR"
         },
         # ---
         # --- entry/run_info ---
@@ -683,7 +683,7 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         # ---
         # --- entry/instrument/mono ---
         # ---
-        "entry/instrument/mono/energy/energy": {
+        "entry/instrument/mono/energy": {
             "value": [0, 0, 0, 0, 0],
             "dtype": "float64",
             "shape": (5,),
@@ -691,7 +691,7 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
                 "units": "keV",  # Expected units
             },
         },
-        "entry/instrument/mono/grating/diffraction_order/diffraction_order": {
+        "entry/instrument/mono/grating/diffraction_order": {
             "value": 0,
             "dtype": "float32",
             "shape": (),  # Scalar
@@ -699,17 +699,17 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
         # ---
-        "entry/instrument/mono_with_grating_cpt/energy/energy": {
+        "entry/instrument/mono_with_grating_cpt/energy": {
             "value": [0, 0],
             "dtype": "float64",
             "shape": (2,),
         },
-        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order/diffraction_order": {
+        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
             "value": [0, 0],
             "dtype": "int32",
             "shape": (2,),
         },
-        "entry/instrument/mono_with_grating_cpt/grating/substrate_material/substrate_material": {
+        "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
             "value": b"leadless",
             "dtype": "S8",  # The dtype for the string with 8 characters
             "shape": (8,),  # Adjust the shape to match the actual string length
@@ -820,9 +820,9 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {"NX_class": "NXfield"},
+        "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono/grating/diffraction_order": {"NX_class": "NXfield"},
+        "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
         # ---
         # --- entry/run_info ---
         # ---
@@ -849,7 +849,7 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
         # ---
         # --- entry/instrument/mono ---
         # ---
-        "entry/instrument/mono/energy/energy": {
+        "entry/instrument/mono/energy": {
             "value": [0, 0, 0, 0, 0],
             "dtype": "float64",
             "shape": (5,),
@@ -857,7 +857,7 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
                 "units": "keV",  # Expected units
             },
         },
-        "entry/instrument/mono/grating/diffraction_order/diffraction_order": {
+        "entry/instrument/mono/grating/diffraction_order": {
             "value": 0,
             "dtype": "float32",
             "shape": (),  # Scalar
