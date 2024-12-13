@@ -1,14 +1,18 @@
 nx_model: NXmonochromatorModel
 nxclass: NXmonochromator
 energy:
-  nxclass: NXfield
+  nxclass: NX_FLOAT
   value: $post-run:events:en
   dtype: float64
   attrs:
     units: "keV"
+  transformation:
+    operation: multiply # Operation to be applied
+    target: value # Specifies that the operation applies to value
+    factor: 1000 # Multiplier for the operation
 grating:
   nxclass: NXgrating
   diffraction_order:
-    nxclass: NXfield
+    nxclass: NX_INT
     value: $pre-run-cpt:grating
     dtype: float32
