@@ -6,7 +6,7 @@ for representing hierarchical datasets. These models provide structure, validati
 fields, groups, links, and attributes.
 """
 
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -157,6 +157,25 @@ class NXobjectModel(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         extra = "forbid"
+
+
+class TransformationModel(BaseModel):
+    operation: Literal[
+        "multiply",
+        "divide",
+        "add",
+        "subtract",
+    ] = Field(
+        ..., description="The mathematical operation to apply to the target field."
+    )
+    target: str = Field(
+        ...,
+        description="Specifies the target field (e.g., 'value') on which the operation is applied.",
+    )
+    factor: Union[float, int] = Field(
+        ...,
+        description="The multiplier, divisor, or additive/subtractive factor for the operation.",
+    )
 
 
 class NXfieldModel(NXobjectModel):
@@ -317,11 +336,17 @@ class NXfieldModelWithInt(NXfieldModel):
     value: Union[int, PrePostRunString] = Field(
         ..., description="NX data field with int type"
     )
+    transformation: Optional[TransformationModel] = Field(
+        None, description="A dictionary of the applicable transformation formulas."
+    )
 
 
 class NXfieldModelWithFloat(NXfieldModel):
     value: Union[float, PrePostRunString] = Field(
         ..., description="NX data field with float type"
+    )
+    transformation: Optional[TransformationModel] = Field(
+        None, description="A dictionary of the applicable transformation formulas."
     )
 
 
