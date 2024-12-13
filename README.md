@@ -17,6 +17,7 @@ This project enables generation of a NeXus file from  a bluesky run. TODO
 <a name="Installation and usage"></a>
 ## Installation and usage
 
+
 1. Installation and usage in the context of bluesky container
 
 TODO
@@ -24,6 +25,16 @@ TODO
 2. Installation and usage outside the bluesky container
 
 TODO
+
+3. Units
+ 
+Concerning the units:
+
+If we know that the device returns the “units”, we put an empty string under the “units” in the schema so that the "units" provided by the device are used.
+If we know that the device does not return the “units”, we enter the unit value that this particular device works with as the value of the “units” in the schema.
+
+
+
 
 
 <a name="Cheat sheet for maintenance purposes"></a>
