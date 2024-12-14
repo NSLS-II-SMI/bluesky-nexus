@@ -13,6 +13,6 @@ energy:
 grating:
   nxclass: NXgrating
   diffraction_order:
-    nxclass: NX_FLOAT
+    nxclass: NX_INT
     value: $pre-run-cpt:grating
-    dtype: float32
+    dtype: int32
