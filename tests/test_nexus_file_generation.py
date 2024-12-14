@@ -320,6 +320,11 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
+        },
         "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
         "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
         # ---
@@ -327,9 +332,23 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         # ---
         "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono_with_grating_cpt/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
+            "nxclass": "NX_FLOAT"
+        },
+        "entry/instrument/mono_with_grating_cpt/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
+        },
         "entry/instrument/mono_with_grating_cpt/grating": {"NX_class": "NXgrating"},
         "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
             "nxclass": "NX_INT"
+        },
+        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order_timestamps": {
+            "nxclass": "NX_FLOAT"
+        },
+        "entry/instrument/mono_with_grating_cpt/grating/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
         },
         "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
             "nxclass": "NX_CHAR"
@@ -371,7 +390,7 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         },
         "entry/instrument/mono/grating/diffraction_order": {
             "value": 0,
-            "dtype": "float32",
+            "dtype": "int32",
             "shape": (),  # Scalar
         },
         # ---
@@ -499,6 +518,11 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
+        },
         "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
         "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
         # ---
@@ -537,7 +561,7 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
         },
         "entry/instrument/mono/grating/diffraction_order": {
             "value": 0,
-            "dtype": "float32",
+            "dtype": "int32",
             "shape": (),  # Scalar
         },
         # ---
@@ -642,6 +666,11 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
+        },
         "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
         "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
         # ---
@@ -649,9 +678,23 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         # ---
         "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono_with_grating_cpt/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
+            "nxclass": "NX_FLOAT"
+        },
+        "entry/instrument/mono_with_grating_cpt/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
+        },
         "entry/instrument/mono_with_grating_cpt/grating": {"NX_class": "NXgrating"},
         "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
             "nxclass": "NX_INT"
+        },
+        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order_timestamps": {
+            "nxclass": "NX_FLOAT"
+        },
+        "entry/instrument/mono_with_grating_cpt/grating/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
         },
         "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
             "nxclass": "NX_CHAR"
@@ -693,7 +736,7 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         },
         "entry/instrument/mono/grating/diffraction_order": {
             "value": 0,
-            "dtype": "float32",
+            "dtype": "int32",
             "shape": (),  # Scalar
         },
         # ---
@@ -821,6 +864,11 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
+        },
         "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
         "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
         # ---
@@ -859,7 +907,7 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
         },
         "entry/instrument/mono/grating/diffraction_order": {
             "value": 0,
-            "dtype": "float32",
+            "dtype": "int32",
             "shape": (),  # Scalar
         },
         # ---

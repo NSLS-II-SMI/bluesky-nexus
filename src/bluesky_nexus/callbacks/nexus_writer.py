@@ -346,6 +346,29 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                 # Assign the result to the object's value
                 obj["value"] = events_data
 
+                # Collect component timestamps from the events associated with the descriptor (by applying 'descriptor_uid')
+                events_cpt_timestamps: np.array = np.array(
+                    [
+                        evt["timestamps"][cpt_name]
+                        for evt in events
+                        if evt["descriptor"] == descriptor_uid
+                        and cpt_name in evt["timestamps"]
+                    ]
+                )
+                # Assign the result to the object's value
+                obj["events_cpt_timestamps"] = events_cpt_timestamps
+
+                # Collect event timestamps from the events associated with the descriptor (by applying 'descriptor_uid')
+                events_timestamps: np.array = np.array(
+                    [
+                        evt["time"]
+                        for evt in events
+                        if evt["descriptor"] == descriptor_uid
+                    ]
+                )
+                # Assign the result to the object's value
+                obj["events_timestamps"] = events_timestamps
+
                 # Extract from the descriptor["data_keys"] the data describing the 'cpt_name'
                 desc: dict = descriptor["data_keys"][cpt_name]
 
@@ -573,10 +596,11 @@ def add_group_or_field(group, data):
                 if dtype in VALID_NXFIELD_DTYPES:
                     if "str" == dtype or "char" == dtype:
                         dtype = h5py.string_dtype(encoding="utf-8")
+
+                    ### Create dataset for 'value'
                     dataset = group.create_dataset(
                         key, data=value["value"], dtype=dtype
                     )
-
                     dataset.attrs["nxclass"] = value["nxclass"]
 
                     # Add attributes to the dataset
@@ -602,6 +626,31 @@ def add_group_or_field(group, data):
                             if isinstance(extra_value, (dict, list)):
                                 extra_value = str(extra_value)
                             dataset.attrs[extra_key] = extra_value
+
+                    ### Create dataset for 'events_cpt_timestamps'
+                    if "events_cpt_timestamps" in value:
+                        dataset = group.create_dataset(
+                            key + "_timestamps",
+                            data=value["events_cpt_timestamps"],
+                            dtype="float64",
+                        )
+                        dataset.attrs["nxclass"] = "NX_FLOAT"
+                        dataset.attrs["shape"] = [len(value["events_cpt_timestamps"])]
+                        dataset.attrs["description"] = (
+                            f"Timestamps of the component: {key}"
+                        )
+
+                    ### Create dataset for 'events_timestamp'
+                    if "events_timestamps" in value:
+                        dataset = group.create_dataset(
+                            "events_timestamps",
+                            data=value["events_timestamps"],
+                            dtype="float64",
+                        )
+                        dataset.attrs["nxclass"] = "NX_FLOAT"
+                        dataset.attrs["shape"] = [len(value["events_timestamps"])]
+                        dataset.attrs["description"] = "Timestamps of the events"
+
                 else:
                     raise ValueError(
                         f"Invalid dtype: {dtype} detected in one of the schema files while processing the group: {group.name}."
