@@ -249,7 +249,7 @@ class TransformationModel(BaseModel):
         description="Specifies the target field (e.g., 'value') on which the operation is applied.",
     )
     factor: Union[float, int] = Field(
-        ...,
+        None,
         description="The multiplier, divisor, or additive/subtractive factor for the operation.",
     )
 
