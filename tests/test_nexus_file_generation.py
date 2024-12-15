@@ -319,19 +319,31 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/energy": {
+            "nxclass": "NX_FLOAT",
+            "description": "Energy value",
+        },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
             "description": "Timestamps of the events",
         },
-        "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
+        "entry/instrument/mono/grating": {
+            "NX_class": "NXgrating",
+            "description": "Grating",
+        },
+        "entry/instrument/mono/grating/diffraction_order": {
+            "nxclass": "NX_INT",
+            "description": "Diffraction order value",
+        },
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
         # ---
         "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono_with_grating_cpt/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono_with_grating_cpt/energy": {
+            "nxclass": "NX_FLOAT",
+            "description": "Energy value",
+        },
         "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
             "nxclass": "NX_FLOAT"
         },
@@ -351,7 +363,8 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
             "description": "Timestamps of the events",
         },
         "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
-            "nxclass": "NX_CHAR"
+            "nxclass": "NX_CHAR",
+            "description": "Substrate material type",
         },
         # ---
         # --- entry/run_info ---
@@ -517,14 +530,23 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/energy": {
+            "nxclass": "NX_FLOAT",
+            "description": "Energy value",
+        },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
             "description": "Timestamps of the events",
         },
-        "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
+        "entry/instrument/mono/grating": {
+            "NX_class": "NXgrating",
+            "description": "Grating",
+        },
+        "entry/instrument/mono/grating/diffraction_order": {
+            "nxclass": "NX_INT",
+            "description": "Diffraction order value",
+        },
         # ---
         # --- entry/run_info ---
         # ---
@@ -665,14 +687,23 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/energy": {
+            "nxclass": "NX_FLOAT",
+            "description": "Energy value",
+        },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
             "description": "Timestamps of the events",
         },
-        "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
+        "entry/instrument/mono/grating": {
+            "NX_class": "NXgrating",
+            "description": "Grating",
+        },
+        "entry/instrument/mono/grating/diffraction_order": {
+            "nxclass": "NX_INT",
+            "description": "Diffraction order value",
+        },
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
         # ---
@@ -697,7 +728,8 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
             "description": "Timestamps of the events",
         },
         "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
-            "nxclass": "NX_CHAR"
+            "nxclass": "NX_CHAR",
+            "description": "Substrate material type",
         },
         # ---
         # --- entry/run_info ---
@@ -863,14 +895,23 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono/energy": {
+            "nxclass": "NX_FLOAT",
+            "description": "Energy value",
+        },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
             "description": "Timestamps of the events",
         },
-        "entry/instrument/mono/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono/grating/diffraction_order": {"nxclass": "NX_INT"},
+        "entry/instrument/mono/grating": {
+            "NX_class": "NXgrating",
+            "description": "Grating",
+        },
+        "entry/instrument/mono/grating/diffraction_order": {
+            "nxclass": "NX_INT",
+            "description": "Diffraction order value",
+        },
         # ---
         # --- entry/run_info ---
         # ---
