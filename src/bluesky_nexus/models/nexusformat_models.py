@@ -158,6 +158,82 @@ class NXobjectModel(BaseModel):
         arbitrary_types_allowed = True
         extra = "forbid"
 
+    def model_dump(self, exclude_none: bool = True) -> Dict:
+        """
+        Override `model_dump` to include 'description' in nested fields based on `self.model_fields`.
+
+        This method extends the base `model_dump` functionality by recursively injecting
+        field descriptions into the output dictionary (`base_dump`). It uses the field metadata
+        defined in `self.model_fields` (from Pydantic's model structure) to include descriptions
+        at every level of the nested dictionary structure.
+
+        Steps:
+        1. The base dump is generated using the `model_dump` method from the parent class.
+        2. A helper function, `inject_descriptions`, is used to traverse the dictionary recursively
+        and add descriptions for fields, where applicable.
+        3. The function checks each key in the `dump` dictionary against `fields` to see if it has
+        a corresponding description in `self.model_fields`. If a description exists, it is added
+        to the field's dictionary as `"description"`.
+        4. If a field is nested (e.g., its value is a dictionary that represents another model),
+        the function looks for nested fields in the `annotation` attribute of the field and recurses
+        into that structure.
+
+        Parameters:
+        - exclude_none: A flag passed to the base `model_dump` method to exclude fields with `None` values.
+
+        Returns:
+        - A dictionary representation of the model (`base_dump`) with descriptions injected into
+        all applicable fields, including nested ones.
+
+        Helper Function:
+        - `inject_descriptions(dump: dict, fields: dict)`:
+            - This function traverses the `dump` dictionary recursively and injects descriptions
+            into each field if a corresponding description exists in the `fields` dictionary.
+            - It also handles nested fields by checking if the current field has a Pydantic model
+            type (with `__fields__` attribute) and recursing into its structure.
+
+        Special Cases:
+        - Keys `"attrs"` and `"default"` are explicitly skipped as they do not require descriptions.
+        - Fields without a description or those not present in `self.model_fields` are ignored.
+        """
+
+        # Generate the initial dump using the base model's `model_dump` method.
+        base_dump = super().model_dump(exclude_none=exclude_none)
+
+        def inject_descriptions(dump: dict, fields: dict):
+            """
+            Recursively traverse the dump dictionary and inject descriptions from the fields dictionary.
+            """
+            for key, value in dump.items():
+                if key in ["attrs", "default"]:
+                    continue
+
+                # Check if the key exists in fields and has a description
+                if key in fields:
+                    field = fields[key]
+                    description = field.description
+
+                    # If a description exists, inject it into the current key
+                    if description is not None:
+                        if isinstance(value, dict):  # For dictionary-like values
+                            value["description"] = description
+
+                # Recurse if the value is a dictionary and contains nested fields
+                if isinstance(value, dict):
+                    # Try to extract nested fields from the current field's annotation
+                    nested_fields = (
+                        getattr(fields[key].annotation, "__fields__", None)
+                        if key in fields
+                        else None
+                    )
+                    if nested_fields:
+                        inject_descriptions(value, nested_fields)
+
+        # Inject descriptions into the base dump using the model's fields
+        inject_descriptions(base_dump, self.model_fields)
+
+        return base_dump
+
 
 class TransformationModel(BaseModel):
     operation: Literal[
