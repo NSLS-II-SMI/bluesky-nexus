@@ -32,10 +32,10 @@ __all__ = ["NXmonochromatorModel", "NXgeneralModel", "MODEL_NAME_TO_CLASS_MAPPIN
 # This is the model which describes the structure of the data from a grating component of a mono
 class NXgratingModel(NXgroupModel):
     diffraction_order: NXfieldModelWithInt = Field(
-        None, description="Diffraction order"
+        None, description="Diffraction order value"
     )
     substrate_material: Optional[NXfieldModelWithString] = Field(
-        None, description="Substrate material"
+        None, description="Substrate material type"
     )
 
 
@@ -44,8 +44,8 @@ class NXmonochromatorModel(NXgroupModel):
     default: NXattrModelWithString = Field(
         NXattrModel(value="energy"), description="Default"
     )
-    energy: NXfieldModelWithFloat = Field(None, description="energy")
-    grating: NXgratingModel = Field(None, description="grating")
+    energy: NXfieldModelWithFloat = Field(None, description="Energy value")
+    grating: NXgratingModel = Field(None, description="Grating")
 
 
 # This is a general model for all classes but not Monitor, Monochromator, Detector
