@@ -53,6 +53,7 @@ from bluesky_nexus.bluesky_nexus_const import (
     PRE_RUN_MD_LABEL,
 )
 from bluesky_nexus.bluesky_nexus_device_model import assign_pydantic_model_instance
+from bluesky_nexus.common.decorator_utils import measure_time
 
 
 class SupplementalMetadata(SupplementalData):
@@ -81,6 +82,12 @@ class SupplementalMetadata(SupplementalData):
         super().__init__(*args, **kwargs)
 
     def __call__(self, plan):
+        """
+        Delegates the call to the `inject_metadata_to_plan` function.
+        """
+        return (yield from self.inject_metadata_to_plan(plan))
+
+    def inject_metadata_to_plan(self, plan):
         if not hasattr(self, "devices_dictionary"):
             raise AttributeError(
                 "The 'devices_dictionary' attribute must be set before calling the instance."
@@ -135,6 +142,7 @@ class SupplementalMetadata(SupplementalData):
 
 
 # Create device metadata
+@measure_time
 def create_device_md(devices_dictionary: dict) -> dict:
     """
     Generate a device metadata dictionary for a collection of device instances.
@@ -187,6 +195,7 @@ def create_device_md(devices_dictionary: dict) -> dict:
 
 
 # Create nexus metadata
+@measure_time
 def create_nexus_md(devices_dictionary: dict) -> dict:
     """
     Create a dictionary of metadata with resolved placeholders. If a placeholder cannot
@@ -444,6 +453,7 @@ class PlanDeviceChecker:
         list(plan_mutator(plan, collect_devices))
         return used_devices
 
+    @measure_time
     def validate_plan_devices(self, plan) -> dict:
         """
         Check if all devices in the dictionary are used in the plan.
@@ -466,6 +476,7 @@ class PlanDeviceChecker:
         }
 
 
+@measure_time
 def cache_plan(plan):
     """
     Cache all messages from the given plan.
