@@ -62,6 +62,7 @@ from bluesky_nexus.bluesky_nexus_const import (
     VALID_NXFIELD_DTYPES,
 )
 from bluesky_nexus.bluesky_nexus_def import _NX_FILE_DIR_PATH
+from bluesky_nexus.common.decorator_utils import measure_time
 
 
 class NexusWriter(CollectThenCompute):
@@ -127,6 +128,10 @@ class NexusWriter(CollectThenCompute):
         return file_path
 
     def compute(self):
+        self.generate_nexus_file()
+
+    @measure_time
+    def generate_nexus_file(self):
         """
         Processes the NeXus metadata and writes a NeXus file based on the start, stop,
         event, and descriptor documents.
