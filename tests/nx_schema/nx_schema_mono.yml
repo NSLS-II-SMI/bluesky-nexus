@@ -7,9 +7,8 @@ energy:
   attrs:
     units: "keV"
   transformation:
-    operation: multiply # Operation to be applied
-    target: value # Specifies that the operation applies to value
-    factor: 1000 # Multiplier for the operation
+    expression: 3 * x**2 + np.exp(np.log(5)) + 1 # Symbolic expression for the transformation
+    target: value # Specifies the name of array to which expression is applied
 grating:
   nxclass: NXgrating
   diffraction_order:
