@@ -63,6 +63,9 @@ from bluesky_nexus.bluesky_nexus_const import (
 )
 from bluesky_nexus.bluesky_nexus_def import _NX_FILE_DIR_PATH
 from bluesky_nexus.common.decorator_utils import measure_time
+from bluesky_nexus.transformation.symbolic_transformation import (
+    apply_symbolic_transformation,
+)
 
 
 class NexusWriter(CollectThenCompute):
@@ -348,6 +351,16 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                         and cpt_name in evt["data"]
                     ]
                 )
+
+                # Optional transformation
+                if "transformation" in obj:
+                    # Execute transformation on events_data
+                    if "value" == obj["transformation"]["target"]:
+                        expression: str = obj["transformation"]["expression"]
+                        events_data = apply_symbolic_transformation(
+                            events_data, expression
+                        )
+
                 # Assign the result to the object's value
                 obj["value"] = events_data
 
