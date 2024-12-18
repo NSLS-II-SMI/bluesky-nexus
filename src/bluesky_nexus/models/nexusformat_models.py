@@ -6,11 +6,12 @@ for representing hierarchical datasets. These models provide structure, validati
 fields, groups, links, and attributes.
 """
 
-from typing import Any, Dict, Optional, Tuple, Union, Literal
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+# from pydantic.core import PydanticSchema  # To be activated for pydantic V3
 
 __all__ = [
     "Field",
@@ -30,6 +31,7 @@ __all__ = [
     "NXattrModelWithString",
     "NXattrModelWithScalar",
     "NXattrModelWithArray",
+    "NXfieldModelWithPrePostRunString",
 ]
 
 # scalar type
@@ -43,9 +45,18 @@ NPArray = npt.NDArray
 
 
 class PrePostRunString(str):
+    # To be removed in pydantic V3
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
+
+    # To be activated for pydantic V3
+    # @classmethod
+    # def __get_pydantic_core_schema__(cls, schema: PydanticSchema):
+    #     # Modify schema to include custom validation logic
+    #     schema = schema.clone()
+    #     schema.validate = cls.validate
+    #     return schema
 
     @classmethod
     def validate(cls, value: Any, *args, **kwargs) -> "PrePostRunString":
@@ -72,9 +83,7 @@ class NXattrModel(BaseModel):
         None, description="Shape of the " "attribute."
     )
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "forbid"
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 
 class NXFileModel(BaseModel):
@@ -89,9 +98,7 @@ class NXFileModel(BaseModel):
         description="Keyword arguments for opening the " "h5py File object.",
     )
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "forbid"
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 
 class NXobjectModel(BaseModel):
@@ -154,9 +161,7 @@ class NXobjectModel(BaseModel):
 
         return recursively_filter_inactive(values)
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "forbid"
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     def model_dump(self, exclude_none: bool = True) -> Dict:
         """
@@ -222,7 +227,7 @@ class NXobjectModel(BaseModel):
                 if isinstance(value, dict):
                     # Try to extract nested fields from the current field's annotation
                     nested_fields = (
-                        getattr(fields[key].annotation, "__fields__", None)
+                        getattr(fields[key].annotation, "model_fields", None)
                         if key in fields
                         else None
                     )
@@ -233,25 +238,6 @@ class NXobjectModel(BaseModel):
         inject_descriptions(base_dump, self.model_fields)
 
         return base_dump
-
-
-class TransformationModel(BaseModel):
-    operation: Literal[
-        "multiply",
-        "divide",
-        "add",
-        "subtract",
-    ] = Field(
-        ..., description="The mathematical operation to apply to the target field."
-    )
-    target: str = Field(
-        ...,
-        description="Specifies the target field (e.g., 'value') on which the operation is applied.",
-    )
-    factor: Union[float, int] = Field(
-        None,
-        description="The multiplier, divisor, or additive/subtractive factor for the operation.",
-    )
 
 
 class NXfieldModel(NXobjectModel):
@@ -269,9 +255,7 @@ class NXfieldModel(NXobjectModel):
         None, description="Data type of the field."
     )
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "forbid"
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 
 class NXgroupModel(NXobjectModel):
@@ -280,9 +264,7 @@ class NXgroupModel(NXobjectModel):
         "NXobject", description="Base class of the object."
     )
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "allow"
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
 
 class NXlinkModel(NXobjectModel):
@@ -303,8 +285,7 @@ class NXlinkModel(NXobjectModel):
     )
     soft: Optional[bool] = Field(None, description="If True, the link is a soft link.")
 
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
     @property
     def nxclass(self) -> str:
@@ -353,8 +334,7 @@ class NXdataModel(NXgroupModel):
     def nxclass(self) -> str:
         return "NXdata"
 
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
 
 class NXentryModel(NXgroupModel):
@@ -379,9 +359,7 @@ class NXentryModel(NXgroupModel):
     def nxclass(self) -> str:
         return "NXentry"
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "forbid"
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 
 class NXattrModelWithString(NXattrModel):
@@ -412,21 +390,37 @@ class NXfieldModelWithInt(NXfieldModel):
     value: Union[int, PrePostRunString] = Field(
         ..., description="NX data field with int type"
     )
-    transformation: Optional[TransformationModel] = Field(
-        None, description="A dictionary of the applicable transformation formulas."
-    )
 
 
 class NXfieldModelWithFloat(NXfieldModel):
     value: Union[float, PrePostRunString] = Field(
         ..., description="NX data field with float type"
     )
-    transformation: Optional[TransformationModel] = Field(
-        None, description="A dictionary of the applicable transformation formulas."
-    )
 
 
 class NXfieldModelWithArray(NXfieldModel):
     value: Union[ArrayLike, PrePostRunString] = Field(
         ..., description="NX data field with array-like type"
+    )
+
+
+class TransformationModel(BaseModel):
+    expression: str = Field(
+        ...,
+        description="Symbolic expression that defines the transformation, using 'x' as the array variable. "
+        "Examples: '3 * x**2 + 5', 'np.sqrt(x) + 2', np.log(x) + 3, np.exp(x) + 3",
+    )
+    target: str = Field(
+        ...,
+        description="Specifies the target array (e.g., 'value') on which the transformation is applied.",
+    )
+
+
+class NXfieldModelWithPrePostRunString(NXfieldModel):
+    value: PrePostRunString = Field(
+        ..., description="NX data field with pre post run string"
+    )
+    transformation: Optional[TransformationModel] = Field(
+        None,
+        description="Optional transformation configuration that applies a symbolic operation to the target data array.",
     )
