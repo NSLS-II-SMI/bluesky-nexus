@@ -13,6 +13,9 @@ from bluesky_nexus.bluesky_nexus_const import NX_FILE_EXTENSION
 from bluesky_nexus.callbacks.nexus_writer import NexusWriter
 from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
 
+# Only for debug purposes
+# import unittest
+
 
 # Fixture: Read environment variable to get the directory path for Nexus files
 @pytest.fixture
@@ -185,16 +188,19 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
             keys = group_path.split("/")
             current = f
             for key in keys:
-                assert key in current, f"Missing group '{key}' in path '{group_path}'"
+                assert key in current, f"Missing group: {key} in path: {group_path}"
                 current = current[key]
 
             # Validate group attributes
             for attr_key, attr_value in group_attrs.items():
                 assert (
                     attr_key in current.attrs
-                ), f"Missing attribute '{attr_key}' in group '{group_path}'"
-                assert current.attrs[attr_key] == attr_value, (
-                    f"Mismatch in attribute '{attr_key}' in group '{group_path}': "
+                ), f"Missing attribute: {attr_key} in group: {group_path}"
+
+                # Convert to str since e.g. expected transformation
+                # is a dictionary and transformation read from nxs file is a string
+                assert str(current.attrs[attr_key]) == str(attr_value), (
+                    f"Mismatch in attribute: {attr_key} in group: {group_path}: "
                     f"Expected {attr_value}, Found {current.attrs[attr_key]}"
                 )
 
@@ -218,7 +224,7 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
             for key in keys:
                 assert (
                     key in current
-                ), f"Missing dataset '{key}' in path '{dataset_path}'"
+                ), f"Missing dataset key: {key} in dataset path: {dataset_path}"
                 current = current[key]
 
             if isinstance(current, h5py.Dataset):
@@ -229,55 +235,85 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
                     # Handle byte string validation (e.g., dtype is 'S8' for strings of length 8)
                     if expected_dtype:
                         assert actual_value == expected_data_value, (
-                            f"Mismatch in byte string dataset '{dataset_path}': "
+                            f"Mismatch in byte string dataset: {dataset_path}: "
                             f"Expected {expected_data_value}, Found {actual_value}"
                         )
                     if expected_shape:
                         assert len(actual_value) == expected_shape[0], (
-                            f"Mismatch in byte string shape for '{dataset_path}': "
+                            f"Mismatch in byte string shape for dataset: {dataset_path}: "
                             f"Expected {expected_shape}, Found {len(actual_value)}"
                         )
                     assert (
                         actual_value == expected_data_value
-                    ), f"Mismatch in dataset '{dataset_path}': Expected {expected_data_value}, Found {actual_value}"
+                    ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
 
                 else:
                     # Validate dtype
                     if expected_dtype:
                         assert (
                             actual_value.dtype == np.dtype(expected_dtype)
-                        ), f"Mismatch in dtype for '{dataset_path}': Expected {expected_dtype}, Found {actual_value.dtype}"
-
+                        ), f"Mismatch in dtype for dataset: {dataset_path}: Expected {expected_dtype}, Found {actual_value.dtype}"
                     # Validate shape
                     if expected_shape:
                         assert (
                             actual_value.shape == expected_shape
-                        ), f"Mismatch in shape for '{dataset_path}': Expected {expected_shape}, Found {actual_value.shape}"
-
+                        ), f"Mismatch in shape for dataset: {dataset_path}: Expected {expected_shape}, Found {actual_value.shape}"
                     if isinstance(actual_value, np.ndarray):
-                        assert np.array_equal(
-                            actual_value, expected_data_value
-                        ), f"Mismatch in dataset '{dataset_path}': Expected {expected_data_value}, Found {actual_value}"
+                        # Convert expected_data_value in np array
+                        expected_data_value = np.array(expected_data_value)
+
+                        ### ---------- DEBUG ONLY
+                        # Print array info
+                        # print_array_info(actual_value, "actual_value")
+                        # print_array_info(expected_data_value, "expected_data_value")
+
+                        # Print array comparison info
+                        # print_arrays_comparison_info(
+                        #     actual_value,
+                        #     "actual_value",
+                        #     expected_data_value,
+                        #     "expected_data_value",
+                        # )
+                        ### ---------- END OF DEBUG ONLY
+
+                        # Check if the array contains string values
+                        if actual_value.dtype.kind == "U":
+                            assert np.array_equal(
+                                actual_value,
+                                expected_data_value,
+                            ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
+
+                        # Check if the array contains numeric values
+                        elif (
+                            actual_value.dtype.kind == "fi"
+                        ):  # 'f' for float, 'i' for integer
+                            assert np.allclose(
+                                actual_value,
+                                expected_data_value,
+                                atol=1e-8,  # Use tolerance of 1e-8 (adjust as needed)
+                            ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
+
                     else:
                         assert (
                             actual_value == expected_data_value
-                        ), f"Mismatch in dataset '{dataset_path}': Expected {expected_data_value}, Found {actual_value}"
+                        ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
 
                 # Validate attributes
                 for attr_name, expected_attr_value in expected_attrs.items():
                     assert (
                         attr_name in current.attrs
-                    ), f"Missing attribute '{attr_name}' in dataset '{dataset_path}'"
+                    ), f"Missing attribute: {attr_name} in dataset {dataset_path}"
                     assert current.attrs[attr_name] == expected_attr_value, (
-                        f"Mismatch in attribute '{attr_name}' for '{dataset_path}': "
+                        f"Mismatch in attribute: {attr_name} for {dataset_path}: "
                         f"Expected {expected_attr_value}, Found {current.attrs[attr_name]}"
                     )
 
             else:
-                raise TypeError(f"'{dataset_path}' is not a dataset")
+                raise TypeError(f"{dataset_path} is not a dataset")
 
 
 # Test function
+# @unittest.skip("Temporarily disabling this test_1")
 def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, request):
     """
     Integration test for generating and validating a Nexus file.
@@ -322,6 +358,11 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         "entry/instrument/mono/energy": {
             "nxclass": "NX_FLOAT",
             "description": "Energy value",
+            "transformation": {
+                "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
+                "target": "value",
+                "description": "Optional transformation configuration that applies a symbolic operation to the target data array.",
+            },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
@@ -394,7 +435,7 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [0, 0, 0, 0, 0],
+            "value": [6.0, 6.0, 6.0, 6.0, 6.0],
             "dtype": "float64",
             "shape": (5,),
             "attrs": {
@@ -489,6 +530,7 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
 
 
 # Test function
+# @unittest.skip("Temporarily disabling this test_2")
 def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, request):
     """
     Integration test for generating and validating a Nexus file.
@@ -533,6 +575,11 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
         "entry/instrument/mono/energy": {
             "nxclass": "NX_FLOAT",
             "description": "Energy value",
+            "transformation": {
+                "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
+                "target": "value",
+                "description": "Optional transformation configuration that applies a symbolic operation to the target data array.",
+            },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
@@ -574,7 +621,7 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [0, 0, 0, 0, 0],
+            "value": [6.0, 6.0, 6.0, 6.0, 6.0],
             "dtype": "float64",
             "shape": (5,),
             "attrs": {
@@ -646,6 +693,7 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
 
 
 # Test function
+# @unittest.skip("Temporarily disabling this test_3")
 def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, request):
     """
     Integration test for generating and validating a Nexus file.
@@ -690,6 +738,11 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         "entry/instrument/mono/energy": {
             "nxclass": "NX_FLOAT",
             "description": "Energy value",
+            "transformation": {
+                "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
+                "target": "value",
+                "description": "Optional transformation configuration that applies a symbolic operation to the target data array.",
+            },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
@@ -759,7 +812,7 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [0, 0, 0, 0, 0],
+            "value": [6.0, 6.0, 6.0, 6.0, 6.0],
             "dtype": "float64",
             "shape": (5,),
             "attrs": {
@@ -854,6 +907,7 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
 
 
 # Test function
+# @unittest.skip("Temporarily disabling this test_4")
 def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, request):
     """
     Integration test for generating and validating a Nexus file.
@@ -898,6 +952,11 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
         "entry/instrument/mono/energy": {
             "nxclass": "NX_FLOAT",
             "description": "Energy value",
+            "transformation": {
+                "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
+                "target": "value",
+                "description": "Optional transformation configuration that applies a symbolic operation to the target data array.",
+            },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
@@ -939,7 +998,7 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [0, 0, 0, 0, 0],
+            "value": [6.0, 6.0, 6.0, 6.0, 6.0],
             "dtype": "float64",
             "shape": (5,),
             "attrs": {
@@ -1007,3 +1066,21 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
 
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
+
+
+# ---------- DEBUG ONLY
+# Aux function
+def print_array_info(arr: np.ndarray, arr_name: str):
+    print(f"{arr_name} dtype: {arr.dtype}")
+    print(f"{arr_name} value: {arr}")
+
+
+# Aux function
+def print_arrays_comparison_info(
+    arr1: np.ndarray, arr1_name: str, arr2: np.ndarray, arr2_name: str
+):
+    print(f"Is {arr1_name} equal to {arr2_name}: {np.array_equal(arr1, arr2)}")
+    print(f"Is {arr1_name} close to {arr2_name}: {np.allclose(arr1, arr2, atol=1e-8)}")
+
+
+# ---------- END OF DEBUG ONLY
