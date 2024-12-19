@@ -639,6 +639,8 @@ def add_group_or_field(group, data):
                             "attrs",
                             "nxclass",
                             "shape",
+                            "events_cpt_timestamps",
+                            "events_timestamps",
                         }:
                             # Convert non-compatible types to strings
                             if isinstance(extra_value, (dict, list)):
