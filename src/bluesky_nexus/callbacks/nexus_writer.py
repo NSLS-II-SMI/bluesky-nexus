@@ -662,14 +662,20 @@ def add_group_or_field(group, data):
 
                     ### Create dataset for 'events_timestamp'
                     if "events_timestamps" in value:
-                        dataset = group.create_dataset(
-                            "events_timestamps",
-                            data=value["events_timestamps"],
-                            dtype="float64",
-                        )
-                        dataset.attrs["nxclass"] = "NX_FLOAT"
-                        dataset.attrs["shape"] = [len(value["events_timestamps"])]
-                        dataset.attrs["description"] = "Timestamps of the events"
+                        # Check if the dataset already exists
+                        if "events_timestamps" in group:
+                            pass
+                        else:
+                            # Create the dataset if it does not exist
+                            dataset = group.create_dataset(
+                                "events_timestamps",
+                                data=value["events_timestamps"],
+                                dtype="float64",
+                            )
+                            # Add attributes to the dataset
+                            dataset.attrs["nxclass"] = "NX_FLOAT"
+                            dataset.attrs["shape"] = [len(value["events_timestamps"])]
+                            dataset.attrs["description"] = "Timestamps of the events"
 
                 else:
                     raise ValueError(
