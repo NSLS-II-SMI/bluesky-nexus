@@ -422,5 +422,5 @@ class NXfieldModelWithPrePostRunString(NXfieldModel):
     )
     transformation: Optional[TransformationModel] = Field(
         None,
-        description="Optional transformation configuration that applies a symbolic operation to the target data array.",
+        description="Transformation configuration that applies a symbolic operation to the target data array.",
     )

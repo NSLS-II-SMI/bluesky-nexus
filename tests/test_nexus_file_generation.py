@@ -361,7 +361,7 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
                 "target": "value",
-                "description": "Optional transformation configuration that applies a symbolic operation to the target data array.",
+                "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
@@ -578,7 +578,7 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
                 "target": "value",
-                "description": "Optional transformation configuration that applies a symbolic operation to the target data array.",
+                "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
@@ -741,7 +741,7 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
                 "target": "value",
-                "description": "Optional transformation configuration that applies a symbolic operation to the target data array.",
+                "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
@@ -955,7 +955,7 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
                 "target": "value",
-                "description": "Optional transformation configuration that applies a symbolic operation to the target data array.",
+                "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
