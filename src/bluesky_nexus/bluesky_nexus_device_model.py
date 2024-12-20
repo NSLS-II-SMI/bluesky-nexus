@@ -24,12 +24,11 @@ from bluesky_nexus.bluesky_nexus_const import (
     NX_SCHEMA_EXTENSIONS,
     NX_SCHEMA_MODEL_NAME_KEY,
 )
-from bluesky_nexus.bluesky_nexus_def import _NX_SCHEMA_DIR_PATH
 from bluesky_nexus.common.yaml_utils import read_yaml
 from bluesky_nexus.models.nexusformat_models_hzb import *
 
 
-def assign_pydantic_model_instance(devices_dictionary: dict):
+def assign_pydantic_model_instance(nx_schema_dir_path: str, devices_dictionary: dict):
     """
     For each device in devices_dictionary assign a pydantic model instance
     """
@@ -44,12 +43,18 @@ def assign_pydantic_model_instance(devices_dictionary: dict):
                 f"Unknown schema name for the device: {dev_instance.name}. Check its class definition."
             )
 
+        # Check if 'nx_schema_dir_path' is pointing to existing directory
+        if not os.path.isdir(nx_schema_dir_path):
+            raise ValueError(
+                f"Nx schema dir path {nx_schema_dir_path} is not pointing to a directory."
+            )
+
         # Define schema file path
         if any(schema_name.endswith(ext) for ext in NX_SCHEMA_EXTENSIONS):
-            file_path: str = os.path.join(_NX_SCHEMA_DIR_PATH, schema_name)
+            file_path: str = os.path.join(nx_schema_dir_path, schema_name)
         else:
             file_path: str = os.path.join(
-                _NX_SCHEMA_DIR_PATH, schema_name + NX_SCHEMA_EXTENSIONS[0]
+                nx_schema_dir_path, schema_name + NX_SCHEMA_EXTENSIONS[0]
             )
 
         # Read content of the schema file
