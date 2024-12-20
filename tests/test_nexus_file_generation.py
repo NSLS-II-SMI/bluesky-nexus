@@ -12,12 +12,15 @@ from preprocessors.baseline import SupplementalDataBaseline
 from bluesky_nexus.bluesky_nexus_const import NX_FILE_EXTENSION
 from bluesky_nexus.callbacks.nexus_writer import NexusWriter
 from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
+from bluesky_nexus.bluesky_nexus_paths import (
+    get_nx_file_dir_path,
+    get_nx_schema_dir_path,
+)
 
-# Only for debug purposes
-# import unittest
+# import unittest # Only for debug purposes
 
 
-# Fixture: Read environment variable to get the directory path for Nexus files
+# Fixture: Get the directory path for storing nexus files
 @pytest.fixture
 def nx_file_dir_path():
     """
@@ -25,11 +28,27 @@ def nx_file_dir_path():
     Ensures that the variable is set and returns a clean path.
     """
 
-    dir_path: str = os.environ.get("_NX_FILE_DIR_PATH")
-    assert dir_path is not None, (
-        "The environment variable '_NX_FILE_DIR_PATH' is not set. "
-        "Please ensure that it is configured correctly."
-    )
+    dir_path: str = get_nx_file_dir_path()
+    assert (
+        dir_path is not None
+    ), "Nx file dir path is None. Please ensure that it is configured correctly."
+    print(f"Info msg: Nx file dir path: {dir_path}")
+    return dir_path.rstrip("/")  # Optional: Clean up trailing slashes
+
+
+# Fixture: Get the directory path where pydantic schema files are stored
+@pytest.fixture
+def nx_schema_dir_path():
+    """
+    Fixture to retrieve the directory path for Nexus files from an environment variable.
+    Ensures that the variable is set and returns a clean path.
+    """
+
+    dir_path: str = get_nx_schema_dir_path()
+    assert (
+        dir_path is not None
+    ), "Nx schema dir path is None. Please ensure that it is configured correctly."
+    print(f"Info msg: Nx schema dir path: {dir_path}")
     return dir_path.rstrip("/")  # Optional: Clean up trailing slashes
 
 
@@ -97,12 +116,14 @@ def run_engine():
 
 # Fixture: Subscribe NexusWriter callback to the RunEngine
 @pytest.fixture
-def RE(run_engine: RunEngine):
+def RE(run_engine: RunEngine, nx_file_dir_path: str):
     """
     Subscribes the NexusWriter callback to a given RunEngine.
     Returns the configured RunEngine.
     """
-    nexus_writer = NexusWriter()
+
+    nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
+
     run_engine.subscribe(nexus_writer)
     return run_engine
 
@@ -127,7 +148,12 @@ def execute_plan(RE: RunEngine, md: dict, detectors: list[object], motor: object
 
 
 # Helper: Add preprocessors to the RunEngine for baseline and metadata
-def add_preprocessors(RE: RunEngine, devices_dictionary: dict, baseline: list[object]):
+def add_preprocessors(
+    RE: RunEngine,
+    devices_dictionary: dict,
+    baseline: list[object],
+    nx_schema_dir_path: str,
+):
     """
     Adds preprocessors to the RunEngine to handle:
     - Baseline devices.
@@ -138,7 +164,7 @@ def add_preprocessors(RE: RunEngine, devices_dictionary: dict, baseline: list[ob
     RE.preprocessors.append(sdd)
 
     # Add Nexus metadata
-    metadata = SupplementalMetadata()
+    metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
     metadata.devices_dictionary = devices_dictionary
     metadata.baseline = baseline
     metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
@@ -177,6 +203,7 @@ def get_nx_file_path(nx_file_dir_path: str, nx_file_name: str) -> str:
 def clean_up(file_path: str):
     if os.path.exists(file_path):
         os.remove(file_path)
+    print(f"Proc info: Clean up of file: {file_path} finished.")
 
 
 # Helper: Validate Nexus file structure and contents
@@ -314,7 +341,15 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
 
 # Test function
 # @unittest.skip("Temporarily disabling this test_1")
-def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, request):
+def test_1(
+    RE,
+    devices_dictionary,
+    baseline_1,
+    my_motor,
+    nx_file_dir_path,
+    nx_schema_dir_path,
+    request,
+):
     """
     Integration test for generating and validating a Nexus file.
     - Configures metadata and baseline devices.
@@ -322,7 +357,7 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
     """
 
     # Add preprocessors to the RunEngine
-    add_preprocessors(RE, devices_dictionary, baseline_1)
+    add_preprocessors(RE, devices_dictionary, baseline_1, nx_schema_dir_path)
 
     # Generate metadata
     nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
@@ -526,12 +561,20 @@ def test_1(RE, devices_dictionary, baseline_1, my_motor, nx_file_dir_path, reque
     validate_nexus_file(nx_file_path, expected_structure, expected_data)
 
     # Remove the nexus file after successful validation
-    # clean_up(nx_file_path)
+    clean_up(nx_file_path)
 
 
 # Test function
 # @unittest.skip("Temporarily disabling this test_2")
-def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, request):
+def test_2(
+    RE,
+    devices_dictionary,
+    baseline_2,
+    my_motor,
+    nx_file_dir_path,
+    nx_schema_dir_path,
+    request,
+):
     """
     Integration test for generating and validating a Nexus file.
     - Configures metadata and baseline devices.
@@ -539,7 +582,7 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
     """
 
     # Add preprocessors to the RunEngine
-    add_preprocessors(RE, devices_dictionary, baseline_2)
+    add_preprocessors(RE, devices_dictionary, baseline_2, nx_schema_dir_path)
 
     # Generate metadata
     nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
@@ -694,7 +737,15 @@ def test_2(RE, devices_dictionary, baseline_2, my_motor, nx_file_dir_path, reque
 
 # Test function
 # @unittest.skip("Temporarily disabling this test_3")
-def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, request):
+def test_3(
+    RE,
+    devices_dictionary,
+    baseline_3,
+    my_motor,
+    nx_file_dir_path,
+    nx_schema_dir_path,
+    request,
+):
     """
     Integration test for generating and validating a Nexus file.
     - Configures metadata and baseline devices.
@@ -702,7 +753,7 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
     """
 
     # Add preprocessors to the RunEngine
-    add_preprocessors(RE, devices_dictionary, baseline_3)
+    add_preprocessors(RE, devices_dictionary, baseline_3, nx_schema_dir_path)
 
     # Generate metadata
     nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
@@ -908,7 +959,15 @@ def test_3(RE, devices_dictionary, baseline_3, my_motor, nx_file_dir_path, reque
 
 # Test function
 # @unittest.skip("Temporarily disabling this test_4")
-def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, request):
+def test_4(
+    RE,
+    devices_dictionary,
+    baseline_4,
+    my_motor,
+    nx_file_dir_path,
+    nx_schema_dir_path,
+    request,
+):
     """
     Integration test for generating and validating a Nexus file.
     - Configures metadata and baseline devices.
@@ -916,7 +975,7 @@ def test_4(RE, devices_dictionary, baseline_4, my_motor, nx_file_dir_path, reque
     """
 
     # Add preprocessors to the RunEngine
-    add_preprocessors(RE, devices_dictionary, baseline_4)
+    add_preprocessors(RE, devices_dictionary, baseline_4, nx_schema_dir_path)
 
     # Generate metadata
     nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
