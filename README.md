@@ -46,20 +46,41 @@ Add to the "baseline.py" (at the top of the file)
 ```
 from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
 from bluesky_nexus.callbacks.nexus_writer import NexusWriter
+from bluesky_nexus.bluesky_nexus_paths import (
+    get_nx_file_dir_path,
+    get_nx_schema_dir_path,
+)  # This import is only applicable if our containerized applications are used
+
 ```
 
 Add to the "baseline.py" (at the bottom of the file)
 
 ```
+# ----------------- NEXUS -----------------
 # Let the preprocessor append nexus metadata to the start document
-metadata = SupplementalMetadata()
-metadata.devices_dictionary = devices_dictionary
+
+nx_schema_dir_path: str = get_nx_schema_dir_path()
+metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
+metadata.devices_dictionary: dict = devices_dictionary
 metadata.baseline = baseline
 metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
 RE.preprocessors.append(metadata)
 
+# Let the preprocessor append devices metadata to the start document
+metadata = (
+    SupplementalMetadata()
+)  # No need to pass "nx_schema_dir_path" in case of DEVICE_MD
+metadata.devices_dictionary: dict = devices_dictionary
+metadata.baseline = baseline
+metadata.md_type = SupplementalMetadata.MetadataType.DEVICE_MD
+RE.preprocessors.append(metadata)
+
 # Subscribe the callback: 'NexusWriter'
-RE.subscribe(NexusWriter())
+nx_file_dir_path: str = get_nx_file_dir_path()
+nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
+RE.subscribe(nexus_writer)
+# ----------------- End of NEXUS -----------------
+
 
 ```
 
