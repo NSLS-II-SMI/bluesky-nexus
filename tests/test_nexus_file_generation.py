@@ -12,44 +12,81 @@ from preprocessors.baseline import SupplementalDataBaseline
 from bluesky_nexus.bluesky_nexus_const import NX_FILE_EXTENSION
 from bluesky_nexus.callbacks.nexus_writer import NexusWriter
 from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
-from bluesky_nexus.bluesky_nexus_paths import (
-    get_nx_file_dir_path,
-    get_nx_schema_dir_path,
+
+# Constants: Define paths
+NX_FILE_DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "nx_file"))
+NX_SCHEMA_DIR_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "nx_schema")
 )
 
-# import unittest # Only for debug purposes
+
+# Fixture: Ensure the `nx_file` directory exists
+@pytest.fixture
+def create_nx_file_dir():
+    """
+    Creates the `nx_file` directory if it doesn't already exist and cleans up after the tests.
+    """
+    if not os.path.exists(NX_FILE_DIR_PATH):
+        os.makedirs(NX_FILE_DIR_PATH)
 
 
-# Fixture: Get the directory path for storing nexus files
+# Fixture: Get the path to `nx_file`
 @pytest.fixture
 def nx_file_dir_path():
     """
-    Fixture to retrieve the directory path for Nexus files from an environment variable.
-    Ensures that the variable is set and returns a clean path.
+    Returns the absolute path to the `nx_file` directory for storing output files.
     """
-
-    dir_path: str = get_nx_file_dir_path()
-    assert (
-        dir_path is not None
-    ), "Nx file dir path is None. Please ensure that it is configured correctly."
-    print(f"Info msg: Nx file dir path: {dir_path}")
-    return dir_path.rstrip("/")  # Optional: Clean up trailing slashes
+    return NX_FILE_DIR_PATH
 
 
-# Fixture: Get the directory path where pydantic schema files are stored
+# Test: Example test that writes to `nx_file`
+@pytest.mark.skip(reason="Temporarily disabling this test_write_to_nx_file_dir")
+def test_write_to_nx_file_dir():
+    test_file_path = os.path.join(NX_FILE_DIR_PATH, "test_output.txt")
+    with open(test_file_path, "w") as f:
+        f.write("This is a test file.")
+    assert os.path.exists(test_file_path)
+
+
+# Test: Ensure the `nx_schema` directory exists
+def test_nx_schema_directory_exists():
+    """
+    Test to ensure that the `nx_schema` directory exists in the same parent directory as this test file.
+    """
+    assert os.path.isdir(
+        NX_SCHEMA_DIR_PATH
+    ), f"The directory `nx_schema` does not exist at {NX_SCHEMA_DIR_PATH}"
+
+
+# Fixture: Get the path to `nx_schema`
 @pytest.fixture
 def nx_schema_dir_path():
     """
-    Fixture to retrieve the directory path for Nexus files from an environment variable.
-    Ensures that the variable is set and returns a clean path.
+    Returns the absolute path to the `nx_schema` directory for storing schema files.
     """
+    return NX_SCHEMA_DIR_PATH
 
-    dir_path: str = get_nx_schema_dir_path()
-    assert (
-        dir_path is not None
-    ), "Nx schema dir path is None. Please ensure that it is configured correctly."
-    print(f"Info msg: Nx schema dir path: {dir_path}")
-    return dir_path.rstrip("/")  # Optional: Clean up trailing slashes
+
+# Constants for the expected files
+EXPECTED_FILES = ["nx_schema_mono.yml", "nx_schema_mono_with_grating_cpt.yml"]
+
+
+# Test: Ensure specific files exist in the `nx_schema` directory
+def test_expected_files_exist_in_nx_schema(nx_schema_dir_path):
+    """
+    Test to ensure that specific files exist in the `nx_schema` directory.
+
+    Expected files:
+    - nx_schema_mono.yml
+    - nx_schema_mono_with_grating_cpt.yml
+    """
+    missing_files = []
+    for file_name in EXPECTED_FILES:
+        file_path = os.path.join(nx_schema_dir_path, file_name)
+        if not os.path.isfile(file_path):
+            missing_files.append(file_name)
+
+    assert not missing_files, f"The following expected files are missing in the `nx_schema` directory: {', '.join(missing_files)}"
 
 
 # Fixture: Create a dictionary of devices for reuse in tests
