@@ -84,7 +84,7 @@ def test_read_yaml():
         "nx_model": "NXmonochromatorModel",
         "nx_schema": "nx_test_mono_schema",
         "energy": {
-            "nxclass": "NXfield",
+            "nxclass": "NX_FLOAT",
             "value": "$post-run:events:en",
             "dtype": "float64",
             "attrs": {"units": "eV"},
@@ -92,9 +92,9 @@ def test_read_yaml():
         "grating": {
             "nxclass": "NXgrating",
             "diffraction_order": {
-                "nxclass": "NXfield",
+                "nxclass": "NX_INT",
                 "value": "$pre-run-cpt:grating",
-                "dtype": "int64",
+                "dtype": "int32",
             },
         },
     }
