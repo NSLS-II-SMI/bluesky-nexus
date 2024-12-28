@@ -12,19 +12,20 @@
   - [Unit Definition Strategy](#unit-definition-strategy)
   - [Placeholder Mechanism](#placeholder-mechanism)
     - [Placeholder Syntax](#placeholder-syntax)
+  - [Requirements for Device Classes](#requirements-for-device-classes)
+    - [Example of custom device](#example-of-custom-device)
   - [Installation and usage in the context of bluesky container](#installation-and-usage-in-the-context-of-bluesky-container)
+  - [NeXus logging setup](#nexus-logging-setup)
     - [Let the preprocessor append `nexus metadata` to the start document](#let-the-preprocessor-append-nexus-metadata-to-the-start-document)
     - [Let the preprocessor append `devices metadata` to the start document](#let-the-preprocessor-append-devices-metadata-to-the-start-document)
     - [Subscribe the callback: 'NexusWriter'](#subscribe-the-callback-nexuswriter)
   - [Installation and usage outside the bluesky container](#installation-and-usage-outside-the-bluesky-container)
+    - [NeXus logging setup](#nexus-logging-setup-1)
     - [Let the preprocessor append ```nexus metadata``` to the start document](#let-the-preprocessor-append-nexus-metadata-to-the-start-document-1)
     - [Let the preprocessor append ```devices metadata``` to the start document](#let-the-preprocessor-append-devices-metadata-to-the-start-document-1)
-    - [Subscribe the callback: 'NexusWriter'](#subscribe-the-callback-nexuswriter-1)
-    - [Examplary application](#examplary-application)
+    - [Subscribe the callback: NexusWriter](#subscribe-the-callback-nexuswriter-1)
   - [Cheat sheet for maintenance purposes in context of HZB bluesky deployment](#cheat-sheet-for-maintenance-purposes-in-context-of-hzb-bluesky-deployment)
   - [License](#license)
-
-<a name="Description"></a>
 
 ## Description
 
@@ -34,8 +35,6 @@
 - **NXcollection Group**: Contains the content of the `start` and `stop` documents generated during the run by the Bluesky Run Engine.
 
 ---
-
-<a name="Pydantic Schema and Model Capabilities"></a>
 
 ## Pydantic Schema and Model Capabilities
 
@@ -49,7 +48,8 @@ This library employs Pydantic schemas to allow for detailed mapping and customiz
    - Map device class component structures to NeXus base class structures (e.g., `mono.grating` → `mono.grating.diffraction_order`).
 
 3. **Value Transformation**:
-   - Apply conversion formulas to transform component values (e.g., eV to keV).
+   - Apply conversion formulas to transform component values (e.g., eV to keV). 
+     - The evaluation of the expression is executed in the restricted environment.
 
 4. **NeXus Metadata**:
    - Define NeXus base class names (e.g. `NXmonochromator`, `NX_FLOAT`)
@@ -116,12 +116,7 @@ class NXmonochromatorModel(NXgroupModel):
 
 ```
 
-
-
-
 ---
-
-<a name="Unit Definition Strategy"></a>
 
 ## Unit Definition Strategy
 
@@ -132,8 +127,6 @@ The schema supports defining units for device components. The strategy for defin
 
 2. **Device Does Not Provide Units**:  
    If the device does not return units, define the appropriate unit value in the `units` field of the schema. This ensures that the correct unit for that specific device is explicitly set.
-
-<a name="Placeholder Mechanism"></a>
 
 ## Placeholder Mechanism
 
@@ -171,7 +164,24 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
 
 ---
 
-<a name="Installation and usage"></a>
+## Requirements for Device Classes
+
+All device classes used with this package must inherit from the `NXdevice` base class. The `NXdevice` class enforces the presence of a `nx_schema` attribute, which specifies the name of the pydantic schema yml file associated with the device. This requirement ensures that each device instance is correctly configured for NeXus data handling.
+The definition of `NXdevice` class is located at: `bluesky_nexus/src/bluesky_nexus/bluesky_nexus_device_base.py`.
+
+### Example of custom device
+
+To define a custom device, create a class that inherits from `NXdevice` and specify the `nx_schema` attribute. This ensures that the device is correctly associated with its corresponding NeXus pydantic schema yml file.
+
+```python
+class Mono(NXdevice):
+    en: SynAxis = Cpt(SynAxis, name="en")
+    grating: Signal = Cpt(Signal, name="grating")
+    slit: Signal = Cpt(Signal, name="slit")
+    nx_schema = "nx_schema_mono"
+```
+
+---
 
 ## Installation and usage in the context of bluesky container
 
@@ -182,13 +192,38 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
   ```python
   from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
   from bluesky_nexus.callbacks.nexus_writer import NexusWriter
+  from bluesky_nexus.common.logging_utils import setup_nx_logger, logging
+
   from bluesky_nexus.bluesky_nexus_paths import (
       get_nx_file_dir_path,
       get_nx_schema_dir_path,
+      get_nx_log_file_dir_path,
   )  # This import is only applicable if HZB containerized application is used
   ```
 
-  Add to the "baseline.py" (at the bottom of the file) following preprocessor and callback subscriptions:
+At the bottom of baseline.py, add the following NeXus logging setup, preprocessor, and callback subscriptions:
+
+## NeXus logging setup
+
+```python
+nx_log_file_dir_path: str = get_nx_log_file_dir_path()
+setup_nx_logger(
+    level=logging.DEBUG,
+    log_file_dir_path=nx_log_file_dir_path,
+    log_format=None,
+    max_file_size=10 * 1024 * 1024,
+    backup_count=5,
+)
+```
+
+- Adjust the log level using `level` if necessary, e.g. logging.INFO, logging.WARNING
+  - Default value: `level`=`logging.DEBUG`
+- Adjust custom log format using `log_format` if necessary.
+  - Default value defined in the body of the `setup_logger` function: `log_format` = `"%(asctime)s - %(name)s - %(levelname)s - %(module)s - %(funcName)s  %(message)s"`
+- Adjust the maximum size of a log file in bytes before rotation occurs using `max_file_size` if necessary.
+  - Default value: `max_file_size`=`10 * 1024 * 1024`
+- "Adjust the number of backup log files to keep using `backup_count` if necessary."
+  - Default value: `backup_count`=`5`
 
 ### Let the preprocessor append `nexus metadata` to the start document
 
@@ -220,6 +255,21 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
   nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
   RE.subscribe(nexus_writer)
   ```
+  
+  Optionally define metadata dictionary which is going to be passed to the plan.
+
+  ```python
+  md = {
+      "nx_file_name": "test_{uid}",  # Facultative
+      "title": "fast test at HZB",  # Facultative
+      "definition": "NXxas",  # Facultative
+      }
+  ```
+
+  ```python
+  def my_plan():
+    yield from scan(detectors, motor, 1, 10, 5, md=md)
+  ```
 
 ## Installation and usage outside the bluesky container
 
@@ -243,10 +293,37 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
 
   In your script use following imports:
 
+  ```python
   from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
   from bluesky_nexus.callbacks.nexus_writer import NexusWriter
+  from bluesky_nexus.common.logging_utils import setup_nx_logger, logging
+  ```
 
-  In your script suncribe to the preprocessor and the callback:
+Add the following NeXus logging setup, preprocessor, and callback subscriptions to your script:
+
+### NeXus logging setup
+
+```python
+nx_log_file_dir_path: str = "Your path to the nexus log file directory"
+setup_nx_logger(
+    level=logging.DEBUG,
+    log_file_dir_path=nx_log_file_dir_path,
+    log_format=None,
+    max_file_size=10 * 1024 * 1024,
+    backup_count=5,
+)
+```
+
+- Adjust the log level using `level` if necessary, e.g. logging.INFO, logging.WARNING
+  - Default value: `level`=`logging.DEBUG`
+- Adjust custom log format using `log_format` if necessary.
+  - Default value defined in the body of the `setup_logger` function: `log_format` = `"%(asctime)s - %(name)s - %(levelname)s - %(module)s - %(funcName)s  %(message)s"`
+- Adjust the maximum size of a log file in bytes before rotation occurs using `max_file_size` if necessary.
+  - Default value: `max_file_size`=`10 * 1024 * 1024`
+- "Adjust the number of backup log files to keep using `backup_count` if necessary."
+  - Default value: `backup_count`=`5`
+
+  In your script subscribe to the preprocessor and the callback:
 
 ### Let the preprocessor append ```nexus metadata``` to the start document
 
@@ -271,15 +348,13 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
   RE.preprocessors.append(metadata)
   ```
 
-### Subscribe the callback: 'NexusWriter'
+### Subscribe the callback: NexusWriter
 
   ```python
   nx_file_dir_path: str = "Your path to nx_file directory"
   nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
   RE.subscribe(nexus_writer)
   ```
-
-### Examplary application
 
   Optionally define metadata dictionary which is going to be passed to the plan.
 
@@ -296,32 +371,32 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
     yield from scan(detectors, motor, 1, 10, 5, md=md)
   ```
 
-<a name="Cheat sheet for maintenance purposes in context of HZB bluesky deployment"></a>
-
 ## Cheat sheet for maintenance purposes in context of HZB bluesky deployment
 
   The file "run_bluesky.sh" has to contain following volume mounts and environment variable setting:
 
   ```bash
   -v ${NX_FILE_DIR_PATH}:${_NX_FILE_DIR_PATH} \
+  -v ${NX_LOG_FILE_DIR_PATH}:${_NX_LOG_FILE_DIR_PATH} \
   -v ${NX_SCHEMA_FILE_DIR_PATH}:${_NX_SCHEMA_FILE_DIR_PATH} \
   ```
 
   ```bash
   --env _NX_FILE_DIR_PATH=${_NX_FILE_DIR_PATH} \
+  --env _NX_LOG_FILE_DIR_PATH=${_NX_LOG_FILE_DIR_PATH} \
   --env _NX_SCHEMA_FILE_DIR_PATH=${_NX_SCHEMA_FILE_DIR_PATH} \
   ```
 
   The file ".bluesky_config" has to contain following definitions of env. variables:
 
   ```bash
-  export NX_FILE_DIR_PATH=~/bluesky/data/nexus
-  export _NX_FILE_DIR_PATH=/opt/bluesky/nx_file_dir_path
-  export NX_SCHEMA_FILE_DIR_PATH=~/bluesky/beamlinetools/beamlinetools/beamline_config/nx_schema
-  export _NX_SCHEMA_FILE_DIR_PATH=/opt/bluesky/nx_schema_file_dir_path
+  export NX_FILE_DIR_PATH=~/bluesky/data/nexus/file
+  export _NX_FILE_DIR_PATH=/opt/bluesky/nx_file
+  export NX_LOG_FILE_DIR_PATH=~/bluesky/data/nexus/log
+  export _NX_LOG_FILE_DIR_PATH=/opt/bluesky/nx_log
+  export NX_SCHEMA_FILE_DIR_PATH=~/bluesky/beamlinetools/beamlinetools/devices/nx_schema
+  export _NX_SCHEMA_FILE_DIR_PATH=/opt/bluesky/nx_schema
   ```
-
-<a name="License"></a>
 
 ## License
 
