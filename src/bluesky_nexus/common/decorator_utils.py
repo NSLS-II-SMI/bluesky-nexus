@@ -35,7 +35,7 @@ def measure_time(func):
         example_function executed in 1.000123 seconds
     """
 
-    def wrapper(*args, **kwargs):
+    def measure_time_wrapper(*args, **kwargs):
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
@@ -43,4 +43,4 @@ def measure_time(func):
         logger.info(f"{func.__name__} executed in {elapsed_time:.6f} seconds")
         return result
 
-    return wrapper
+    return measure_time_wrapper
