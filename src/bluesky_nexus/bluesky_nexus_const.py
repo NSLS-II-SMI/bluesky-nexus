@@ -5,22 +5,21 @@ This module defines a collection of constants used throughout the application. T
 Constants:
 
     NOT_AVAILABLE_LABEL (str): Label representing unavailable data ("NotAvailable").
-    PRE_RUN_CPT_LABEL (str): Label for pre-run component placeholders ($pre-run-cpt).
-    PRE_RUN_MD_LABEL (str): Label for pre-run metadata placeholders ($pre-run-md).
+    PRE_RUN_CPT_LABEL (str): Label for pre-run component placeholders ("$pre-run-cpt").
+    PRE_RUN_MD_LABEL (str): Label for pre-run metadata placeholders ("$pre-run-md").
     NX_MD_KEY (str): The key used for Nexus metadata ("nexus_md").
+    DEVICE_MD_KEY (str): The key used for device metadata ("device_md").
     NX_FILE_EXTENSION (str): The file extension for Nexus files (".nxs").
-    NX_SCHEMA_EXTENSIONS (list): List of valid file extensions for Nexus schema files (".yml", ".yaml").
+    NX_SCHEMA_EXTENSIONS (list): List of valid file extensions for Nexus schema files ([".yml", ".yaml"]).
     NX_SCHEMA_MODEL_NAME_KEY (str): Key for the Nexus schema model name ("nx_model").
     DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME (str): Attribute name for the Nexus schema in the device class ("nx_schema").
     DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME (str): Attribute name for the Nexus model in the device instance ("nx_model").
-    TIME_ZONE (str): Default time zone used in the application ("Europe/Berlin").
 
 Valid Data Types for Nexus Fields:
 
-    VALID_NXFIELD_DTYPES (list): List of valid data types for Nexus fields, including numeric types (e.g., float32, int32) and string types ("char", "str").
+    VALID_NXFIELD_DTYPES (list): List of valid data types for Nexus fields, including numeric types (e.g., float32, int32), unsigned integers (e.g., uint8, uint16), and string types ("char", "str").
 """
 
-# ----------------------- CONSTANTS -----------------------
 NOT_AVAILABLE_LABEL: str = "NotAvailable"
 PRE_RUN_CPT_LABEL: str = "$pre-run-cpt"
 PRE_RUN_MD_LABEL: str = "$pre-run-md"
@@ -47,5 +46,3 @@ VALID_NXFIELD_DTYPES = [
     "char",
     "str",
 ]
-
-# ----------------------- End of CONSTANTS ----------------
