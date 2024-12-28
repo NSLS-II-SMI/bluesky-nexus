@@ -15,8 +15,8 @@ Functions:
         Retrieves the directory path for NeXus schema files from the `_NX_SCHEMA_DIR_PATH`
         environment variable. Raises an error if the variable is not set.
 
-    get_log_file_path():
-        Retrieves the log file path from the `_LOG_FILE_PATH` environment variable.
+    get_nx_log_file_dir_path():
+        Retrieves the NeXus log file dir path from the `_NX_LOG_FILE_DIR_PATH` environment variable.
         Raises an error if the variable is not set.
 
 Usage:
@@ -28,14 +28,14 @@ Usage:
 Example:
     from bluesky_nexus_paths import get_nx_file_dir_path, get_nx_schema_dir_path, get_log_file_path
 
-    nexus_file_dir = get_nx_file_dir_path()
-    nexus_schema_dir = get_nx_schema_dir_path()
-    log_file_path = get_log_file_path()
+    nexus_file_dir_path: str = get_nx_file_dir_path()
+    nexus_schema_dir_path: str = get_nx_schema_dir_path()
+    nexus_log_file_dir_path: str = get_nx_log_file_dir_path()
 
 Environment Variables:
     - `_NX_FILE_DIR_PATH`: The path to the directory where NeXus files will be stored.
     - `_NX_SCHEMA_DIR_PATH`: The path to the directory where NeXus schema files are located.
-    - `_LOG_FILE_PATH`: The path to the log file used by the application.
+    - `_NX_LOG_FILE_DIR_PATH`: The path to the NeXus log file dir used by the application.
 
 Notes:
     - If the required environment variables are not set, the functions will raise a
@@ -117,33 +117,35 @@ def get_nx_schema_dir_path():
     return _NX_SCHEMA_DIR_PATH
 
 
-def get_log_file_path():
+def get_nx_log_file_dir_path():
     """
-    Retrieve the log file path from the environment variable.
+    Retrieve the log file dir path from the environment variable.
 
-    This function checks the environment variable `_LOG_FILE_PATH` to determine
-    the path to the application's log file. If the variable is not set, a `ValueError`
+    This function checks the environment variable `_NX_LOG_FILE_DIR_PATH` to determine
+    the path to the application's log file directory. If the variable is not set, a `ValueError`
     is raised.
 
     Returns:
-        str: The log file path.
+        str: The log file dir path.
 
     Raises:
-        ValueError: If the `_LOG_FILE_PATH` environment variable is not defined.
+        ValueError: If the `_NX_LOG_FILE_DIR_PATH` environment variable is not defined.
 
     Notes:
-        - The `_LOG_FILE_PATH` variable must be set in the environment configuration file
+        - The `_NX_LOG_FILE_DIR_PATH` variable must be set in the environment configuration file
           (e.g., `~/etc/environment`) for this function to work correctly.
         - This function is designed for environments where paths are configured
           via environment variables, such as containerized setups.
     """
 
     # Extract from env variable log file path (in container)
-    _LOG_FILE_PATH = os.environ.get("_LOG_FILE_PATH")
-    if _LOG_FILE_PATH is None:
+    _NX_LOG_FILE_DIR_PATH = os.environ.get("_NX_LOG_FILE_DIR_PATH")
+    if _NX_LOG_FILE_DIR_PATH is None:
         logger.error(
-            "Environment variable '_LOG_FILE_PATH' is not set. Unable to retrieve log file path."
+            "Environment variable '_NX_LOG_FILE_DIR_PATH' is not set. Unable to retrieve nexus log file dir path."
         )
-        raise ValueError("_LOG_FILE_PATH is None. Check content of ~/etc/environment.")
-    logger.debug(f"Retrieved log file path: {_LOG_FILE_PATH}")
-    return _LOG_FILE_PATH
+        raise ValueError(
+            "_NX_LOG_FILE_DIR_PATH is None. Check content of ~/etc/environment."
+        )
+    logger.debug(f"Retrieved nexus log file dir path: {_NX_LOG_FILE_DIR_PATH}")
+    return _NX_LOG_FILE_DIR_PATH
