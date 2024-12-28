@@ -46,14 +46,15 @@ from bluesky.run_engine import Msg
 
 from bluesky_nexus.bluesky_nexus_const import (
     DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME,
+    DEVICE_MD_KEY,
     NOT_AVAILABLE_LABEL,
     NX_MD_KEY,
-    DEVICE_MD_KEY,
     PRE_RUN_CPT_LABEL,
     PRE_RUN_MD_LABEL,
 )
 from bluesky_nexus.bluesky_nexus_device_model import assign_pydantic_model_instance
 from bluesky_nexus.common.decorator_utils import measure_time
+from bluesky_nexus.common.logging_utils import logger
 
 
 class SupplementalMetadata(SupplementalData):
@@ -289,7 +290,7 @@ def process_value_not_available(data: dict) -> dict:
         if isinstance(value, dict):
             # If 'value': NOT_AVAILABLE_LABEL is in this dictionary, mark the parent key for deletion
             if NOT_AVAILABLE_LABEL == value.get("value"):
-                print(f"WARNING_MSG: The key: '{key}' removed from nexus metadata.")
+                logger.warning(f"The key: '{key}' removed from nexus metadata.")
                 del data[key]
             else:
                 # Otherwise, recursively check deeper levels
@@ -369,8 +370,8 @@ def resolve_pre_run_placeholder_value(placeholder: str, device_obj: object) -> A
         data: dict = device_obj.md.get_attributes()
         value = get_nested_dict_value(data, parts)
         if value is None:
-            print(
-                f"WARNING_MSG: The key (key sequence) '{':'.join(parts)}' not found in the metadata of the device instance: '{device_obj.name}'. The associated NeXus metadata will be automatically removed."
+            logger.warning(
+                f"The key (key sequence) '{':'.join(parts)}' not found in the metadata of the device instance: '{device_obj.name}'. The associated NeXus metadata will be automatically removed."
             )
             return NOT_AVAILABLE_LABEL
         return value
@@ -382,8 +383,8 @@ def resolve_pre_run_placeholder_value(placeholder: str, device_obj: object) -> A
         for attribute in parts:
             component = getattr(component, attribute, None)
             if component is None:
-                print(
-                    f"WARNING_MSG: Attribute '{'.'.join(parts)}' not found in device instance '{device_obj.name}'. The associated NeXus metadata will be automatically removed."
+                logger.warning(
+                    f"Attribute '{'.'.join(parts)}' not found in device instance '{device_obj.name}'. The associated NeXus metadata will be automatically removed."
                 )
                 return NOT_AVAILABLE_LABEL
 

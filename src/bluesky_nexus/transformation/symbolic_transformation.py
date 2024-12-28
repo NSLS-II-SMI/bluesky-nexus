@@ -23,6 +23,15 @@ Features:
 
 import numpy as np
 
+from bluesky_nexus.common.logging_utils import logger
+
+
+class ExpressionEvaluationError(ValueError):
+    def __init__(self, message: str):
+        # Log the exception as soon as it's created
+        logger.exception(message)
+        super().__init__(message)  # Call the base class constructor
+
 
 def apply_symbolic_transformation(array: np.ndarray, expression: str) -> np.ndarray:
     """
@@ -70,6 +79,8 @@ def apply_symbolic_transformation(array: np.ndarray, expression: str) -> np.ndar
         # Evaluate the expression in the restricted environment
         result = eval(expression, safe_globals, {"x": x})
     except Exception as e:
-        raise ValueError(f"Error evaluating expression '{expression}': {e}")
+        raise ExpressionEvaluationError(
+            f"Failed to evaluate expression '{expression}'"
+        ) from e
 
     return result

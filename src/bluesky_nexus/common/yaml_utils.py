@@ -12,6 +12,8 @@ Advice:         If you use any static type checking tool in your IDE: install ty
 
 import yaml
 
+from bluesky_nexus.common.logging_utils import logger
+
 
 def read_yaml(file_path: str) -> list[dict] | dict | None:
     """Read from an y(a)ml file.
@@ -31,7 +33,9 @@ def read_yaml(file_path: str) -> list[dict] | dict | None:
         try:
             data = yaml.safe_load(file)
         except yaml.YAMLError as error:
-            print(f"Read from Y(A)ML file: {file_path} FAILED. Error msg: {error}")
+            logger.error(
+                f"Read from Y(A)ML file: {file_path} FAILED. Error msg: {error}"
+            )
             return None
         else:
             return data
@@ -51,4 +55,6 @@ def write_yaml(file_path: str, data: list | dict) -> None:
         try:
             yaml.dump(data, file)
         except yaml.YAMLError as error:
-            print(f"Write to Y(A)ML file: {file_path} FAILED. Error msg: {error}")
+            logger.error(
+                f"Write to Y(A)ML file: {file_path} FAILED. Error msg: {error}"
+            )

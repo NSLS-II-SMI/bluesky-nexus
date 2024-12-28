@@ -43,8 +43,8 @@ from bluesky_nexus.bluesky_nexus_const import (
     NX_MD_KEY,
     VALID_NXFIELD_DTYPES,
 )
-
 from bluesky_nexus.common.decorator_utils import measure_time
+from bluesky_nexus.common.logging_utils import logger
 from bluesky_nexus.transformation.symbolic_transformation import (
     apply_symbolic_transformation,
 )
@@ -129,8 +129,8 @@ class NexusWriter(CollectThenCompute):
         if file_name is None or not file_name.strip():
             file_name = self._start_doc["uid"]
             file_name = file_name + NX_FILE_EXTENSION
-            print(
-                f"WARNING_MSG: Nexus file name not defined by the user. Nexus file name automatically generated to {file_name}"
+            logger.warning(
+                f"Nexus file name not defined by the user. Nexus file name automatically generated to {file_name}"
             )
 
         # Add extension to file name
@@ -181,9 +181,7 @@ class NexusWriter(CollectThenCompute):
 
         # Check if NEXUS_MD_KEY is contained in the start document
         if NX_MD_KEY not in self._start_doc:
-            print(
-                f"ERROR_MSG: The start document does not contain {NX_MD_KEY} dictionary."
-            )
+            logger.error(f"The start document does not contain {NX_MD_KEY} dictionary.")
             return
 
         # Define nexus file dir path
@@ -202,7 +200,7 @@ class NexusWriter(CollectThenCompute):
         try:
             start_doc_cpy = copy.deepcopy(self._start_doc)
         except Exception as e:
-            print(f"ERROR_MSG: Error during deepcopy of the start document: {e}")
+            logger.exception(f"Error during deepcopy of the start document: {e}")
             return
 
         # Process the placeholders of the nexus_md applying events and descriptors
@@ -598,7 +596,7 @@ def create_nexus_file(file_path, data_dict):
                 elif isinstance(value, (list, np.ndarray)):
                     entry.create_dataset(key, data=np.array(value))
 
-        print(f"NeXus file '{file_path}' created successfully.")
+        logger.info(f"NeXus file '{file_path}' created successfully.")
 
 
 def add_group_or_field(group, data):
@@ -785,5 +783,5 @@ def write_collection(group, data: dict):
                     normalized_value = list(value)
                     group.create_dataset(key, data=np.array(normalized_value))
         else:
-            print(f"Unsupported type {type(value)} for key '{key}'")
+            logger.error(f"Unsupported type {type(value)} for key '{key}'")
             raise TypeError(f"ERROR: Unsupported type {type(value)} for key '{key}'")

@@ -25,6 +25,7 @@ from bluesky_nexus.bluesky_nexus_const import (
     NX_SCHEMA_MODEL_NAME_KEY,
 )
 from bluesky_nexus.common.yaml_utils import read_yaml
+from bluesky_nexus.common.logging_utils import logger
 from bluesky_nexus.models.nexusformat_models_hzb import *
 
 
@@ -116,7 +117,7 @@ def read_attribute(device, attribute_name):
         return value
     except AttributeError as e:
         # Handle case where the attribute does not exist
-        print(
+        logger.exception(
             f"Error: Attribute '{attribute_name}' does not exist on the device {device.name}. Details: {e}"
         )
         return None
