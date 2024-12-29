@@ -51,7 +51,6 @@ This module is suitable for applications running in containerized environments, 
 
 import logging
 import os
-import time
 from logging.handlers import RotatingFileHandler
 
 from bluesky_nexus.bluesky_nexus_const import DEFAULT_NX_LOG_FORMAT
@@ -72,34 +71,15 @@ def setup_nx_logger(
     """
     Configures the logger for the package, setting up handlers for console and optional file logging with rotation.
 
-    This function allows you to set the logging level, specify a directory for log files, and enable file rotation.
-    Log filenames are generated automatically based on a timestamp, and old log files are backed up when size limits are reached.
-
     Parameters:
         level (int, optional): The logging level for the logger. Defaults to `logging.DEBUG`.
-                               Common levels include `logging.DEBUG`, `logging.INFO`, `logging.WARNING`, etc.
-        log_file_dir_path (str, optional): Directory path where log files will be stored. If not provided, logs will not
-                                           be saved to a file.
-        log_format (str, optional): Custom format for log messages. Defaults to:
-                                    `"%(asctime)s - %(name)s - %(levelname)s - %(module)s - %(funcName)s  %(message)s"`.
+        log_file_dir_path (str, optional): Directory path where log files will be stored. Defaults to None (no file logging).
+        log_format (str, optional): Format for log messages. Defaults to DEFAULT_NX_LOG_FORMAT.
         max_file_size (int, optional): Maximum size of a log file in bytes before rotation occurs. Defaults to 10 MB.
         backup_count (int, optional): Number of backup log files to keep. Defaults to 5.
 
     Returns:
         None
-
-    Notes:
-        - If `log_file_dir_path` is provided, log files will be created in that directory with automatic rotation.
-        - Logs are saved with filenames based on timestamps, e.g., `log_20241228_103045.log`.
-        - Old logs are preserved up to the number specified in `backup_count`.
-        - Log messages are formatted using the provided `log_format` or the default format.
-
-    Example:
-        >>> from logging_utils import setup_nx_logger
-        >>> setup_nx_logger(level=logging.INFO, log_file_dir_path="/var/log/bluesky")
-        >>> logger = logging.getLogger("bluesky_nexus")
-        >>> logger.info("This is an info message.")
-        >>> logger.debug("This is a debug message.")
     """
     log_format: str = log_format or DEFAULT_NX_LOG_FORMAT
     formatter = logging.Formatter(log_format)
@@ -115,9 +95,8 @@ def setup_nx_logger(
         # Ensure the directory exists
         os.makedirs(log_file_dir_path, exist_ok=True)
 
-        # Generate log file name based on the current timestamp
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        log_file_path = os.path.join(log_file_dir_path, f"nx_log_{timestamp}.log")
+        # Use a consistent log file name
+        log_file_path = os.path.join(log_file_dir_path, "nx_log.log")
 
         # Create a RotatingFileHandler for log rotation
         file_handler = RotatingFileHandler(
