@@ -40,7 +40,7 @@ def measure_time(func):
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
         elapsed_time = end_time - start_time
-        logger.info(f"{func.__name__} executed in {elapsed_time:.6f} seconds")
+        logger.debug(f"{func.__name__} executed in {elapsed_time:.6f} seconds")
         return result
 
     return measure_time_wrapper
