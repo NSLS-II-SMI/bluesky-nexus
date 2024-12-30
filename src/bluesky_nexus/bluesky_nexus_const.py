@@ -14,6 +14,7 @@ Constants:
     NX_SCHEMA_MODEL_NAME_KEY (str): Key for the Nexus schema model name ("nx_model").
     DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME (str): Attribute name for the Nexus schema in the device class ("nx_schema").
     DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME (str): Attribute name for the Nexus model in the device instance ("nx_model").
+    DEFAULT_NX_LOG_FORMAT (str): The default log format used by the logger.
 
 Valid Data Types for Nexus Fields:
 
