@@ -378,13 +378,13 @@ setup_nx_logger(
   ```bash
   -v ${NX_FILE_DIR_PATH}:${_NX_FILE_DIR_PATH} \
   -v ${NX_LOG_FILE_DIR_PATH}:${_NX_LOG_FILE_DIR_PATH} \
-  -v ${NX_SCHEMA_FILE_DIR_PATH}:${_NX_SCHEMA_FILE_DIR_PATH} \
+  -v ${NX_SCHEMA_DIR_PATH}:${_NX_SCHEMA_DIR_PATH} \
   ```
 
   ```bash
   --env _NX_FILE_DIR_PATH=${_NX_FILE_DIR_PATH} \
   --env _NX_LOG_FILE_DIR_PATH=${_NX_LOG_FILE_DIR_PATH} \
-  --env _NX_SCHEMA_FILE_DIR_PATH=${_NX_SCHEMA_FILE_DIR_PATH} \
+  --env _NX_SCHEMA_DIR_PATH=${_NX_SCHEMA_DIR_PATH} \
   ```
 
   The file ".bluesky_config" has to contain following definitions of env. variables:
@@ -394,8 +394,8 @@ setup_nx_logger(
   export _NX_FILE_DIR_PATH=/opt/bluesky/nx_file
   export NX_LOG_FILE_DIR_PATH=~/bluesky/data/nexus/log
   export _NX_LOG_FILE_DIR_PATH=/opt/bluesky/nx_log
-  export NX_SCHEMA_FILE_DIR_PATH=~/bluesky/beamlinetools/beamlinetools/devices/nx_schema
-  export _NX_SCHEMA_FILE_DIR_PATH=/opt/bluesky/nx_schema
+  export NX_SCHEMA_DIR_PATH=~/bluesky/beamlinetools/beamlinetools/devices/nx_schema
+  export _NX_SCHEMA_DIR_PATH=/opt/bluesky/nx_schema
   ```
 
 ## License
