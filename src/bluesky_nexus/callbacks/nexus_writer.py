@@ -567,7 +567,7 @@ def create_nexus_file(file_path, data_dict):
         # Create the NXentry group
         entry: Group = f.create_group("entry")
         entry.attrs["NX_class"] = "NXentry"
-        entry.attrs["default"] = "data"
+        # entry.attrs["default"] = "data" # Deactivate since NXdata group does not exist
 
         for key, value in data_dict.items():
             # Create instrument group under 'entry' group
