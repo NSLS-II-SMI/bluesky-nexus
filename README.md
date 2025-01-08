@@ -205,6 +205,8 @@ At the bottom of baseline.py, add the following NeXus logging setup, preprocesso
 
 ## NeXus logging setup
 
+This is an optional setting of the NeXus logger. If the setting is not defined, logging to a log file is deactivated.
+
 ```python
 nx_log_file_dir_path: str = get_nx_log_file_dir_path()
 setup_nx_logger(
