@@ -187,36 +187,56 @@ class Mono(NXdevice):
 
   Bluesky deployment
 
-  Add to the "baseline.py" following imports:
-
-  ```python
-  from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
-  from bluesky_nexus.callbacks.nexus_writer import NexusWriter
-  from bluesky_nexus.common.logging_utils import setup_nx_logger, logging
-
-  from bluesky_nexus.bluesky_nexus_paths import (
-      get_nx_file_dir_path,
-      get_nx_schema_dir_path,
-      get_nx_log_file_dir_path,
-  )  # This import is only applicable if HZB containerized application is used
-  ```
-
-At the bottom of baseline.py, add the following NeXus logging setup, preprocessor, and callback subscriptions:
-
-## NeXus logging setup
-
-This is an optional setting of the NeXus logger. If the setting is not defined, logging to a log file is deactivated.
+  Make sure that the “nexus.py” file is located in the “beamline_config” directory. The content of “nexus.py” is:
 
 ```python
+from .base import *
+from .beamline import *
+from .baseline import *
+
+from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
+from bluesky_nexus.callbacks.nexus_writer import NexusWriter
+from bluesky_nexus.common.logging_utils import setup_nx_logger, logging
+from bluesky_nexus.bluesky_nexus_paths import (
+    get_nx_file_dir_path,
+    get_nx_schema_dir_path,
+    get_nx_log_file_dir_path,
+)
+
+# Let the preprocessor append nexus metadata to the start document
+nx_schema_dir_path: str = get_nx_schema_dir_path()
+metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
+metadata.devices_dictionary: dict = devices_dictionary
+metadata.baseline = baseline
+metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
+RE.preprocessors.append(metadata)
+
+# Let the preprocessor append devices metadata to the start document
+metadata = (
+    SupplementalMetadata()
+)  # No need to pass "nx_schema_dir_path" in case of DEVICE_MD
+metadata.devices_dictionary: dict = devices_dictionary
+metadata.baseline = baseline
+metadata.md_type = SupplementalMetadata.MetadataType.DEVICE_MD
+RE.preprocessors.append(metadata)
+
+# Subscribe the callback: 'NexusWriter'
+nx_file_dir_path: str = get_nx_file_dir_path()
+nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
+RE.subscribe(nexus_writer)
+
+# This is an optional setting of the NeXus logger. If the setting is not defined, logging to a log file is deactivated.
 nx_log_file_dir_path: str = get_nx_log_file_dir_path()
 setup_nx_logger(
-    level=logging.DEBUG,
+    level=logging.INFO,
     log_file_dir_path=nx_log_file_dir_path,
-    log_format=None,
-    max_file_size=10 * 1024 * 1024,
+    max_file_size=2 * 1024 * 1024,
     backup_count=5,
 )
+
 ```
+
+## Explanations on the optional NeXus logger
 
 - Adjust the log level using `level` if necessary, e.g. logging.INFO, logging.WARNING
   - Default value: `level`=`logging.DEBUG`
@@ -227,38 +247,7 @@ setup_nx_logger(
 - "Adjust the number of backup log files to keep using `backup_count` if necessary."
   - Default value: `backup_count`=`5`
 
-### Let the preprocessor append `nexus metadata` to the start document
-
-  ```python
-  nx_schema_dir_path: str = get_nx_schema_dir_path()
-  metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
-  metadata.devices_dictionary: dict = devices_dictionary
-  metadata.baseline = baseline
-  metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
-  RE.preprocessors.append(metadata)
-  ```
-
-### Let the preprocessor append `devices metadata` to the start document
-
-  ```python
-  metadata = (
-      SupplementalMetadata()
-  )  # No need to pass "nx_schema_dir_path" in case of DEVICE_MD
-  metadata.devices_dictionary: dict = devices_dictionary
-  metadata.baseline = baseline
-  metadata.md_type = SupplementalMetadata.MetadataType.DEVICE_MD
-  RE.preprocessors.append(metadata)
-  ```
-
-### Subscribe the callback: 'NexusWriter'
-
-  ```python
-  nx_file_dir_path: str = get_nx_file_dir_path()
-  nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
-  RE.subscribe(nexus_writer)
-  ```
-  
-  Optionally define metadata dictionary which is going to be passed to the plan.
+## Optional definition of the metadata dictionary that is transferred to the plan.
 
   ```python
   md = {
@@ -267,6 +256,7 @@ setup_nx_logger(
       "definition": "NXxas",  # Facultative
       }
   ```
+The 'nx_file_name' enables the creation of a user-defined name for the NeXus file. If not defined, the nx_file_name is generated automatically.
 
   ```python
   def my_plan():
