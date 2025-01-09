@@ -27,7 +27,7 @@
 
 ## Description
 
-**bluesky_nexus** is a Python library designed to create NeXus files from a Bluesky run. The library generates NeXus files containing two primary groups:
+**bluesky_nexus** is a Python library designed to create NeXus file from a Bluesky run. The library generates NeXus file containing two primary groups:
 
 - **NXinstrument Group**: Includes all instruments involved in the run, including baseline instruments.
 - **NXcollection Group**: Contains the content of the `start` and `stop` documents generated during the run by the Bluesky Run Engine.
@@ -167,6 +167,8 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
 All device classes used with this package must inherit from the `NXdevice` base class. The `NXdevice` class enforces the presence of a `nx_schema` attribute, which specifies the name of the pydantic schema yml file associated with the device. This requirement ensures that each device instance is correctly configured for NeXus data handling.
 The definition of `NXdevice` class is located at: `bluesky_nexus/src/bluesky_nexus/bluesky_nexus_device_base.py`.
 
+It was decided to “manage” the pydantic schema of NeXus in a yaml file and not directly in the nx_schema variable as a dictionary. The reason for this is the easy readability and editability of nested elements of the schema file when it is represented as a yml file.
+
 ### Example of custom device
 
 To define a custom device, create a class that inherits from `NXdevice` and specify the `nx_schema` attribute. This ensures that the device is correctly associated with its corresponding NeXus pydantic schema yml file.
@@ -229,6 +231,11 @@ setup_nx_logger(
     max_file_size=2 * 1024 * 1024,
     backup_count=5,
 )
+```
+Make sure that the file `__init__.py` in the “beamline_config” directory contains the following import:
+
+```python
+from .nexus import *
 ```
 
 ## Installation and usage outside the bluesky container
