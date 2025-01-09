@@ -365,11 +365,11 @@ the 'uid' extracted from the start document of the run (start_doc[“uid”]). Y
 
   ```bash
 NX_FILE_DIR_PATH=/home/daniel/bluesky/data/nexus/file
-_NX_FILE_DIR_PATH=/opt/bluesky/nx_file
+_NX_FILE_DIR_PATH=/opt/bluesky/nx_file_dir
 NX_LOG_FILE_DIR_PATH=/home/daniel/bluesky/data/nexus/log
-_NX_LOG_FILE_DIR_PATH=/opt/bluesky/nx_log
+_NX_LOG_FILE_DIR_PATH=/opt/bluesky/nx_log_dir
 NX_SCHEMA_DIR_PATH=/home/daniel/bluesky/beamlinetools/beamlinetools/devices/nx_schema
-_NX_SCHEMA_DIR_PATH=/opt/bluesky/nx_schema
+_NX_SCHEMA_DIR_PATH=/opt/bluesky/nx_schema_dir
 
   ```
 
