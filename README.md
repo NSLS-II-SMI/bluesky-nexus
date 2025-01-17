@@ -156,10 +156,12 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
    - Syntax: `$post-run:events:<component_name>`  
    - Details:  
      - The separation between the prefix `$post-run:events` and component name is made by applying the colon sign (`:`).  
-     - The separation between items of the `<component_name>` is made by applying the underscore sign (`_`) (as per the ophyd naming style).  
+     - The separation between items of the `<component_name>` is made by applying the underscore sign (`_`) (as per the ophyd naming style).
+     - If the name of device instance is the actual component name (which is a case for positioners) please only use `$post-run:events`
      - **Examples**:  
        - `$post-run:events:grating_diffraction_order`
-
+       - `$post-run:events`
+  
 ---
 
 ## Requirements for Device Classes
