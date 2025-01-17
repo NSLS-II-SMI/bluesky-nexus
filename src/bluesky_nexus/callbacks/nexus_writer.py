@@ -307,21 +307,22 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     $post-run:events:a-b-c-d
                     $post-run:events:a_b-c_d-e
                     $post-run:events:a
+                    $post-run:events
             Returns:
                 str: The component name extracted from the placeholder (e.g., "a_b_c").
                 None: If the placeholder does not match the expected pattern.
             """
 
-            POST_RUN_LABEL: str = "$post-run"
-            DELIMITER: str = ":"
-            PATTERN: str = r"^\$post-run:events:[a-zA-Z0-9_-]+$"
+            POST_RUN_LABEL: str = "$post-run:events:"
+            PATTERN: str = r"^\$post-run:events(:[a-zA-Z0-9_-]+)?$"
 
             match = re.search(PATTERN, value)
             if match:
-                cpt_name: str = value[
-                    len(POST_RUN_LABEL + DELIMITER + "events" + DELIMITER) :
-                ]
-                return cpt_name
+                if len(POST_RUN_LABEL) < len(value):
+                    cpt_name: str = value[len(POST_RUN_LABEL):]
+                    return cpt_name
+                else:
+                    return str("")  # Return empty string
             else:
                 return None  # Pattern does not match
 
@@ -354,7 +355,10 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                 obj_delimiter: str = "_"
 
                 # Redefine component name as to be read from the blusky documents (with prefixed device name)
-                cpt_name: str = dev_name + obj_delimiter + cpt_name
+                if str("") == cpt_name:  # The case when there is not cpt_name in the placeholder
+                    cpt_name = dev_name
+                else:
+                    cpt_name: str = dev_name + obj_delimiter + cpt_name
 
                 # Select an appropriate descriptor for the 'cpt_name':
                 descriptor: dict = select_descriptor(descriptors, cpt_name)
