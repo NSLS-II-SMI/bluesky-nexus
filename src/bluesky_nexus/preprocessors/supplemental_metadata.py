@@ -87,7 +87,7 @@ class SupplementalMetadata(SupplementalData):
 
         Notes:
             - `nx_schema_dir_path` is an optional argument that can be used to specify
-            the path where the NeXus schema is located.
+            the path to the directory where the NeXus schema is located.
         """
 
         super().__init__(*args, **kwargs)
@@ -135,22 +135,22 @@ class SupplementalMetadata(SupplementalData):
         checker = PlanDeviceChecker(self.devices_dictionary)
         checker_result = checker.validate_plan_devices(replayable_plan())
 
-        # Define a dictionary of devices taking part in the plan or devices subscribed to the baseline.
-        devices_for_metadata: dict = {
+        # Define a dictionary of devices taking part in the plan. (It includes devices not taking part in a run but subscribed to the baseline.)
+        devices_in_plan: dict = {
             name: dev
             for name, dev in self.devices_dictionary.items()
             if dev not in checker_result["unused_devices"].values()
             or dev in self.baseline
         }
 
-        # Assign to all the devices contained in 'devices_for_metadata' instances of pydantic models
+        # Assign to all the devices contained in 'devices_in_plan' instances of pydantic models
         if self.MetadataType.NEXUS_MD == self.md_type:
             assign_pydantic_model_instance(
-                self.nx_schema_dir_path, devices_for_metadata
+                self.nx_schema_dir_path, devices_in_plan
             )
 
         # Create metadata and inject it into the plan
-        metadata: dict = create_metadata(devices_for_metadata)
+        metadata: dict = create_metadata(devices_in_plan)
         plan = inject_md_wrapper(replayable_plan(), metadata)
         return (yield from plan)
 
@@ -360,13 +360,11 @@ def resolve_pre_run_placeholder_value(placeholder: str, device_obj: object) -> A
     parts: list = placeholder_splitted[
         1:
     ]  # Ignore the "$pre-run-cpt" or "$pre-run-md" part
-    if not parts:
-        raise ValueError(
-            f"Invalid placeholder format: {placeholder} detected in a schema yml file associated with the device instance: {device_obj.name}. Valid placeholder structure: '$pre-run-md:key1: ... keyN-1:keyN' or '$pre-run-cpt:obj1: ... objN-1:objN'"
-        )
 
     # Resolve placeholder by asking device instance metadata for its value
     if PRE_RUN_MD_LABEL == prefix:
+        if not parts:
+            raise ValueError(f"Invalid placeholder format: {placeholder} detected in a schema yml file associated with the device instance: {device_obj.name}. Valid placeholder structure: '$pre-run-md:key1: ... keyN-1:keyN'")
         data: dict = device_obj.md.get_attributes()
         value = get_nested_dict_value(data, parts)
         if value is None:
@@ -439,7 +437,7 @@ def get_nested_dict_value(data: dict, key_path: list):
 
 class PlanDeviceChecker:
     """ "
-    Check which ao the devices listed in devices_dictionary participate in the plan
+    Check which of the devices listed in devices_dictionary participate in the plan
     Returns:
         - all_devices_used: bool
         - unused_devices: dict
