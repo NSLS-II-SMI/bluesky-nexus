@@ -175,7 +175,6 @@ class NexusWriter(CollectThenCompute):
 
         Notes:
             - If required metadata is missing from the start document, an error message is logged.
-            - The NeXus directory path and other configurations are taken from the environment.
             - The method processes placeholders within the NeXus metadata using the associated events and descriptors.
         """
 
@@ -257,7 +256,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                 - If cpt_name is found in any other descriptor than the 'baseline' descriptor read from this descriptor
                 - elif cpt_name is found only in the 'baseline' descriptor read from 'baseline' descriptor
                 - else raise exception
-                This means taht each instantiated device whose schema contains '$post-run' placeholder has to be included into a baseline.
+                This means that each instantiated device whose schema contains '$post-run' placeholder has to be included into a baseline.
                 Otherwise if such an instantiated device is not used in a plan, the descriptor will not be found and exception will be raised
 
             Args:
@@ -290,10 +289,10 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     and descriptor["name"] == "baseline"
                 ):
                     return descriptor
-
+                
             # No descriptor contains the cpt_name
             raise ValueError(f"No descriptor contains the 'data_key': {cpt_name}")
-
+        
         # Define a few helper functions to parse the Nexus tree and replace values with data from the events of the run
         def get_cpt_name_from_placeholder(value: str) -> Optional[str]:
             """
