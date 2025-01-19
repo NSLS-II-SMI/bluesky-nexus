@@ -12,6 +12,7 @@
   - [Unit Definition Strategy](#unit-definition-strategy)
   - [Placeholder Mechanism](#placeholder-mechanism)
     - [Placeholder Syntax](#placeholder-syntax)
+  - [Subscription of devices in the baseline](#subscription-of-devices-in-the-baseline)
   - [Requirements for Device Classes](#requirements-for-device-classes)
     - [Example of custom device](#example-of-custom-device)
   - [Installation and usage in the context of bluesky container (Bluesky deployment)](#installation-and-usage-in-the-context-of-bluesky-container-bluesky-deployment)
@@ -145,11 +146,13 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
 2. **Pre-run Component Values**:  
    - Fetch values from components before the run.
    - Syntax: `$pre-run-cpt:<component_name>`  
-   - Details:  
+   - Details:
      - The separation between the prefix `$pre-run-cpt` and component name is made by applying the colon sign (`:`).  
      - The separation between items of the `<component_name>` is also made by applying the colon sign (`:`).  
+     - If the device name appears under `data_keys` of a descriptor document without additional component names (which is a case e.g. for positioners) please only use `$pre-run-cpt`
      - **Examples**:  
        - `$pre-run-cpt:grat:diffraction_order`
+       - `$pre-run-cpt` This is the case if the device name appears under `data_keys` of a descriptor document without additional component names
 
 3. **Post-run Component Values**:  
    - Fetch values from components after the run (event documents).
@@ -157,11 +160,17 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
    - Details:  
      - The separation between the prefix `$post-run:events` and component name is made by applying the colon sign (`:`).  
      - The separation between items of the `<component_name>` is made by applying the underscore sign (`_`) (as per the ophyd naming style).
-     - If the name of device instance is the actual component name (which is a case for positioners) please only use `$post-run:events`
-     - **Examples**:  
+     - If the device name appears under `data_keys` of a descriptor document without additional component names (which is a case e.g. for positioners) please only use `$post-run:events`
+     - **Examples**:
        - `$post-run:events:grating_diffraction_order`
-       - `$post-run:events`
+       - `$post-run:events` This is the case if the device name appears under `data_keys` of a descriptor document without additional component names
+
+---
+
+## Subscription of devices in the baseline
   
+  If only some but not all of the components of a device used in the schema yml file are used in a plan, subscribe the device in the baseline so that the device components not used in the plan can be found in the baseline descriptor, allowing replacement of all the placeholders defined in the schema yml file associated with the device.
+
 ---
 
 ## Requirements for Device Classes
