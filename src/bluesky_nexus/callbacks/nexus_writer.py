@@ -256,9 +256,8 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                 - If cpt_name is found in any other descriptor than the 'baseline' descriptor read from this descriptor
                 - elif cpt_name is found only in the 'baseline' descriptor read from 'baseline' descriptor
                 - else raise exception
-                This means that each instantiated device whose schema contains '$post-run' placeholder has to be included into a baseline.
-                Otherwise if such an instantiated device is not used in a plan, the descriptor will not be found and exception will be raised
-
+                If there is a device that is used in a plan and whose schema contains a component (with '$post-run' placeholder) that is not used in the plan, such a device must be entered in the baseline.
+                Otherwise, there is no data to replace the placeholder for the component (with '$post-run' placeholder) that is not participating in the plan.
             Args:
                 descriptors (deque): The deque of descriptors.
                 cpt_name (str): The component name to look for in the descriptors.
