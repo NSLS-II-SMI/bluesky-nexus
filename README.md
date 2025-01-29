@@ -152,7 +152,7 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
      - If the device name appears under `data_keys` of a descriptor document without additional component names (which is a case e.g. for positioners) please only use `$pre-run-cpt`
      - **Examples**:  
        - `$pre-run-cpt:grat:diffraction_order`
-       - `$pre-run-cpt` This is the case if the device name appears under `data_keys` of a descriptor document without additional component names
+       - `$pre-run-cpt` This is the case if the component name is 'reduced' to the name of the instance that contains this component, for example by using: `self.readback.name = self.name`
 
 3. **Post-run Component Values**:  
    - Fetch values from components after the run (event documents).
@@ -163,7 +163,7 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
      - If the device name appears under `data_keys` of a descriptor document without additional component names (which is a case e.g. for positioners) please only use `$post-run:events`
      - **Examples**:
        - `$post-run:events:grating_diffraction_order`
-       - `$post-run:events` This is the case if the device name appears under `data_keys` of a descriptor document without additional component names
+       - `$post-run:events` This is the case if the component name is 'reduced' to the name of the instance that contains this component, for example by using: `self.readback.name = self.name`
 
 ---
 
