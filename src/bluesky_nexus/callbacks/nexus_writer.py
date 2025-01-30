@@ -30,7 +30,7 @@ Notes:
 import copy
 import os
 import re
-from collections import deque
+from collections import deque, OrderedDict
 from typing import Optional, Union
 
 import h5py
@@ -239,6 +239,15 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
         - This function assumes that the descriptors contain metadata on the devices being used in the run.
     """
 
+    if not nexus_md:
+        raise ValueError("The dict 'nexus_md' is empty")
+
+    if not descriptors:
+        raise ValueError("The deque 'descriptors' is empty")
+
+    if not events:
+        raise ValueError("The deque 'events' is empty")
+
     def process_post_run():
         """
         Processes post-run placeholders within the Nexus metadata, replacing them with actual
@@ -250,69 +259,101 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
         - Replace the placeholders in the Nexus metadata with actual event data.
         """
 
-        def select_descriptor(descriptors: deque, cpt_name: str) -> Optional[dict]:
-            """
-            Select an appropriate descriptor for the given component name 'cpt_name'
-                - If cpt_name is found in any other descriptor than the 'baseline' descriptor read from this descriptor
-                - elif cpt_name is found only in the 'baseline' descriptor read from 'baseline' descriptor
-                - else raise exception
-                If there is a device that is used in a plan and whose schema contains a component (with '$post-run' placeholder) that is not used in the plan, such a device must be entered in the baseline.
-                Otherwise, there is no data to replace the placeholder for the component (with '$post-run' placeholder) that is not participating in the plan.
-            Args:
-                descriptors (deque): The deque of descriptors.
-                cpt_name (str): The component name to look for in the descriptors.
+        def get_data_from_configuration(descriptor: dict, cpt_name: str) -> Optional[dict]:
 
-            Returns:
-                dict: The selected descriptor.
-
-            Raises:
-                ValueError: If no descriptor with the specified component name is found.
+            """ Get data from 'configuration' dictionary of the descriptor
+            Returns: dictionary containing: 'description', 'data' and 'timestamps'
             """
 
-            # If the deque 'descriptors' is empty, raise an exception
-            if not descriptors:
-                raise ValueError("The deque 'descriptors' is empty")
+            configuration: dict = descriptor.get('configuration', {})
 
-            # Try to find a descriptor with the cpt_name and name not equal to 'baseline'
-            for descriptor in descriptors:
-                if (
-                    cpt_name in descriptor["data_keys"]
-                    and descriptor["name"] != "baseline"
-                ):
-                    return descriptor
+            for device_name, device_data in configuration.items():
+                data_keys: dict = device_data.get('data_keys', OrderedDict())
+                data: dict = device_data.get('data', {})
+                timestamps: dict = device_data.get('timestamps', {})
 
-            # If no such selector, try to find a baseline descriptor containing cpt_name
-            for descriptor in descriptors:
-                if (
-                    cpt_name in descriptor["data_keys"]
-                    and descriptor["name"] == "baseline"
-                ):
-                    return descriptor
-                
-            # No descriptor contains the cpt_name
-            raise ValueError(f"No descriptor contains the 'data_key': {cpt_name}")
-        
+                if cpt_name in data_keys:
+                    return {
+                        'description': data_keys[cpt_name],
+                        'data': data.get(cpt_name),
+                        'timestamp': timestamps.get(cpt_name)
+                    }
+
+            return None  # Component not found
+
+        def get_data_from_data_keys(descriptor, events, cpt_name: str) -> Optional[dict]:
+
+            """ Get data from 'data_keys' dictionary of the descriptor
+            Returns: dictionary containing: 'description', 'data' , 'events_cpt_timestamps' and 'events_timestamps'
+            """
+
+            # Check if component_name is in the 'data_keys'
+            if cpt_name not in descriptor['data_keys']:
+                return None
+
+            # Extract description from descriptor's 'data_keys' for given component_name
+            description: dict = descriptor["data_keys"][cpt_name]
+
+            # Extract the descriptors 'uid'
+            descriptor_uid: str = descriptor["uid"]
+
+            # Collect data from the events associated with the specific descriptor having 'descriptor_uid'
+            data: np.array = np.array(
+                [
+                    evt["data"][cpt_name]
+                    for evt in events
+                    if evt["descriptor"] == descriptor_uid
+                    and cpt_name in evt["data"]
+                ]
+            )
+
+            # Collect component timestamps from the events associated with the specific descriptor having 'descriptor_uid'
+            events_cpt_timestamps: np.array = np.array(
+                [
+                    evt["timestamps"][cpt_name]
+                    for evt in events
+                    if evt["descriptor"] == descriptor_uid
+                    and cpt_name in evt["timestamps"]
+                ]
+            )
+
+            # Collect event timestamps from the events associated with the specific descriptor having 'descriptor_uid'
+            events_timestamps: np.array = np.array(
+                [
+                    evt["time"]
+                    for evt in events
+                    if evt["descriptor"] == descriptor_uid
+                ]
+            )
+
+            return {
+                'description': description,
+                'data': data,
+                'events_cpt_timestamps': events_cpt_timestamps,
+                'events_timestamps': events_timestamps
+            }
+
         # Define a few helper functions to parse the Nexus tree and replace values with data from the events of the run
         def get_cpt_name_from_placeholder(value: str) -> Optional[str]:
             """
             Extracts the component name from the placeholder string, typically in the form
-            of `$post-run:events:<component_name>`.
+            of `$post-run:<component_name>`.
 
             Args:
-                value (str): The placeholder string, e.g., "$post-run:events:a_b_c".
+                value (str): The placeholder string, e.g., "$post-run:a_b_c".
                 Pattern matches:
-                    $post-run:events:a_b_c
-                    $post-run:events:a-b-c-d
-                    $post-run:events:a_b-c_d-e
-                    $post-run:events:a
-                    $post-run:events
+                    $post-run:a_b_c
+                    $post-run:a-b-c-d
+                    $post-run:a_b-c_d-e
+                    $post-run:a
+                    $post-run
             Returns:
                 str: The component name extracted from the placeholder (e.g., "a_b_c").
                 None: If the placeholder does not match the expected pattern.
             """
 
-            POST_RUN_LABEL: str = "$post-run:events:"
-            PATTERN: str = r"^\$post-run:events(:[a-zA-Z0-9_-]+)?$"
+            POST_RUN_LABEL: str = "$post-run:"
+            PATTERN: str = r"^\$post-run(:[a-zA-Z0-9_-]+)?$"
 
             match = re.search(PATTERN, value)
             if match:
@@ -323,6 +364,27 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     return str("")  # Return empty string
             else:
                 return None  # Pattern does not match
+
+        def extract_data(descriptors, events, cpt_name) -> dict:
+            """Extract data for cpt_name from descriptors, prioritizing non-baseline first."""
+            
+            def find_data(descriptor) -> Optional[dict]:
+                return get_data_from_data_keys(descriptor, events, cpt_name) or get_data_from_configuration(descriptor, cpt_name)
+
+            # Prioritize non-baseline descriptors
+            for descriptor in descriptors:
+                if descriptor["name"] != "baseline":
+                    if data := find_data(descriptor):
+                        return data
+
+            # Check baseline descriptor if no data found so far
+            for descriptor in descriptors:
+                if descriptor["name"] == "baseline":
+                    if data := find_data(descriptor):
+                        return data
+
+            # No data found
+            raise ValueError(f"No descriptor contains data for the 'cpt_name': {cpt_name}")
 
         def replace_func(dev_name: str, obj: dict) -> dict:
             """
@@ -345,7 +407,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     return obj
 
                 # Define component name
-                cpt_name: str = get_cpt_name_from_placeholder(placeholder)
+                cpt_name: Optional[str] = get_cpt_name_from_placeholder(placeholder)
                 if cpt_name is None:
                     return obj
 
@@ -358,59 +420,44 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                 else:
                     cpt_name: str = dev_name + obj_delimiter + cpt_name
 
-                # Select an appropriate descriptor for the 'cpt_name':
-                descriptor: dict = select_descriptor(descriptors, cpt_name)
+                # Extract data from descriptor
+                data: dict = extract_data(descriptors, events, cpt_name)
 
-                # Extract the 'uid' of the descriptor
-                descriptor_uid: str = descriptor["uid"]
-
-                # Collect data from the events associated with the descriptor (by applying 'descriptor_uid')
-                events_data: np.array = np.array(
-                    [
-                        evt["data"][cpt_name]
-                        for evt in events
-                        if evt["descriptor"] == descriptor_uid
-                        and cpt_name in evt["data"]
-                    ]
-                )
-
-                # Optional transformation
+                # Optional transformation on data of data
                 if "transformation" in obj:
                     # Execute transformation on events_data
                     if "value" == obj["transformation"]["target"]:
                         expression: str = obj["transformation"]["expression"]
-                        events_data = apply_symbolic_transformation(
-                            events_data, expression
+                        data['data'] = apply_symbolic_transformation(
+                            data['data'], expression
                         )
 
                 # Assign the result to the object's value
-                obj["value"] = events_data
+                obj["value"] = data['data']
 
-                # Collect component timestamps from the events associated with the descriptor (by applying 'descriptor_uid')
-                events_cpt_timestamps: np.array = np.array(
-                    [
-                        evt["timestamps"][cpt_name]
-                        for evt in events
-                        if evt["descriptor"] == descriptor_uid
-                        and cpt_name in evt["timestamps"]
-                    ]
-                )
-                # Assign the result to the object's value
-                obj["events_cpt_timestamps"] = events_cpt_timestamps
+                # Assign 'events_cpt_timestamps'
+                if 'events_cpt_timestamps' in data:
+                    obj["events_cpt_timestamps"] = data["events_cpt_timestamps"]
+                    
+                # Assign 'events_cpt_timestamps'
+                if 'events_timestamps' in data:
+                    obj["events_timestamps"] = data["events_timestamps"]
+                    
+                # Assign 'timestamps'
+                if 'timestamp' in data:
+                    obj["timestamp"] = data["timestamp"]
 
-                # Collect event timestamps from the events associated with the descriptor (by applying 'descriptor_uid')
-                events_timestamps: np.array = np.array(
-                    [
-                        evt["time"]
-                        for evt in events
-                        if evt["descriptor"] == descriptor_uid
-                    ]
-                )
-                # Assign the result to the object's value
-                obj["events_timestamps"] = events_timestamps
+                # Extract description of the component
+                desc: dict = data["description"]
 
-                # Extract from the descriptor["data_keys"] the data describing the 'cpt_name'
-                desc: dict = descriptor["data_keys"][cpt_name]
+
+
+
+
+
+
+
+
 
                 # ----------- Assign to the 'obj' all abligatory keys -----------
 
