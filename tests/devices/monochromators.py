@@ -29,7 +29,7 @@ class MetadataMono:
 class Mono(NXdevice):
     en: SynAxis = Cpt(SynAxis, name="en")
     grating: Signal = Cpt(Signal, name="grating")
-    slit: Signal = Cpt(Signal, name="slit")
+    slit: Signal = Cpt(Signal, name="slit", kind = 'config')
     md = MetadataMono()
     nx_schema = "nx_schema_mono"
 
