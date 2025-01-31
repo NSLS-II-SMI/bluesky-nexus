@@ -41,7 +41,7 @@ def nx_file_dir_path():
 
 
 # Test: Example test that writes to `nx_file`
-@pytest.mark.skip(reason="Temporarily disabling this test_write_to_nx_file_dir")
+# @pytest.mark.skip(reason="Temporarily disabling this test_write_to_nx_file_dir")
 def test_write_to_nx_file_dir():
     test_file_path = os.path.join(NX_FILE_DIR_PATH, "test_output.txt")
     with open(test_file_path, "w") as f:
