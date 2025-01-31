@@ -248,7 +248,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     logger.debug(f"Data for component: '{cpt_name}' found in configuration of descriptor: '{descriptor['name']}'")
                     return {
                         'description': data_keys[cpt_name],
-                        'data': data.get(cpt_name),
+                        'data': np.array(data.get(cpt_name)),
                         'timestamp': timestamps.get(cpt_name)
                     }
             return None
@@ -410,7 +410,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 obj["dtype"] = dtype
 
                 # Assign shape (obligatory key)
-                obj["shape"] = [len(data)]
+                obj["shape"] = list(data.shape)
 
                 # Ensure "attrs" key exists in obj
                 obj.setdefault("attrs", {})
