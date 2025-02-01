@@ -67,7 +67,7 @@ nx_model: NXmonochromatorModel
 nxclass: NXmonochromator
 energy:
   nxclass: NX_FLOAT
-  value: $post-run:events:en
+  value: $post-run:en
   dtype: float64
   attrs:
     units: "keV"
@@ -78,7 +78,7 @@ grating:
   nxclass: NXgrating
   diffraction_order:
     nxclass: NX_INT
-    value: $pre-run-cpt:grating
+    value: $post-run:grating
     dtype: int32
 ```
 
@@ -148,22 +148,26 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
    - Syntax: `$pre-run-cpt:<component_name>`  
    - Details:
      - The separation between the prefix `$pre-run-cpt` and component name is made by applying the colon sign (`:`).  
-     - The separation between items of the `<component_name>` is also made by applying the colon sign (`:`).  
-     - If the device name appears under `data_keys` of a descriptor document without additional component names (which is a case e.g. for positioners) please only use `$pre-run-cpt`
+     - The separation between items of the `<component_name>` is also made by applying the colon sign (`:`).
      - **Examples**:  
        - `$pre-run-cpt:grat:diffraction_order`
-       - `$pre-run-cpt` This is the case if the component name is 'reduced' to the name of the instance that contains this component, for example by using: `self.readback.name = self.name`
+       - `$pre-run-cpt:en:readback`
 
 3. **Post-run Component Values**:  
-   - Fetch values from components after the run (event documents).
-   - Syntax: `$post-run:events:<component_name>`  
+   - Retrieve values of components after the run from event documents or descriptor document.
+   - Syntax: `$post-run:<component_name>`
    - Details:  
-     - The separation between the prefix `$post-run:events` and component name is made by applying the colon sign (`:`).  
+     - The separation between the prefix `$post-run` and component name is made by applying the colon sign (`:`).
      - The separation between items of the `<component_name>` is made by applying the underscore sign (`_`) (as per the ophyd naming style).
-     - If the device name appears under `data_keys` of a descriptor document without additional component names (which is a case e.g. for positioners) please only use `$post-run:events`
+     -  If in the class definition of the component its name is “reduced” to the name of the instance that contains this component, e.g.: `self.readback.name = self.name`, this must be taken into account when defining the character string that appears after `$post-run`.
      - **Examples**:
-       - `$post-run:events:grating_diffraction_order`
-       - `$post-run:events` This is the case if the component name is 'reduced' to the name of the instance that contains this component, for example by using: `self.readback.name = self.name`
+       - `$post-run:grating_diffraction_order`
+       - `$post-run:en`
+       - `$post-run`
+
+    The data of device components with `kind='config'` are retrieved from the `configuration` dictionary of the descriptor document.
+    The data of device components with `kind='hinted'` or `kind='normal'` are retrieved from the `data_keys` dictionary of the descriptor document and from the associated events documents.
+    As far as the sequence is concerned, the data is retrieved from the stream descriptors. Only if the component name could not be found in the stream descriptors is the data retrieved from the baseline descriptor.
 
 ---
 
