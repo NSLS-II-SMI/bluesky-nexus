@@ -249,7 +249,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     return {
                         'description': data_keys[cpt_name],
                         'data': np.array(data.get(cpt_name)),
-                        'timestamp': timestamps.get(cpt_name)
+                        'descriptor_cpt_timestamp': np.array(timestamps.get(cpt_name))
                     }
             return None
 
@@ -362,7 +362,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 cpt_data: dict = extract_data(descriptors, events, cpt_name)
 
                 # Component data from descriptor
-                data = cpt_data['data']
+                data: np.ndarray = cpt_data['data']
                 # Component description from descriptor
                 desc: dict = cpt_data["description"]
 
@@ -386,9 +386,9 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 if 'events_timestamps' in cpt_data:
                     obj["events_timestamps"] = cpt_data["events_timestamps"]
                     
-                # Assign 'timestamp'
-                if 'timestamp' in cpt_data:
-                    obj["timestamp"] = cpt_data["timestamp"]
+                # Assign 'descriptor_cpt_timestamp'
+                if 'descriptor_cpt_timestamp' in cpt_data:
+                    obj["descriptor_cpt_timestamp"] = cpt_data["descriptor_cpt_timestamp"]
 
                 # ----------- Assign all abligatory keys -----------
 
@@ -661,6 +661,7 @@ def add_group_or_field(group, data):
                             "shape",
                             "events_cpt_timestamps",
                             "events_timestamps",
+                            "descriptor_cpt_timestamp"
                         }:
                             # Convert non-compatible types to strings
                             if isinstance(extra_value, (dict, list)):
@@ -675,9 +676,22 @@ def add_group_or_field(group, data):
                             dtype="float64",
                         )
                         dataset.attrs["nxclass"] = "NX_FLOAT"
-                        dataset.attrs["shape"] = [len(value["events_cpt_timestamps"])]
+                        dataset.attrs["shape"] = list(value["events_cpt_timestamps"].shape)
                         dataset.attrs["description"] = (
-                            f"Timestamps of the component: {key}"
+                            f"Timestamps of the component: {key} extracted from the events"
+                        )
+                        
+                    ### Create dataset for 'descriptor_cpt_timestamp'
+                    if "descriptor_cpt_timestamp" in value:
+                        dataset = group.create_dataset(
+                            key + "_timestamp",
+                            data=value["descriptor_cpt_timestamp"],
+                            dtype="float64",
+                        )
+                        dataset.attrs["nxclass"] = "NX_FLOAT"
+                        dataset.attrs["shape"] = list(value["descriptor_cpt_timestamp"].shape)
+                        dataset.attrs["description"] = (
+                            f"Timestamp of the component: {key} extracted from the descriptor"
                         )
 
                     ### Create dataset for 'events_timestamp'
@@ -694,7 +708,7 @@ def add_group_or_field(group, data):
                             )
                             # Add attributes to the dataset
                             dataset.attrs["nxclass"] = "NX_FLOAT"
-                            dataset.attrs["shape"] = [len(value["events_timestamps"])]
+                            dataset.attrs["shape"] = list(value["events_timestamps"].shape)
                             dataset.attrs["description"] = "Timestamps of the events"
 
                 else:
