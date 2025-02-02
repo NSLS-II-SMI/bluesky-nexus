@@ -25,7 +25,7 @@ Functions:
     process_value_not_available: Removes keys with values marked as "NOT_AVAILABLE".
     resolve_pre_run_placeholders: Recursively resolves placeholders in metadata dictionaries.
     get_nested_dict_value: Fetches values from nested dictionaries using a key path.
-    cache_plan: Caches Bluesky plans to make them replayable.
+    cache_plan: Caches Bluesky plan to make it replayable twice.
 
 Dependencies:
 
@@ -39,6 +39,7 @@ Dependencies:
 
 import asyncio
 from enum import Enum, auto
+from itertools import tee
 from typing import Any, Callable, Dict
 
 from bluesky.preprocessors import SupplementalData, inject_md_wrapper, plan_mutator
@@ -127,13 +128,11 @@ class SupplementalMetadata(SupplementalData):
             raise ValueError(f"Invalid metadata type: {self.md_type}")
 
         # We have to cache the plan, otherwise the PlanDeviceChecker would exhaust the plan
-        replayable_plan = cache_plan(
-            plan
-        )  # 'replayable_plan' can be reused as many times as we want, it is not exhaustible
+        plan1, plan2 = cache_plan(plan)  # Create two identical plans plan1 and plan2 from the plan
 
         # Check if all devices of self.devices_dictionary are participating in the plan.
         checker = PlanDeviceChecker(self.devices_dictionary)
-        checker_result = checker.validate_plan_devices(replayable_plan())
+        checker_result = checker.validate_plan_devices(plan1)
 
         # Define a dictionary of devices taking part in the plan. (It includes devices not taking part in a run but subscribed to the baseline.)
         devices_in_plan: dict = {
@@ -151,7 +150,7 @@ class SupplementalMetadata(SupplementalData):
 
         # Create metadata and inject it into the plan
         metadata: dict = create_metadata(devices_in_plan)
-        plan = inject_md_wrapper(replayable_plan(), metadata)
+        plan = inject_md_wrapper(plan2, metadata)
         return (yield from plan)
 
 
@@ -491,17 +490,19 @@ class PlanDeviceChecker:
 @measure_time
 def cache_plan(plan):
     """
-    Cache all messages from the given plan.
+    Efficiently create two independent iterators from a Bluesky plan while preserving generator behavior.
+    
+    Args:
+        plan (generator): The original Bluesky plan.
+    
+    Returns:
+        tuple: Two independent generators over the plan.
     """
-    cached_messages: list[Msg] = list(
-        plan
-    )  # Consume and store all messages, plan is going to be exhausted
+    plan1, plan2 = tee(plan, 2)  # Create two independent iterators
 
-    def replay_plan():
-        """
-        Replay the cached messages as a generator.
-        """
-        for msg in cached_messages:
-            yield msg
+    # Convert iterators back into generators to support `.send()`
+    def wrap_generator(it):
+        for msg in it:
+            yield msg  # Ensures it works like a generator
 
-    return replay_plan
+    return wrap_generator(plan1), wrap_generator(plan2)
