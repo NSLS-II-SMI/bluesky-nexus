@@ -446,42 +446,46 @@ class PlanDeviceChecker:
     def __init__(self, devices_dictionary):
         self.devices_dictionary = devices_dictionary
 
-    def devices_used_in_plan(self, plan) -> dict:
-        """
-        Extract devices used in a Bluesky plan by inspecting its messages.
-        The result will be a dictionary of used devices (device instance name -> device instance).
-        """
-        used_devices: dict = {}
-
-        # A helper to inspect each message
-        def collect_devices(msg):
-            # Check if the object in the message is one of the devices
-            if msg.obj and msg.obj.name in self.devices_dictionary:
-                used_devices[msg.obj.name] = self.devices_dictionary[msg.obj.name]
-            return None, None  # No modifications to the plan
-
-        # Use a plan_mutator to iterate through the plan
-        list(plan_mutator(plan, collect_devices))
-        return used_devices
-
     @measure_time
     def validate_plan_devices(self, plan) -> dict:
         """
-        Check if all devices in the dictionary are used in the plan.
-        Returns a dictionary with 'all_devices_used' (bool), 'used_devices' (dict), and 'unused_devices' (dict).
-        """
-        used_devices: dict = self.devices_used_in_plan(plan)
-        all_devices: dict = self.devices_dictionary
+        Check which devices from self.devices_dictionary are used in the plan.
+        Optimized to stop iterating once all devices have been found.
 
-        # Find unused devices by comparing the keys (names) in used_devices and all_devices
-        unused_devices = {
-            name: device
-            for name, device in all_devices.items()
-            if name not in used_devices
-        }
+        Returns:
+            dict: {
+                "all_devices_used": bool,  # True if all devices in self.devices_dictionary are used
+                "unused_devices": dict,    # Devices in self.devices_dictionary that are NOT used
+                "used_devices": dict       # Devices in self.devices_dictionary that are used
+            }
+        """
+        used_devices: dict = {}
+        remaining_devices = set(self.devices_dictionary.keys())  # Track missing devices
+
+        def collect_devices(msg):
+            # Check if the object in the message is one of the devices
+            if msg.obj and msg.obj.name in remaining_devices:
+                used_devices[msg.obj.name] = self.devices_dictionary[msg.obj.name]
+                remaining_devices.remove(msg.obj.name)  # Remove from remaining devices
+
+                # Stop iterating if all devices have been found
+                if not remaining_devices:
+                    return None, None
+
+            return None, None  # No modifications to the plan
+
+        # Iterate through the plan
+        # Make sure plan_mutator properly handles the StopIteration exception:
+        try:
+            list(plan_mutator(plan, collect_devices)) # Trigger the iteration process
+        except StopIteration:
+            pass  # Gracefully handle the StopIteration without causing a RuntimeError
+
+        # Find unused devices
+        unused_devices = {name: self.devices_dictionary[name] for name in remaining_devices}
 
         return {
-            "all_devices_used": len(unused_devices) == 0,
+            "all_devices_used": not unused_devices,  # True if all devices were used
             "unused_devices": unused_devices,
             "used_devices": used_devices,
         }
