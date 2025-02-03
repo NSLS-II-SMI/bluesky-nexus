@@ -435,7 +435,7 @@ def get_nested_dict_value(data: dict, key_path: list):
 
 
 class PlanDeviceChecker:
-    """ "
+    """
     Check which of the devices listed in devices_dictionary participate in the plan
     Returns:
         - all_devices_used: bool
@@ -445,6 +445,7 @@ class PlanDeviceChecker:
 
     def __init__(self, devices_dictionary):
         self.devices_dictionary = devices_dictionary
+        self.device_names_set = set(devices_dictionary.keys())  # Set of all device names
 
     @measure_time
     def validate_plan_devices(self, plan) -> dict:
@@ -461,30 +462,29 @@ class PlanDeviceChecker:
         """
 
         logger.info('Detection of devices in the plan started. Please wait.')
-        used_devices: dict = {}
-        remaining_devices = set(self.devices_dictionary.keys())  # Track missing devices
 
+        used_device_names = set()  # To store the names of used devices
+
+        # Step 1: Create the callable to collect devices used in the plan
         def collect_devices(msg):
-            # Check if the object in the message is one of the devices
-            if msg.obj and msg.obj.name in remaining_devices:
-                used_devices[msg.obj.name] = self.devices_dictionary[msg.obj.name]
-                remaining_devices.remove(msg.obj.name)  # Remove from remaining devices
+            if msg.obj and msg.obj.name in self.device_names_set:
+                used_device_names.add(msg.obj.name)
+            # Stop iteration if all devices are found
+            if len(used_device_names) == len(self.device_names_set):
+                return None, None
+            return None, None
 
-                # Stop iterating if all devices have been found
-                if not remaining_devices:
-                    return None, None
-
-            return None, None  # No modifications to the plan
-
-        # Iterate through the plan
-        # Make sure plan_mutator properly handles the StopIteration exception:
+        # Step 2: Iterate over the plan using the plan_mutator and collect devices
         try:
-            list(plan_mutator(plan, collect_devices)) # Trigger the iteration process
+            list(plan_mutator(plan, collect_devices))  # Trigger iteration process
         except StopIteration:
             pass  # Gracefully handle the StopIteration without causing a RuntimeError
 
-        # Find unused devices
-        unused_devices = {name: self.devices_dictionary[name] for name in remaining_devices}
+        # Step 3: Create used_devices and unused_devices dictionaries
+        used_devices: dict = {name: self.devices_dictionary[name] for name in used_device_names}
+        unused_devices: dict = {name: self.devices_dictionary[name] for name in self.device_names_set - used_device_names}
+
+        # Step 4: Return results
         logger.info('Detection of devices in the plan finished.')
 
         return {
