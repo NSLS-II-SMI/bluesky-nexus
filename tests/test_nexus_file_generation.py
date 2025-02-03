@@ -3,6 +3,7 @@ import os
 import h5py
 import numpy as np
 import pytest
+import types
 import unittest
 from bluesky import RunEngine
 from bluesky.plans import scan
@@ -189,8 +190,10 @@ def execute_plan(RE: RunEngine, md: dict, detectors: list[object], motor: object
     """
 
     def scan_plan():
-        yield from scan(detectors, motor, 1, 10, plan_step_number, md=md)  # Start, stop, steps
-
+        plan = scan(detectors, motor, 1, 10, plan_step_number, md=md)  # Start, stop, steps
+        assert isinstance(plan, types.GeneratorType), "scan() is not returning a generator!"
+        yield from plan
+        
     RE(scan_plan())
 
 
