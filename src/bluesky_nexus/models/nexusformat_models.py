@@ -65,10 +65,10 @@ class PrePostRunString(str):
         if not (
             value.startswith("$pre-run-cpt")
             or value.startswith("$pre-run-md")
-            or value.startswith("$post-run:events")
+            or value.startswith("$post-run")
         ):
             raise ValueError(
-                'string must start with "$pre-run-cpt" or $pre-run-md or "$post-run:events"'
+                'string must start with "$pre-run-cpt" or $pre-run-md or "$post-run"'
             )
         return cls(value)
 

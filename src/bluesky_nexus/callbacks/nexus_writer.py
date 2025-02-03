@@ -30,7 +30,7 @@ Notes:
 import copy
 import os
 import re
-from collections import deque
+from collections import deque, OrderedDict
 from typing import Optional, Union
 
 import h5py
@@ -216,28 +216,17 @@ class NexusWriter(CollectThenCompute):
 
 
 # Define processing of the nexus md
-def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
+def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
     """
-    Process the nexus metadata from the 'start' document by replacing placeholders with data
-    from the 'events' and 'descriptors' documents. This function is used to fill in the values
-    of placeholders ($post-run) with corresponding data from the events of the run.
-
-    Args:
-        nexus_md (dict): The dictionary representing the Nexus metadata, which may contain placeholders
-                            for device values that need to be filled in with actual data.
-        descriptors (dict): A dictionary or deque of descriptors, which contains metadata describing
-                            the devices and their corresponding data keys.
-        events (dict): A dictionary representing events, containing data associated with the run,
-                        including the actual values for the placeholders.
-
-    Returns:
-        None: This function modifies the input `nexus_md` dictionary in place, replacing the placeholders
-                with the corresponding data from the events.
-
-    Notes:
-        - The `$post-run` placeholders are replaced with data based on descriptors and events.
-        - This function assumes that the descriptors contain metadata on the devices being used in the run.
+    Process the Nexus metadata by replacing placeholders with actual data from events and descriptors.
     """
+
+    if not nexus_md:
+        raise ValueError("The dict 'nexus_md' is empty")
+    if not descriptors:
+        raise ValueError("The deque 'descriptors' is empty")
+    if not events:
+        raise ValueError("The deque 'events' is empty")
 
     def process_post_run():
         """
@@ -250,69 +239,59 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
         - Replace the placeholders in the Nexus metadata with actual event data.
         """
 
-        def select_descriptor(descriptors: deque, cpt_name: str) -> Optional[dict]:
-            """
-            Select an appropriate descriptor for the given component name 'cpt_name'
-                - If cpt_name is found in any other descriptor than the 'baseline' descriptor read from this descriptor
-                - elif cpt_name is found only in the 'baseline' descriptor read from 'baseline' descriptor
-                - else raise exception
-                If there is a device that is used in a plan and whose schema contains a component (with '$post-run' placeholder) that is not used in the plan, such a device must be entered in the baseline.
-                Otherwise, there is no data to replace the placeholder for the component (with '$post-run' placeholder) that is not participating in the plan.
-            Args:
-                descriptors (deque): The deque of descriptors.
-                cpt_name (str): The component name to look for in the descriptors.
+        def get_data_from_descriptor(descriptor: dict, cpt_name: str) -> Optional[dict]:
+            """Retrieve data from descriptor configuration"""
+            config = descriptor.get('configuration', {})
+            for device_name, device_data in config.items():
+                data_keys, data, timestamps = map(device_data.get, ['data_keys', 'data', 'timestamps'])
+                if data_keys and cpt_name in data_keys:
+                    logger.debug(f"Data for component: '{cpt_name}' found in configuration of descriptor: '{descriptor['name']}'")
+                    return {
+                        'description': data_keys[cpt_name],
+                        'data': np.array(data.get(cpt_name)),
+                        'descriptor_cpt_timestamp': np.array(timestamps.get(cpt_name))
+                    }
+            return None
 
-            Returns:
-                dict: The selected descriptor.
 
-            Raises:
-                ValueError: If no descriptor with the specified component name is found.
-            """
+        def get_data_from_events(descriptor: dict, events, cpt_name: str) -> Optional[dict]:
+            """Retrieve data from events based on descriptor UID."""
+            if cpt_name not in descriptor['data_keys']:
+                return None
 
-            # If the deque 'descriptors' is empty, raise an exception
-            if not descriptors:
-                raise ValueError("The deque 'descriptors' is empty")
+            descriptor_uid = descriptor['uid']
+            filtered_events = [evt for evt in events if evt['descriptor'] == descriptor_uid]
+            data: dict =  {
+                'description': descriptor['data_keys'][cpt_name],
+                'data': np.array([evt['data'][cpt_name] for evt in filtered_events if cpt_name in evt['data']]),
+                'events_cpt_timestamps': np.array([evt['timestamps'][cpt_name] for evt in filtered_events if cpt_name in evt['timestamps']]),
+                'events_timestamps': np.array([evt['time'] for evt in filtered_events])
+            }
+            logger.debug(f"Data for component: '{cpt_name}' found in {len(data['data'])} event(s) of the descriptor: '{descriptor['name']}'")
+            return data
 
-            # Try to find a descriptor with the cpt_name and name not equal to 'baseline'
-            for descriptor in descriptors:
-                if (
-                    cpt_name in descriptor["data_keys"]
-                    and descriptor["name"] != "baseline"
-                ):
-                    return descriptor
 
-            # If no such selector, try to find a baseline descriptor containing cpt_name
-            for descriptor in descriptors:
-                if (
-                    cpt_name in descriptor["data_keys"]
-                    and descriptor["name"] == "baseline"
-                ):
-                    return descriptor
-                
-            # No descriptor contains the cpt_name
-            raise ValueError(f"No descriptor contains the 'data_key': {cpt_name}")
-        
         # Define a few helper functions to parse the Nexus tree and replace values with data from the events of the run
         def get_cpt_name_from_placeholder(value: str) -> Optional[str]:
             """
             Extracts the component name from the placeholder string, typically in the form
-            of `$post-run:events:<component_name>`.
+            of `$post-run:<component_name>`.
 
             Args:
-                value (str): The placeholder string, e.g., "$post-run:events:a_b_c".
+                value (str): The placeholder string, e.g., "$post-run:a_b_c".
                 Pattern matches:
-                    $post-run:events:a_b_c
-                    $post-run:events:a-b-c-d
-                    $post-run:events:a_b-c_d-e
-                    $post-run:events:a
-                    $post-run:events
+                    $post-run:a_b_c
+                    $post-run:a-b-c-d
+                    $post-run:a_b-c_d-e
+                    $post-run:a
+                    $post-run
             Returns:
                 str: The component name extracted from the placeholder (e.g., "a_b_c").
                 None: If the placeholder does not match the expected pattern.
             """
 
-            POST_RUN_LABEL: str = "$post-run:events:"
-            PATTERN: str = r"^\$post-run:events(:[a-zA-Z0-9_-]+)?$"
+            POST_RUN_LABEL: str = "$post-run:"
+            PATTERN: str = r"^\$post-run(:[a-zA-Z0-9_-]+)?$"
 
             match = re.search(PATTERN, value)
             if match:
@@ -323,6 +302,27 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     return str("")  # Return empty string
             else:
                 return None  # Pattern does not match
+
+        def extract_data(descriptors, events, cpt_name) -> dict:
+            """Extract data for cpt_name from descriptors, prioritizing non-baseline first."""
+            
+            def find_data(descriptor) -> Optional[dict]:
+                return get_data_from_events(descriptor, events, cpt_name) or get_data_from_descriptor(descriptor, cpt_name)
+
+            # Prioritize non-baseline descriptors
+            for descriptor in descriptors:
+                if descriptor["name"] != "baseline":
+                    if data := find_data(descriptor):
+                        return data
+
+            # Check baseline descriptor if no data found so far
+            for descriptor in descriptors:
+                if descriptor["name"] == "baseline":
+                    if data := find_data(descriptor):
+                        return data
+
+            # No data found
+            raise ValueError(f"No descriptor contains data for the 'cpt_name': {cpt_name}")
 
         def replace_func(dev_name: str, obj: dict) -> dict:
             """
@@ -345,7 +345,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     return obj
 
                 # Define component name
-                cpt_name: str = get_cpt_name_from_placeholder(placeholder)
+                cpt_name: Optional[str] = get_cpt_name_from_placeholder(placeholder)
                 if cpt_name is None:
                     return obj
 
@@ -358,66 +358,46 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                 else:
                     cpt_name: str = dev_name + obj_delimiter + cpt_name
 
-                # Select an appropriate descriptor for the 'cpt_name':
-                descriptor: dict = select_descriptor(descriptors, cpt_name)
+                # Extract data from descriptor for the component
+                cpt_data: dict = extract_data(descriptors, events, cpt_name)
 
-                # Extract the 'uid' of the descriptor
-                descriptor_uid: str = descriptor["uid"]
+                # Component data from descriptor
+                data: np.ndarray = cpt_data['data']
+                # Component description from descriptor
+                desc: dict = cpt_data["description"]
 
-                # Collect data from the events associated with the descriptor (by applying 'descriptor_uid')
-                events_data: np.array = np.array(
-                    [
-                        evt["data"][cpt_name]
-                        for evt in events
-                        if evt["descriptor"] == descriptor_uid
-                        and cpt_name in evt["data"]
-                    ]
-                )
-
-                # Optional transformation
+                # Optional transformation on data of data
                 if "transformation" in obj:
                     # Execute transformation on events_data
                     if "value" == obj["transformation"]["target"]:
                         expression: str = obj["transformation"]["expression"]
-                        events_data = apply_symbolic_transformation(
-                            events_data, expression
+                        data = apply_symbolic_transformation(
+                            data, expression
                         )
 
-                # Assign the result to the object's value
-                obj["value"] = events_data
+                # Assign 'data'
+                obj["value"] = data
 
-                # Collect component timestamps from the events associated with the descriptor (by applying 'descriptor_uid')
-                events_cpt_timestamps: np.array = np.array(
-                    [
-                        evt["timestamps"][cpt_name]
-                        for evt in events
-                        if evt["descriptor"] == descriptor_uid
-                        and cpt_name in evt["timestamps"]
-                    ]
-                )
-                # Assign the result to the object's value
-                obj["events_cpt_timestamps"] = events_cpt_timestamps
+                # Assign 'events_cpt_timestamps'
+                if 'events_cpt_timestamps' in cpt_data:
+                    obj["events_cpt_timestamps"] = cpt_data["events_cpt_timestamps"]
+                    
+                # Assign 'events_timestamps'
+                if 'events_timestamps' in cpt_data:
+                    obj["events_timestamps"] = cpt_data["events_timestamps"]
+                    
+                # Assign 'descriptor_cpt_timestamp'
+                if 'descriptor_cpt_timestamp' in cpt_data:
+                    obj["descriptor_cpt_timestamp"] = cpt_data["descriptor_cpt_timestamp"]
 
-                # Collect event timestamps from the events associated with the descriptor (by applying 'descriptor_uid')
-                events_timestamps: np.array = np.array(
-                    [
-                        evt["time"]
-                        for evt in events
-                        if evt["descriptor"] == descriptor_uid
-                    ]
-                )
-                # Assign the result to the object's value
-                obj["events_timestamps"] = events_timestamps
-
-                # Extract from the descriptor["data_keys"] the data describing the 'cpt_name'
-                desc: dict = descriptor["data_keys"][cpt_name]
-
-                # ----------- Assign to the 'obj' all abligatory keys -----------
+                # ----------- Assign all abligatory keys -----------
 
                 # Extract dtype (obligatory key), with fallback to defaults
                 dtype = obj.get("dtype", desc.get("dtype", "unknown"))
                 if dtype == "number":
                     dtype = "float64"
+                elif dtype == "integer":
+                    dtype = "int64"
                 elif dtype == "string":
                     dtype = "str"
                 elif dtype == "array":
@@ -426,13 +406,11 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     )  # One lookup for dtype
                 elif dtype == "object":
                     dtype = "str"  # Treat object as a string
-                # Assign dtype to the object
+                # Assign dtype
                 obj["dtype"] = dtype
 
-                # Extract shape (obligatory key) and prepend the length of events
-                obj["shape"] = [len(events_data)] + obj.get(
-                    "shape", desc.get("shape", [])
-                )
+                # Assign shape (obligatory key)
+                obj["shape"] = list(data.shape)
 
                 # Ensure "attrs" key exists in obj
                 obj.setdefault("attrs", {})
@@ -442,7 +420,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                     "source", desc.get("source", "unknown")
                 )
 
-                # ----------- Assign to the 'obj' all optional keys -----------
+                # ----------- Assign all optional keys -----------
 
                 # Extract units (optional key)
                 units = obj["attrs"].get("units", desc.get("units", None))
@@ -458,6 +436,26 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: dict):
                 precision = obj.get("precision", desc.get("precision", None))
                 if precision is not None:
                     obj["precision"] = precision
+
+                # Extract and set lower_ctrl_limit (optional key)
+                lower_ctrl_limit = obj["attrs"].get("lower_ctrl_limit", desc.get("lower_ctrl_limit", None))
+                if lower_ctrl_limit is not None:
+                    obj["attrs"]["lower_ctrl_limit"] = lower_ctrl_limit
+
+                # Extract and set upper_ctrl_limit (optional key)
+                upper_ctrl_limit = obj["attrs"].get("upper_ctrl_limit", desc.get("upper_ctrl_limit", None))
+                if upper_ctrl_limit is not None:
+                    obj["attrs"]["upper_ctrl_limit"] = upper_ctrl_limit
+
+                # Extract and set upper_ctrl_limit (optional key)
+                enum_strs = obj["attrs"].get("enum_strs", desc.get("enum_strs", None))
+                if enum_strs is not None:
+                    obj["attrs"]["enum_strs"] = enum_strs
+
+                # Extract and set object_name (optional key)
+                object_name = obj["attrs"].get("object_name", desc.get("object_name", None))
+                if object_name is not None:
+                    obj["attrs"]["object_name"] = object_name
 
                 return obj
             else:
@@ -663,6 +661,7 @@ def add_group_or_field(group, data):
                             "shape",
                             "events_cpt_timestamps",
                             "events_timestamps",
+                            "descriptor_cpt_timestamp"
                         }:
                             # Convert non-compatible types to strings
                             if isinstance(extra_value, (dict, list)):
@@ -677,9 +676,22 @@ def add_group_or_field(group, data):
                             dtype="float64",
                         )
                         dataset.attrs["nxclass"] = "NX_FLOAT"
-                        dataset.attrs["shape"] = [len(value["events_cpt_timestamps"])]
+                        dataset.attrs["shape"] = list(value["events_cpt_timestamps"].shape)
                         dataset.attrs["description"] = (
-                            f"Timestamps of the component: {key}"
+                            f"Timestamps of the component: {key} extracted from the events"
+                        )
+                        
+                    ### Create dataset for 'descriptor_cpt_timestamp'
+                    if "descriptor_cpt_timestamp" in value:
+                        dataset = group.create_dataset(
+                            key + "_timestamp",
+                            data=value["descriptor_cpt_timestamp"],
+                            dtype="float64",
+                        )
+                        dataset.attrs["nxclass"] = "NX_FLOAT"
+                        dataset.attrs["shape"] = list(value["descriptor_cpt_timestamp"].shape)
+                        dataset.attrs["description"] = (
+                            f"Timestamp of the component: {key} extracted from the descriptor"
                         )
 
                     ### Create dataset for 'events_timestamp'
@@ -696,7 +708,7 @@ def add_group_or_field(group, data):
                             )
                             # Add attributes to the dataset
                             dataset.attrs["nxclass"] = "NX_FLOAT"
-                            dataset.attrs["shape"] = [len(value["events_timestamps"])]
+                            dataset.attrs["shape"] = list(value["events_timestamps"].shape)
                             dataset.attrs["description"] = "Timestamps of the events"
 
                 else:

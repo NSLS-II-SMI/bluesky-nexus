@@ -25,7 +25,7 @@ Functions:
     process_value_not_available: Removes keys with values marked as "NOT_AVAILABLE".
     resolve_pre_run_placeholders: Recursively resolves placeholders in metadata dictionaries.
     get_nested_dict_value: Fetches values from nested dictionaries using a key path.
-    cache_plan: Caches Bluesky plans to make them replayable.
+    cache_plan: Caches Bluesky plan to make it replayable twice.
 
 Dependencies:
 
@@ -39,6 +39,7 @@ Dependencies:
 
 import asyncio
 from enum import Enum, auto
+from itertools import tee
 from typing import Any, Callable, Dict
 
 from bluesky.preprocessors import SupplementalData, inject_md_wrapper, plan_mutator
@@ -127,13 +128,11 @@ class SupplementalMetadata(SupplementalData):
             raise ValueError(f"Invalid metadata type: {self.md_type}")
 
         # We have to cache the plan, otherwise the PlanDeviceChecker would exhaust the plan
-        replayable_plan = cache_plan(
-            plan
-        )  # 'replayable_plan' can be reused as many times as we want, it is not exhaustible
+        plan1, plan2 = cache_plan(plan)  # Create two identical plans plan1 and plan2 from the plan
 
         # Check if all devices of self.devices_dictionary are participating in the plan.
         checker = PlanDeviceChecker(self.devices_dictionary)
-        checker_result = checker.validate_plan_devices(replayable_plan())
+        checker_result = checker.validate_plan_devices(plan1)
 
         # Define a dictionary of devices taking part in the plan. (It includes devices not taking part in a run but subscribed to the baseline.)
         devices_in_plan: dict = {
@@ -151,7 +150,7 @@ class SupplementalMetadata(SupplementalData):
 
         # Create metadata and inject it into the plan
         metadata: dict = create_metadata(devices_in_plan)
-        plan = inject_md_wrapper(replayable_plan(), metadata)
+        plan = inject_md_wrapper(plan2, metadata)
         return (yield from plan)
 
 
@@ -436,7 +435,7 @@ def get_nested_dict_value(data: dict, key_path: list):
 
 
 class PlanDeviceChecker:
-    """ "
+    """
     Check which of the devices listed in devices_dictionary participate in the plan
     Returns:
         - all_devices_used: bool
@@ -446,43 +445,50 @@ class PlanDeviceChecker:
 
     def __init__(self, devices_dictionary):
         self.devices_dictionary = devices_dictionary
-
-    def devices_used_in_plan(self, plan) -> dict:
-        """
-        Extract devices used in a Bluesky plan by inspecting its messages.
-        The result will be a dictionary of used devices (device instance name -> device instance).
-        """
-        used_devices: dict = {}
-
-        # A helper to inspect each message
-        def collect_devices(msg):
-            # Check if the object in the message is one of the devices
-            if msg.obj and msg.obj.name in self.devices_dictionary:
-                used_devices[msg.obj.name] = self.devices_dictionary[msg.obj.name]
-            return None, None  # No modifications to the plan
-
-        # Use a plan_mutator to iterate through the plan
-        list(plan_mutator(plan, collect_devices))
-        return used_devices
+        self.device_names_set = set(devices_dictionary.keys())  # Set of all device names
 
     @measure_time
     def validate_plan_devices(self, plan) -> dict:
         """
-        Check if all devices in the dictionary are used in the plan.
-        Returns a dictionary with 'all_devices_used' (bool), 'used_devices' (dict), and 'unused_devices' (dict).
-        """
-        used_devices: dict = self.devices_used_in_plan(plan)
-        all_devices: dict = self.devices_dictionary
+        Check which devices from self.devices_dictionary are used in the plan.
+        Optimized to stop iterating once all devices have been found.
 
-        # Find unused devices by comparing the keys (names) in used_devices and all_devices
-        unused_devices = {
-            name: device
-            for name, device in all_devices.items()
-            if name not in used_devices
-        }
+        Returns:
+            dict: {
+                "all_devices_used": bool,  # True if all devices in self.devices_dictionary are used
+                "unused_devices": dict,    # Devices in self.devices_dictionary that are NOT used
+                "used_devices": dict       # Devices in self.devices_dictionary that are used
+            }
+        """
+
+        logger.info('Detection of devices in the plan started. Please wait.')
+
+        used_device_names = set()  # To store the names of used devices
+
+        # Step 1: Create the callable to collect devices used in the plan
+        def collect_devices(msg):
+            if msg.obj and msg.obj.name in self.device_names_set:
+                used_device_names.add(msg.obj.name)
+            # Stop iteration if all devices are found
+            if len(used_device_names) == len(self.device_names_set):
+                return None, None
+            return None, None
+
+        # Step 2: Iterate over the plan using the plan_mutator and collect devices
+        try:
+            list(plan_mutator(plan, collect_devices))  # Trigger iteration process
+        except StopIteration:
+            pass  # Gracefully handle the StopIteration without causing a RuntimeError
+
+        # Step 3: Create used_devices and unused_devices dictionaries
+        used_devices: dict = {name: self.devices_dictionary[name] for name in used_device_names}
+        unused_devices: dict = {name: self.devices_dictionary[name] for name in self.device_names_set - used_device_names}
+
+        # Step 4: Return results
+        logger.info('Detection of devices in the plan finished.')
 
         return {
-            "all_devices_used": len(unused_devices) == 0,
+            "all_devices_used": not unused_devices,  # True if all devices were used
             "unused_devices": unused_devices,
             "used_devices": used_devices,
         }
@@ -491,17 +497,19 @@ class PlanDeviceChecker:
 @measure_time
 def cache_plan(plan):
     """
-    Cache all messages from the given plan.
+    Efficiently create two independent iterators from a Bluesky plan while preserving generator behavior.
+    
+    Args:
+        plan (generator): The original Bluesky plan.
+    
+    Returns:
+        tuple: Two independent generators over the plan.
     """
-    cached_messages: list[Msg] = list(
-        plan
-    )  # Consume and store all messages, plan is going to be exhausted
+    plan1, plan2 = tee(plan, 2)  # Create two independent iterators
 
-    def replay_plan():
-        """
-        Replay the cached messages as a generator.
-        """
-        for msg in cached_messages:
-            yield msg
+    # Convert iterators back into generators to support `.send()`
+    def wrap_generator(it):
+        for msg in it:
+            yield msg  # Ensures it works like a generator
 
-    return replay_plan
+    return wrap_generator(plan1), wrap_generator(plan2)

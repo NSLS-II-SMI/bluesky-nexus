@@ -3,6 +3,7 @@ import os
 import h5py
 import numpy as np
 import pytest
+import types
 import unittest
 from bluesky import RunEngine
 from bluesky.plans import scan
@@ -102,6 +103,15 @@ def devices_dictionary():
     return {"mono": mono, "mono_with_grating_cpt": mono_with_grating_cpt}
 
 
+# Fixture: number of plan's steps
+@pytest.fixture
+def plan_step_number():
+    """
+    Number of plan's steps
+    """
+    return 10
+
+
 # Fixture: Baseline configuration for test 1
 @pytest.fixture
 def baseline_1(devices_dictionary):
@@ -173,15 +183,17 @@ def my_motor():
 
 
 # Helper: Execute a plan on the RunEngine
-def execute_plan(RE: RunEngine, md: dict, detectors: list[object], motor: object):
+def execute_plan(RE: RunEngine, md: dict, detectors: list[object], motor: object, plan_step_number: int):
     """
     Helper function to define and execute a plan on the RunEngine.
     - Scans detectors over a motor's range with given metadata.
     """
 
     def scan_plan():
-        yield from scan(detectors, motor, 1, 10, 5, md=md)  # Start, stop, steps
-
+        plan = scan(detectors, motor, 1, 10, plan_step_number, md=md)  # Start, stop, steps
+        assert isinstance(plan, types.GeneratorType), "scan() is not returning a generator!"
+        yield from plan
+        
     RE(scan_plan())
 
 
@@ -386,6 +398,7 @@ def test_1(
     my_motor,
     nx_file_dir_path,
     nx_schema_dir_path,
+    plan_step_number,
     request,
 ):
     """
@@ -407,7 +420,7 @@ def test_1(
     )
 
     # Execute the plan
-    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor)
+    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
 
     # Define Nexus file path
     nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
@@ -508,9 +521,9 @@ def test_1(
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6.0, 6.0, 6.0, 6.0, 6.0],
+            "value": [6,0] * plan_step_number,
             "dtype": "float64",
-            "shape": (5,),
+            "shape": (plan_step_number,),
             "attrs": {
                 "units": "keV",  # Expected units
             },
@@ -555,8 +568,8 @@ def test_1(
         "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/z": b"17.180000019",
         "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
         "entry/run_info/start/motors": [b"motor"],
-        "entry/run_info/start/num_intervals": 4,
-        "entry/run_info/start/num_points": 5,
+        "entry/run_info/start/num_intervals": plan_step_number - 1,
+        "entry/run_info/start/num_points": plan_step_number,
         "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
@@ -566,7 +579,7 @@ def test_1(
         "entry/run_info/start/plan_args/detectors": [
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
-        "entry/run_info/start/plan_args/num": 5,
+        "entry/run_info/start/plan_args/num": plan_step_number,
         "entry/run_info/start/plan_args/per_step": b"None",
         "entry/run_info/start/plan_name": b"scan",
         "entry/run_info/start/plan_pattern": b"inner_product",
@@ -575,7 +588,7 @@ def test_1(
             b"1",
             b"10",
         ],
-        "entry/run_info/start/plan_pattern_args/num": 5,
+        "entry/run_info/start/plan_pattern_args/num": plan_step_number,
         "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
         "entry/run_info/start/plan_type": b"generator",
         "entry/run_info/start/scan_id": 1,
@@ -591,7 +604,7 @@ def test_1(
         # ---
         "entry/run_info/stop/exit_status": b"success",
         "entry/run_info/stop/num_events/baseline": 2,
-        "entry/run_info/stop/num_events/primary": 5,
+        "entry/run_info/stop/num_events/primary": plan_step_number,
         "entry/run_info/stop/reason": b"",
     }
 
@@ -611,6 +624,7 @@ def test_2(
     my_motor,
     nx_file_dir_path,
     nx_schema_dir_path,
+    plan_step_number,
     request,
 ):
     """
@@ -632,7 +646,7 @@ def test_2(
     )
 
     # Execute the plan
-    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor)
+    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
 
     # Define Nexus file path
     nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
@@ -702,9 +716,9 @@ def test_2(
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6.0, 6.0, 6.0, 6.0, 6.0],
+            "value": [6,0] * plan_step_number,
             "dtype": "float64",
-            "shape": (5,),
+            "shape": (plan_step_number,),
             "attrs": {
                 "units": "keV",  # Expected units
             },
@@ -726,8 +740,8 @@ def test_2(
         "entry/run_info/start/device_md/mono/worldPosition/z": b"7.8000000000000009",
         "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
         "entry/run_info/start/motors": [b"motor"],
-        "entry/run_info/start/num_intervals": 4,
-        "entry/run_info/start/num_points": 5,
+        "entry/run_info/start/num_intervals": plan_step_number - 1,
+        "entry/run_info/start/num_points": plan_step_number,
         "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
@@ -737,7 +751,7 @@ def test_2(
         "entry/run_info/start/plan_args/detectors": [
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
-        "entry/run_info/start/plan_args/num": 5,
+        "entry/run_info/start/plan_args/num": plan_step_number,
         "entry/run_info/start/plan_args/per_step": b"None",
         "entry/run_info/start/plan_name": b"scan",
         "entry/run_info/start/plan_pattern": b"inner_product",
@@ -746,7 +760,7 @@ def test_2(
             b"1",
             b"10",
         ],
-        "entry/run_info/start/plan_pattern_args/num": 5,
+        "entry/run_info/start/plan_pattern_args/num": plan_step_number,
         "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
         "entry/run_info/start/plan_type": b"generator",
         "entry/run_info/start/scan_id": 1,
@@ -762,7 +776,7 @@ def test_2(
         # ---
         "entry/run_info/stop/exit_status": b"success",
         "entry/run_info/stop/num_events/baseline": 2,
-        "entry/run_info/stop/num_events/primary": 5,
+        "entry/run_info/stop/num_events/primary": plan_step_number,
         "entry/run_info/stop/reason": b"",
     }
 
@@ -782,6 +796,7 @@ def test_3(
     my_motor,
     nx_file_dir_path,
     nx_schema_dir_path,
+    plan_step_number,
     request,
 ):
     """
@@ -803,7 +818,7 @@ def test_3(
     )
 
     # Execute the plan
-    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor)
+    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
 
     # Define Nexus file path
     nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
@@ -901,9 +916,9 @@ def test_3(
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6.0, 6.0, 6.0, 6.0, 6.0],
+            "value": [6.0] * plan_step_number,
             "dtype": "float64",
-            "shape": (5,),
+            "shape": (plan_step_number,),
             "attrs": {
                 "units": "keV",  # Expected units
             },
@@ -948,8 +963,8 @@ def test_3(
         "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/z": b"17.180000019",
         "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
         "entry/run_info/start/motors": [b"motor"],
-        "entry/run_info/start/num_intervals": 4,
-        "entry/run_info/start/num_points": 5,
+        "entry/run_info/start/num_intervals": plan_step_number - 1,
+        "entry/run_info/start/num_points": plan_step_number,
         "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
@@ -959,7 +974,7 @@ def test_3(
         "entry/run_info/start/plan_args/detectors": [
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
-        "entry/run_info/start/plan_args/num": 5,
+        "entry/run_info/start/plan_args/num": plan_step_number,
         "entry/run_info/start/plan_args/per_step": b"None",
         "entry/run_info/start/plan_name": b"scan",
         "entry/run_info/start/plan_pattern": b"inner_product",
@@ -968,7 +983,7 @@ def test_3(
             b"1",
             b"10",
         ],
-        "entry/run_info/start/plan_pattern_args/num": 5,
+        "entry/run_info/start/plan_pattern_args/num": plan_step_number,
         "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
         "entry/run_info/start/plan_type": b"generator",
         "entry/run_info/start/scan_id": 1,
@@ -984,7 +999,7 @@ def test_3(
         # ---
         "entry/run_info/stop/exit_status": b"success",
         "entry/run_info/stop/num_events/baseline": 2,
-        "entry/run_info/stop/num_events/primary": 5,
+        "entry/run_info/stop/num_events/primary": plan_step_number,
         "entry/run_info/stop/reason": b"",
     }
 
@@ -1004,6 +1019,7 @@ def test_4(
     my_motor,
     nx_file_dir_path,
     nx_schema_dir_path,
+    plan_step_number,
     request,
 ):
     """
@@ -1025,7 +1041,7 @@ def test_4(
     )
 
     # Execute the plan
-    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor)
+    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
 
     # Define Nexus file path
     nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
@@ -1095,9 +1111,9 @@ def test_4(
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6.0, 6.0, 6.0, 6.0, 6.0],
+            "value": [6,0] * plan_step_number,
             "dtype": "float64",
-            "shape": (5,),
+            "shape": (plan_step_number,),
             "attrs": {
                 "units": "keV",  # Expected units
             },
@@ -1119,8 +1135,8 @@ def test_4(
         "entry/run_info/start/device_md/mono/worldPosition/z": b"7.8000000000000009",
         "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
         "entry/run_info/start/motors": [b"motor"],
-        "entry/run_info/start/num_intervals": 4,
-        "entry/run_info/start/num_points": 5,
+        "entry/run_info/start/num_intervals": plan_step_number - 1,
+        "entry/run_info/start/num_points": plan_step_number,
         "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
@@ -1130,7 +1146,7 @@ def test_4(
         "entry/run_info/start/plan_args/detectors": [
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
-        "entry/run_info/start/plan_args/num": 5,
+        "entry/run_info/start/plan_args/num": plan_step_number,
         "entry/run_info/start/plan_args/per_step": b"None",
         "entry/run_info/start/plan_name": b"scan",
         "entry/run_info/start/plan_pattern": b"inner_product",
@@ -1139,7 +1155,7 @@ def test_4(
             b"1",
             b"10",
         ],
-        "entry/run_info/start/plan_pattern_args/num": 5,
+        "entry/run_info/start/plan_pattern_args/num": plan_step_number,
         "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
         "entry/run_info/start/plan_type": b"generator",
         "entry/run_info/start/scan_id": 1,
@@ -1154,7 +1170,7 @@ def test_4(
         # --- entry/run_info/stop ---
         # ---
         "entry/run_info/stop/exit_status": b"success",
-        "entry/run_info/stop/num_events/primary": 5,
+        "entry/run_info/stop/num_events/primary": plan_step_number,
         "entry/run_info/stop/reason": b"",
     }
 

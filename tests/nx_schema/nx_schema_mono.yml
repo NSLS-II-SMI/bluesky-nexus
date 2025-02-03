@@ -2,7 +2,7 @@ nx_model: NXmonochromatorModel
 nxclass: NXmonochromator
 energy:
   nxclass: NX_FLOAT
-  value: $post-run:events:en
+  value: $post-run:en
   dtype: float64
   attrs:
     units: "keV"
