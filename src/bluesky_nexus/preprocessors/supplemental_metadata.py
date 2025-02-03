@@ -459,6 +459,8 @@ class PlanDeviceChecker:
                 "used_devices": dict       # Devices in self.devices_dictionary that are used
             }
         """
+
+        logger.info('Detection of devices in the plan started. Please wait.')
         used_devices: dict = {}
         remaining_devices = set(self.devices_dictionary.keys())  # Track missing devices
 
@@ -483,6 +485,7 @@ class PlanDeviceChecker:
 
         # Find unused devices
         unused_devices = {name: self.devices_dictionary[name] for name in remaining_devices}
+        logger.info('Detection of devices in the plan finished.')
 
         return {
             "all_devices_used": not unused_devices,  # True if all devices were used
