@@ -246,10 +246,15 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 data_keys, data, timestamps = map(device_data.get, ['data_keys', 'data', 'timestamps'])
                 if data_keys and cpt_name in data_keys:
                     logger.debug(f"Data for component: '{cpt_name}' found in configuration of descriptor: '{descriptor['name']}'")
+
+                    value = data.get(cpt_name)
+                    timestamp = timestamps.get(cpt_name)
+
+                    #  By switching to dtype=object, we are telling NumPy to treat each element as an object, which means the strings are not constrained to a fixed size.
                     return {
                         'description': data_keys[cpt_name],
-                        'data': np.array(data.get(cpt_name)),
-                        'descriptor_cpt_timestamp': np.array(timestamps.get(cpt_name))
+                        'data': np.array(value, dtype=object) if isinstance(value, str) else np.array(value),
+                        'descriptor_cpt_timestamp': np.array(timestamp, dtype=object) if isinstance(timestamp, str) else np.array(timestamp)
                     }
             return None
 
@@ -261,11 +266,20 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
 
             descriptor_uid = descriptor['uid']
             filtered_events = [evt for evt in events if evt['descriptor'] == descriptor_uid]
+
+            values: list = [evt['data'][cpt_name] for evt in filtered_events if cpt_name in evt['data']]
+            timestamps: list = [evt['timestamps'][cpt_name] for evt in filtered_events if cpt_name in evt['timestamps']]
+            event_times: list = [evt['time'] for evt in filtered_events]
+
+            # Check type of first value and use proper dtype
+            data_dtype = object if any(isinstance(v, str) for v in values) else None
+            timestamps_dtype = object if any(isinstance(v, str) for v in timestamps) else None
+
             data: dict =  {
                 'description': descriptor['data_keys'][cpt_name],
-                'data': np.array([evt['data'][cpt_name] for evt in filtered_events if cpt_name in evt['data']]),
-                'events_cpt_timestamps': np.array([evt['timestamps'][cpt_name] for evt in filtered_events if cpt_name in evt['timestamps']]),
-                'events_timestamps': np.array([evt['time'] for evt in filtered_events])
+                'data': np.array(values, dtype=data_dtype),
+                'events_cpt_timestamps': np.array(timestamps, dtype=timestamps_dtype),
+                'events_timestamps': np.array(event_times)
             }
             logger.debug(f"Data for component: '{cpt_name}' found in {len(data['data'])} event(s) of the descriptor: '{descriptor['name']}'")
             return data
@@ -632,8 +646,16 @@ def add_group_or_field(group, data):
                 dtype = value.get("dtype", None)
 
                 if dtype in VALID_NXFIELD_DTYPES:
-                    if "str" == dtype or "char" == dtype:
+                    if dtype in {"str", "char"} or isinstance(value["value"], np.str_) or (
+                        isinstance(value["value"], np.ndarray) and value["value"].dtype == object and
+                        value["value"].size > 0 and
+                        all(isinstance(item, str) for item in value["value"])
+                    ):
                         dtype = h5py.string_dtype(encoding="utf-8")
+
+                        # Extract single string from an ndarray with shape (1,)
+                        if isinstance(value["value"], np.ndarray) and value["value"].size == 1:
+                            value["value"] = value["value"].item()  # Extracts the scalar string
 
                     ### Create dataset for 'value'
                     dataset = group.create_dataset(
