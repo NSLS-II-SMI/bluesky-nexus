@@ -680,11 +680,19 @@ def add_group_or_field(group, data):
                 dtype = value.get("dtype", None)
 
                 if dtype in VALID_NXFIELD_DTYPES:
-                    # Handle strings explicitelly
+                    # Handle strings and object dtype explicitly
                     if isinstance(value["value"], np.ndarray) and value["value"].dtype == object:
-                        # Convert np.str_ elements to native Python strings (if any)
-                        value["value"] = np.array([str(item) if isinstance(item, np.str_) else item for item in value["value"]], dtype='str')
+                        # Check if the array is not 0-dimensional (i.e., scalar)
+                        if value["value"].ndim > 0:
+                            # Convert np.str_ elements to native Python strings (if any)
+                            value["value"] = np.array([str(item) if isinstance(item, np.str_) else item 
+                                                       for item in value["value"]], dtype='str')
+                        else:
+                            # For 0-dimensional arrays, convert np.str_ to a native Python string
+                            if isinstance(value["value"], np.str_):
+                                value["value"] = str(value["value"])
 
+                    # Handle strings explicitly
                     if dtype in {"str", "char"} or (
                         isinstance(value["value"], np.ndarray) and
                         value["value"].dtype == object and
