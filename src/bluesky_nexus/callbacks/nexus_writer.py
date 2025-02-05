@@ -249,12 +249,31 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
 
                     value = data.get(cpt_name)
                     timestamp = timestamps.get(cpt_name)
-
-                    #  By switching to dtype=object, we are telling NumPy to treat each element as an object, which means the strings are not constrained to a fixed size.
+                    
+                    # Determine dtype dynamically for value
+                    if isinstance(value, str):
+                        value_array = np.array(value, dtype=object)  # Single string, keep object dtype
+                    elif isinstance(value, list):
+                        # Use object dtype if list contains any strings; otherwise, let NumPy infer
+                        dtype = object if any(isinstance(v, str) for v in value) else None
+                        value_array = np.array(value, dtype=dtype)
+                    else:
+                        value_array = np.array(value)  # Let NumPy infer the best dtype
+                    
+                    # Determine dtype dynamically for timestamp
+                    if isinstance(timestamp, str):
+                        timestamp_array = np.array(timestamp, dtype=object)
+                    elif isinstance(timestamp, list):
+                        # Use object dtype if list contains any strings; otherwise, let NumPy infer
+                        dtype = object if any(isinstance(t, str) for t in timestamp) else None
+                        timestamp_array = np.array(timestamp, dtype=dtype)
+                    else:
+                        timestamp_array = np.array(timestamp) # Let NumPy infer the best dtype
+                    
                     return {
                         'description': data_keys[cpt_name],
-                        'data': np.array(value, dtype=object) if isinstance(value, str) else np.array(value),
-                        'descriptor_cpt_timestamp': np.array(timestamp, dtype=object) if isinstance(timestamp, str) else np.array(timestamp)
+                        'data': value_array,
+                        'descriptor_cpt_timestamp': timestamp_array
                     }
             return None
 
@@ -271,15 +290,30 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
             timestamps: list = [evt['timestamps'][cpt_name] for evt in filtered_events if cpt_name in evt['timestamps']]
             event_times: list = [evt['time'] for evt in filtered_events]
 
-            # Check type of first value and use proper dtype
-            data_dtype = object if any(isinstance(v, str) for v in values) else None
-            timestamps_dtype = object if any(isinstance(v, str) for v in timestamps) else None
+            # Determine dtype dynamically for values
+            if any(isinstance(v, str) for v in values):
+                values_array = np.array(values, dtype=object)  # Contains strings → use object
+            else:
+                values_array = np.array(values)  # Only numbers → NumPy infers dtype
 
+            # Determine dtype dynamically for timestamps
+            if any(isinstance(t, str) for t in timestamps):
+                timestamps_array = np.array(timestamps, dtype=object)  # Contains strings → use object
+            else:
+                timestamps_array = np.array(timestamps)  # Only numbers → NumPy infers dtype
+
+            # Determine dtype dynamically for event_times
+            if any(isinstance(t, str) for t in event_times):
+                event_times_array = np.array(event_times, dtype=object)  # Contains strings → use object
+            else:
+                event_times_array = np.array(event_times)  # Only numbers → NumPy infers dtype
+
+            # Define data to be returned
             data: dict =  {
                 'description': descriptor['data_keys'][cpt_name],
-                'data': np.array(values, dtype=data_dtype),
-                'events_cpt_timestamps': np.array(timestamps, dtype=timestamps_dtype),
-                'events_timestamps': np.array(event_times)
+                'data': values_array,
+                'events_cpt_timestamps': timestamps_array,
+                'events_timestamps': event_times_array
             }
             logger.debug(f"Data for component: '{cpt_name}' found in {len(data['data'])} event(s) of the descriptor: '{descriptor['name']}'")
             return data
@@ -646,10 +680,15 @@ def add_group_or_field(group, data):
                 dtype = value.get("dtype", None)
 
                 if dtype in VALID_NXFIELD_DTYPES:
-                    if dtype in {"str", "char"} or isinstance(value["value"], np.str_) or (
-                        isinstance(value["value"], np.ndarray) and value["value"].dtype == object and
-                        value["value"].size > 0 and
-                        all(isinstance(item, str) for item in value["value"])
+                    # Handle strings explicitelly
+                    if isinstance(value["value"], np.ndarray) and value["value"].dtype == object:
+                        # Convert np.str_ elements to native Python strings (if any)
+                        value["value"] = np.array([str(item) if isinstance(item, np.str_) else item for item in value["value"]], dtype='str')
+
+                    if dtype in {"str", "char"} or (
+                        isinstance(value["value"], np.ndarray) and
+                        value["value"].dtype == object and
+                        all(isinstance(item, (str, np.str_)) for item in value["value"])
                     ):
                         dtype = h5py.string_dtype(encoding="utf-8")
 
@@ -695,7 +734,7 @@ def add_group_or_field(group, data):
                         dataset = group.create_dataset(
                             key + "_timestamps",
                             data=value["events_cpt_timestamps"],
-                            dtype="float64",
+                            dtype=value["events_cpt_timestamps"].dtype,
                         )
                         dataset.attrs["nxclass"] = "NX_FLOAT"
                         dataset.attrs["shape"] = list(value["events_cpt_timestamps"].shape)
@@ -708,7 +747,7 @@ def add_group_or_field(group, data):
                         dataset = group.create_dataset(
                             key + "_timestamp",
                             data=value["descriptor_cpt_timestamp"],
-                            dtype="float64",
+                            dtype=value["descriptor_cpt_timestamp"].dtype,
                         )
                         dataset.attrs["nxclass"] = "NX_FLOAT"
                         dataset.attrs["shape"] = list(value["descriptor_cpt_timestamp"].shape)
@@ -726,7 +765,7 @@ def add_group_or_field(group, data):
                             dataset = group.create_dataset(
                                 "events_timestamps",
                                 data=value["events_timestamps"],
-                                dtype="float64",
+                                dtype=value["events_timestamps"].dtype,
                             )
                             # Add attributes to the dataset
                             dataset.attrs["nxclass"] = "NX_FLOAT"
