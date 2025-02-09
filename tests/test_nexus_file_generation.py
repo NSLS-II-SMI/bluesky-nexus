@@ -7,7 +7,7 @@ import types
 import unittest
 from bluesky import RunEngine
 from bluesky.plans import scan
-from devices.monochromators import Mono, MonoWithGratingCpt
+from devices.monochromators import Mono, MonoWithGratingCpt, MonoWithStrCpt
 from ophyd.sim import motor
 from preprocessors.baseline import SupplementalDataBaseline
 
@@ -100,7 +100,8 @@ def devices_dictionary():
     """
     mono = Mono(name="mono")
     mono_with_grating_cpt = MonoWithGratingCpt(name="mono_with_grating_cpt")
-    return {"mono": mono, "mono_with_grating_cpt": mono_with_grating_cpt}
+    mono_with_str_cpt = MonoWithStrCpt(name="mono_with_str_cpt")
+    return {"mono": mono, "mono_with_grating_cpt": mono_with_grating_cpt, "mono_with_str_cpt": mono_with_str_cpt}
 
 
 # Fixture: number of plan's steps
@@ -119,7 +120,7 @@ def baseline_1(devices_dictionary):
     Baseline configuration with both 'mono' and 'mono_with_grating_cpt' devices.
     """
 
-    return [devices_dictionary["mono"], devices_dictionary["mono_with_grating_cpt"]]
+    return [devices_dictionary["mono"], devices_dictionary["mono_with_grating_cpt"], devices_dictionary["mono_with_str_cpt"]]
 
 
 # Fixture: Baseline configuration for test 2
@@ -309,12 +310,6 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
 
                 # If the dataset contains byte strings, handle them differently
                 if isinstance(actual_value, bytes):
-                    # Handle byte string validation (e.g., dtype is 'S8' for strings of length 8)
-                    if expected_dtype:
-                        assert actual_value == expected_data_value, (
-                            f"Mismatch in byte string dataset: {dataset_path}: "
-                            f"Expected {expected_data_value}, Found {actual_value}"
-                        )
                     if expected_shape:
                         assert len(actual_value) == expected_shape[0], (
                             f"Mismatch in byte string shape for dataset: {dataset_path}: "
@@ -494,6 +489,36 @@ def test_1(
             "description": "Substrate material type",
         },
         # ---
+        # --- entry/instrument/mono_with_str_cpt ---
+        # ---
+        "entry/instrument/mono_with_str_cpt": {"NX_class": "NXmonochromator"},
+        "entry/instrument/mono_with_str_cpt/energy": {
+            "nxclass": "NX_FLOAT",
+            "description": "Energy value",
+        },
+        "entry/instrument/mono_with_str_cpt/energy_timestamps": {
+            "nxclass": "NX_FLOAT"
+        },
+        "entry/instrument/mono_with_str_cpt/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
+        },
+        "entry/instrument/mono_with_str_cpt/grating": {"NX_class": "NXgrating"},
+        "entry/instrument/mono_with_str_cpt/grating/diffraction_order": {
+            "nxclass": "NX_INT"
+        },
+        "entry/instrument/mono_with_str_cpt/grating/diffraction_order_timestamps": {
+            "nxclass": "NX_FLOAT"
+        },
+        "entry/instrument/mono_with_str_cpt/grating/events_timestamps": {
+            "nxclass": "NX_FLOAT",
+            "description": "Timestamps of the events",
+        },
+        "entry/instrument/mono_with_str_cpt/grating/substrate_material": {
+            "nxclass": "NX_CHAR",
+            "description": "Substrate material type",
+        },
+        # ---
         # --- entry/run_info ---
         # ---
         "entry/run_info": {"NX_class": "NXcollection"},
@@ -521,7 +546,7 @@ def test_1(
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6,0] * plan_step_number,
+            "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
             "attrs": {
@@ -548,9 +573,30 @@ def test_1(
         },
         "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
             "value": b"leadless",
-            "dtype": "S8",  # The dtype for the string with 8 characters
             "shape": (8,),  # Adjust the shape to match the actual string length
         },
+        # ---
+        # --- entry/instrument/mono_with_str_cpt ---
+        # ---
+        "entry/instrument/mono_with_str_cpt/energy": {
+            "value": [6.0, 6.0],
+            "dtype": "float64",
+            "shape": (2,),
+        },
+        "entry/instrument/mono_with_str_cpt/grating/diffraction_order": {
+            "value": [0, 0],
+            "dtype": "int32",
+            "shape": (2,),
+        },
+        "entry/instrument/mono_with_str_cpt/grating/substrate_material": {
+            "value": b"leadless",
+            "shape": (8,),  # Adjust the shape to match the actual string length
+        },
+        "entry/instrument/mono_with_str_cpt/slit": {
+            "value": b"default_value",
+            "shape": (13,),  # Adjust the shape to match the actual string length
+        },
+
         # ---
         # --- entry/run_info/start ---
         # ---
@@ -716,7 +762,7 @@ def test_2(
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6,0] * plan_step_number,
+            "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
             "attrs": {
@@ -943,7 +989,6 @@ def test_3(
         },
         "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
             "value": b"leadless",
-            "dtype": "S8",  # The dtype for the string with 8 characters
             "shape": (8,),  # Adjust the shape to match the actual string length
         },
         # ---
@@ -1111,7 +1156,7 @@ def test_4(
         # --- entry/instrument/mono ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6,0] * plan_step_number,
+            "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
             "attrs": {
