@@ -495,7 +495,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 if upper_ctrl_limit is not None:
                     obj["attrs"]["upper_ctrl_limit"] = upper_ctrl_limit
 
-                # Extract and set upper_ctrl_limit (optional key)
+                # Extract and set enum_strs (optional key)
                 enum_strs = obj["attrs"].get("enum_strs", desc.get("enum_strs", None))
                 if enum_strs is not None:
                     obj["attrs"]["enum_strs"] = enum_strs
@@ -692,11 +692,11 @@ def add_group_or_field(group, data):
                             if isinstance(value["value"], np.str_):
                                 value["value"] = str(value["value"])
 
-                    # Handle strings explicitly
+                    # Handle strings explicitly: encoding="utf-8"
                     if dtype in {"str", "char"} or (
                         isinstance(value["value"], np.ndarray) and
                         value["value"].dtype == object and
-                        all(isinstance(item, (str, np.str_)) for item in value["value"])
+                        all(isinstance(item, str) for item in value["value"])
                     ):
                         dtype = h5py.string_dtype(encoding="utf-8")
 
@@ -782,7 +782,7 @@ def add_group_or_field(group, data):
 
                 else:
                     raise ValueError(
-                        f"Invalid dtype: {dtype} detected in one of the schema files while processing the group: {group.name}."
+                        f"Invalid dtype: {dtype} detected while processing the group: {group.name} and the key: {key}. Check evtl. one of the schema files."
                     )
 
             ###
