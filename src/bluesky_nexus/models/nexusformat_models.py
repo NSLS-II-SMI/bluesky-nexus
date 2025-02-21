@@ -19,30 +19,13 @@ __all__ = [
     "NXfieldModel",
     "NXgroupModel",
     "NXobjectModel",
-    "NXlinkModel",
-    "NXlinkFieldModel",
-    "NXlinkGroupModel",
-    "NXdataModel",
-    "NXentryModel",
-    "NXfieldModelWithString",
-    "NXfieldModelWithInt",
-    "NXfieldModelWithFloat",
-    "NXfieldModelWithArray",
-    "NXattrModelWithString",
-    "NXattrModelWithScalar",
-    "NXattrModelWithArray",
-    "NXfieldModelWithPrePostRunString",
 ]
 
 # scalar type
 Scalar = Union[str, float, int]
+
 # array-like i.e. list, tuple, numpy.ndarray
 ArrayLike = npt.ArrayLike
-# numpy datatype
-NPType = np.dtype
-# numpy array
-NPArray = npt.NDArray
-
 
 class PrePostRunString(str):
     # To be removed in pydantic V3
@@ -75,14 +58,13 @@ class PrePostRunString(str):
 
 class NXattrModel(BaseModel):
     nxclass: Optional[str] = Field("NXattr", description="The class of the NXattr.")
-    value: Union[PrePostRunString, str, Scalar, ArrayLike] = Field(
+    value: Union[PrePostRunString, Scalar, ArrayLike] = Field(
         ..., description="Value of the attribute."
     )
     dtype: Optional[str] = Field(None, description="Data type of the attribute.")
     shape: Optional[Union[list, Tuple[int]]] = Field(
         None, description="Shape of the " "attribute."
     )
-
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 
@@ -99,7 +81,6 @@ class NXFileModel(BaseModel):
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
 
 class NXobjectModel(BaseModel):
     nxclass: Optional[str] = Field("NXobject", description="The class of the NXobject.")
@@ -240,170 +221,6 @@ class NXobjectModel(BaseModel):
         return base_dump
 
 
-class NXfieldModel(NXobjectModel):
-    inherits_from: Optional[str] = Field(
-        "NXobject", description="Base class of the object."
-    )
-    nxclass: Optional[str] = Field("NXfield", description="The class of the NXfield.")
-    value: Optional[Union[PrePostRunString, int, float, ArrayLike, str]] = Field(
-        ..., description="Value of" " the field" "."
-    )
-    shape: Optional[Union[list, Tuple[int]]] = Field(
-        None, description="Shape of the field."
-    )
-    dtype: Optional[Union[str, np.dtype]] = Field(
-        None, description="Data type of the field."
-    )
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-
-class NXgroupModel(NXobjectModel):
-    nxclass: Optional[str] = Field("NXgroup", description="The class of the NXgroup.")
-    inherits_from: Optional[str] = Field(
-        "NXobject", description="Base class of the object."
-    )
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
-
-
-class NXlinkModel(NXobjectModel):
-    target: Optional[str] = Field(None, description="The target of the link.")
-    file: Optional[str] = Field(
-        None, description="The file containing the target of" " the link."
-    )
-    name: Optional[str] = Field(None, description="The name of the link.")
-    group: Optional["NXgroupModel"] = Field(
-        None,
-        description="The parent group"
-        " containing this "
-        "link within a NeXus"
-        " tree.",
-    )
-    abspath: Optional[str] = Field(
-        None, description="The absolute path to the" " target of the link."
-    )
-    soft: Optional[bool] = Field(None, description="If True, the link is a soft link.")
-
-    model_config = ConfigDict(extra="forbid")
-
-    @property
-    def nxclass(self) -> str:
-        return "NXlink"
-
-
-class NXlinkFieldModel(NXlinkModel):
-    @property
-    def nxclass(self) -> str:
-        return "NXlink"
-
-    @property
-    def value(self) -> Optional[Union[int, float, str, list, tuple]]:
-        return self.target.value if isinstance(self.target, NXfieldModel) else None
-
-
-class NXlinkGroupModel(NXlinkModel):
-    @property
-    def nxclass(self) -> str:
-        return "NXlink"
-
-    @property
-    def entries(self) -> Optional[Dict[str, Union[NXfieldModel, NXgroupModel]]]:
-        return self.target.entries if isinstance(self.target, NXgroupModel) else None
-
-
-class NXdataModel(NXgroupModel):
-    signal: Optional[NXfieldModel] = Field(
-        None, description="Field defining the data to be" " plotted"
-    )
-    axes: Optional[Tuple[NXfieldModel, ...]] = Field(
-        None,
-        description="Tuple of" " one-dimensional" " fields defining " "the plot axes",
-    )
-    errors: Optional[NXfieldModel] = Field(
-        None,
-        description="Field containing the "
-        "standard deviations of the"
-        " signal values",
-    )
-    weights: Optional[NXfieldModel] = Field(
-        None, description="Field containing signal value" " weights"
-    )
-
-    @property
-    def nxclass(self) -> str:
-        return "NXdata"
-
-    model_config = ConfigDict(extra="forbid")
-
-
-class NXentryModel(NXgroupModel):
-    def __add__(self, other: "NXentryModel") -> "NXentryModel":
-        # Implement the addition logic here
-        pass
-
-    def __sub__(self, other: "NXentryModel") -> "NXentryModel":
-        # Implement the subtraction logic here
-        pass
-
-    def set_default(self, over: bool = False):
-        # Implement the set_default logic here
-        pass
-
-    @property
-    def plottable_data(self):
-        # Implement the plottable_data logic here
-        pass
-
-    @property
-    def nxclass(self) -> str:
-        return "NXentry"
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-
-class NXattrModelWithString(NXattrModel):
-    value: Union[PrePostRunString, str] = Field(
-        ..., description="Value of the attribute."
-    )
-
-
-class NXattrModelWithScalar(NXattrModel):
-    value: Union[Scalar, PrePostRunString] = Field(
-        ..., description="Value of the attribute."
-    )
-
-
-class NXattrModelWithArray(NXattrModel):
-    value: Union[ArrayLike, PrePostRunString] = Field(
-        ..., description="Value of the attribute."
-    )
-
-
-class NXfieldModelWithString(NXfieldModel):
-    value: Union[str, PrePostRunString] = Field(
-        ..., description="NX data field with string type"
-    )
-
-
-class NXfieldModelWithInt(NXfieldModel):
-    value: Union[int, PrePostRunString] = Field(
-        ..., description="NX data field with int type"
-    )
-
-
-class NXfieldModelWithFloat(NXfieldModel):
-    value: Union[float, PrePostRunString] = Field(
-        ..., description="NX data field with float type"
-    )
-
-
-class NXfieldModelWithArray(NXfieldModel):
-    value: Union[ArrayLike, PrePostRunString] = Field(
-        ..., description="NX data field with array-like type"
-    )
-
-
 class TransformationModel(BaseModel):
     expression: str = Field(
         ...,
@@ -415,12 +232,29 @@ class TransformationModel(BaseModel):
         description="Specifies the target array (e.g., 'value') on which the transformation is applied.",
     )
 
-
-class NXfieldModelWithPrePostRunString(NXfieldModel):
+class NXfieldModel(NXobjectModel):
+    nxclass: Optional[str] = Field("NXfield", description="The class of the NXfield.")
     value: PrePostRunString = Field(
-        ..., description="NX data field with pre post run string"
+        ..., description="Value of the field."
     )
+    shape: Optional[Union[list, Tuple[int]]] = Field(
+        None, description="Shape of the field."
+    )
+    dtype: Optional[Union[str, np.dtype]] = Field(
+        None, description="Data type of the field."
+    )
+    
     transformation: Optional[TransformationModel] = Field(
-        None,
-        description="Transformation configuration that applies a symbolic operation to the target data array.",
+    None,
+    description="Transformation configuration that applies a symbolic operation to the target data array.",
     )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
+class NXgroupModel(NXobjectModel):
+    nxclass: Optional[str] = Field("NXgroup", description="The class of the NXgroup.")
+    inherits_from: Optional[str] = Field(
+        "NXobject", description="Base class of the object."
+    )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
