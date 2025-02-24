@@ -15,3 +15,8 @@ GRATING:
     nxclass: NX_INT
     value: $pre-run-cpt:grating
     dtype: int32
+
+description:
+  nxclass: NX_CHAR
+  value: $pre-run-md:description
+  dtype: str

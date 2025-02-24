@@ -14,12 +14,14 @@ class MetadataMono:
         "y": "4.5000000000000006",
         "z": "7.8000000000000009",
     }
+    description: str = "I am the best mono at the bessyii facility"
     baseline: str = "True"
 
     def get_attributes(self):
         attributes = {
             "grating_substrate_material": self.grating_substrate_material,
             "worldPosition": self.worldPosition,
+            "description": self.description,
             "baseline": self.baseline,
         }
         return attributes
@@ -47,12 +49,14 @@ class MetadataMonoWithGratingCpt:
         "y": "14.150000016",
         "z": "17.180000019",
     }
+    description: str = "I am the best mono with grating cpt at the bessyii facility"
     baseline: str = "True"
 
     def get_attributes(self):
         attributes = {
             "grating_substrate_material": self.grating_substrate_material,
             "worldPosition": self.worldPosition,
+            "description": self.description,
             "baseline": self.baseline,
         }
         return attributes

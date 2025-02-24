@@ -16,3 +16,8 @@ GRATING:
     nxclass: NX_CHAR
     value: $pre-run-md:grating_substrate_material
     dtype: str
+
+description:
+  nxclass: NX_CHAR
+  value: $pre-run-md:description
+  dtype: str
