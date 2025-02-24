@@ -26,7 +26,7 @@ from bluesky_nexus.bluesky_nexus_const import (
 )
 from bluesky_nexus.common.yaml_utils import read_yaml
 from bluesky_nexus.common.logging_utils import logger
-from bluesky_nexus.models.nexusformat_models_hzb import *
+from bluesky_nexus.models.nx_models import *
 
 
 def assign_pydantic_model_instance(nx_schema_dir_path: str, devices_dictionary: dict):

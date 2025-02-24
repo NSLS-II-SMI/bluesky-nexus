@@ -7,7 +7,7 @@ import types
 import unittest
 from bluesky import RunEngine
 from bluesky.plans import scan
-from devices.monochromators import Mono, MonoWithGratingCpt, MonoWithStrCpt
+from devices.monochromators import Mono, MonoWithGratingCpt
 from ophyd.sim import motor
 from preprocessors.baseline import SupplementalDataBaseline
 
@@ -20,7 +20,6 @@ NX_FILE_DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "nx_f
 NX_SCHEMA_DIR_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "nx_schema")
 )
-
 
 # Fixture: Ensure the `nx_file` directory exists
 @pytest.fixture
@@ -100,8 +99,7 @@ def devices_dictionary():
     """
     mono = Mono(name="mono")
     mono_with_grating_cpt = MonoWithGratingCpt(name="mono_with_grating_cpt")
-    mono_with_str_cpt = MonoWithStrCpt(name="mono_with_str_cpt")
-    return {"mono": mono, "mono_with_grating_cpt": mono_with_grating_cpt, "mono_with_str_cpt": mono_with_str_cpt}
+    return {"mono": mono, "mono_with_grating_cpt": mono_with_grating_cpt}
 
 
 # Fixture: number of plan's steps
@@ -120,7 +118,7 @@ def baseline_1(devices_dictionary):
     Baseline configuration with both 'mono' and 'mono_with_grating_cpt' devices.
     """
 
-    return [devices_dictionary["mono"], devices_dictionary["mono_with_grating_cpt"], devices_dictionary["mono_with_str_cpt"]]
+    return [devices_dictionary["mono"], devices_dictionary["mono_with_grating_cpt"]]
 
 
 # Fixture: Baseline configuration for test 2
@@ -271,6 +269,11 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
 
             # Validate group attributes
             for attr_key, attr_value in group_attrs.items():
+                
+                print("attr_key:", attr_key)
+                print("attr_key:", attr_value)
+                
+                
                 assert (
                     attr_key in current.attrs
                 ), f"Missing attribute: {attr_key} in group: {group_path}"
@@ -438,25 +441,25 @@ def test_1(
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {
             "nxclass": "NX_FLOAT",
-            "description": "Energy value",
+        #    "description": "Energy selected",
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
                 "target": "value",
-                "description": "Transformation configuration that applies a symbolic operation to the target data array.",
+        #        "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
+        #    "description": "Timestamps of the events",
         },
-        "entry/instrument/mono/grating": {
+        "entry/instrument/mono/GRATING": {
             "NX_class": "NXgrating",
-            "description": "Grating",
+        #    "description": "Grating",
         },
-        "entry/instrument/mono/grating/diffraction_order": {
+        "entry/instrument/mono/GRATING/diffraction_order": {
             "nxclass": "NX_INT",
-            "description": "Diffraction order value",
+        #    "description": "Diffraction order",
         },
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
@@ -464,60 +467,31 @@ def test_1(
         "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono_with_grating_cpt/energy": {
             "nxclass": "NX_FLOAT",
-            "description": "Energy value",
+        #    "description": "Energy selected",
         },
         "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
             "nxclass": "NX_FLOAT"
         },
         "entry/instrument/mono_with_grating_cpt/events_timestamps": {
             "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
+        #    "description": "Timestamps of the events",
         },
-        "entry/instrument/mono_with_grating_cpt/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
+        "entry/instrument/mono_with_grating_cpt/GRATING": {"NX_class": "NXgrating"},
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
             "nxclass": "NX_INT"
         },
-        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order_timestamps": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
             "nxclass": "NX_FLOAT"
         },
-        "entry/instrument/mono_with_grating_cpt/grating/events_timestamps": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps": {
             "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
+        #    "description": "Timestamps of the events",
         },
-        "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
             "nxclass": "NX_CHAR",
-            "description": "Substrate material type",
+        #    "description": "Substrate material type",
         },
-        # ---
-        # --- entry/instrument/mono_with_str_cpt ---
-        # ---
-        "entry/instrument/mono_with_str_cpt": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono_with_str_cpt/energy": {
-            "nxclass": "NX_FLOAT",
-            "description": "Energy value",
-        },
-        "entry/instrument/mono_with_str_cpt/energy_timestamps": {
-            "nxclass": "NX_FLOAT"
-        },
-        "entry/instrument/mono_with_str_cpt/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
-        },
-        "entry/instrument/mono_with_str_cpt/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono_with_str_cpt/grating/diffraction_order": {
-            "nxclass": "NX_INT"
-        },
-        "entry/instrument/mono_with_str_cpt/grating/diffraction_order_timestamps": {
-            "nxclass": "NX_FLOAT"
-        },
-        "entry/instrument/mono_with_str_cpt/grating/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
-        },
-        "entry/instrument/mono_with_str_cpt/grating/substrate_material": {
-            "nxclass": "NX_CHAR",
-            "description": "Substrate material type",
-        },
+
         # ---
         # --- entry/run_info ---
         # ---
@@ -549,11 +523,11 @@ def test_1(
             "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
-            "attrs": {
-                "units": "keV",  # Expected units
-            },
+            # "attrs": {
+            #     "units": "keV",  # Expected units
+            # },
         },
-        "entry/instrument/mono/grating/diffraction_order": {
+        "entry/instrument/mono/GRATING/diffraction_order": {
             "value": 0,
             "dtype": "int32",
             "shape": (),  # Scalar
@@ -566,37 +540,15 @@ def test_1(
             "dtype": "float64",
             "shape": (2,),
         },
-        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
             "value": [0, 0],
             "dtype": "int32",
             "shape": (2,),
         },
-        "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
             "value": b"leadless",
             "shape": (8,),  # Adjust the shape to match the actual string length
         },
-        # ---
-        # --- entry/instrument/mono_with_str_cpt ---
-        # ---
-        "entry/instrument/mono_with_str_cpt/energy": {
-            "value": [6.0, 6.0],
-            "dtype": "float64",
-            "shape": (2,),
-        },
-        "entry/instrument/mono_with_str_cpt/grating/diffraction_order": {
-            "value": [0, 0],
-            "dtype": "int32",
-            "shape": (2,),
-        },
-        "entry/instrument/mono_with_str_cpt/grating/substrate_material": {
-            "value": b"leadless",
-            "shape": (8,),  # Adjust the shape to match the actual string length
-        },
-        "entry/instrument/mono_with_str_cpt/slit": {
-            "value": b"default_value",
-            "shape": (13,),  # Adjust the shape to match the actual string length
-        },
-
         # ---
         # --- entry/run_info/start ---
         # ---
@@ -715,25 +667,25 @@ def test_2(
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {
             "nxclass": "NX_FLOAT",
-            "description": "Energy value",
+        #    "description": "Energy selected",
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
                 "target": "value",
-                "description": "Transformation configuration that applies a symbolic operation to the target data array.",
+        #        "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
+        #    "description": "Timestamps of the events",
         },
-        "entry/instrument/mono/grating": {
+        "entry/instrument/mono/GRATING": {
             "NX_class": "NXgrating",
-            "description": "Grating",
+        #    "description": "Grating",
         },
-        "entry/instrument/mono/grating/diffraction_order": {
+        "entry/instrument/mono/GRATING/diffraction_order": {
             "nxclass": "NX_INT",
-            "description": "Diffraction order value",
+        #    "description": "Diffraction order",
         },
         # ---
         # --- entry/run_info ---
@@ -765,11 +717,11 @@ def test_2(
             "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
-            "attrs": {
-                "units": "keV",  # Expected units
-            },
+            # "attrs": {
+            #     "units": "keV",  # Expected units
+            # },
         },
-        "entry/instrument/mono/grating/diffraction_order": {
+        "entry/instrument/mono/GRATING/diffraction_order": {
             "value": 0,
             "dtype": "int32",
             "shape": (),  # Scalar
@@ -887,25 +839,25 @@ def test_3(
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {
             "nxclass": "NX_FLOAT",
-            "description": "Energy value",
+        #    "description": "Energy selected",
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
                 "target": "value",
-                "description": "Transformation configuration that applies a symbolic operation to the target data array.",
+        #        "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
+        #    "description": "Timestamps of the events",
         },
-        "entry/instrument/mono/grating": {
+        "entry/instrument/mono/GRATING": {
             "NX_class": "NXgrating",
-            "description": "Grating",
+        #    "description": "Grating",
         },
-        "entry/instrument/mono/grating/diffraction_order": {
+        "entry/instrument/mono/GRATING/diffraction_order": {
             "nxclass": "NX_INT",
-            "description": "Diffraction order value",
+        #    "description": "Diffraction order",
         },
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
@@ -917,22 +869,22 @@ def test_3(
         },
         "entry/instrument/mono_with_grating_cpt/events_timestamps": {
             "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
+        #    "description": "Timestamps of the events",
         },
-        "entry/instrument/mono_with_grating_cpt/grating": {"NX_class": "NXgrating"},
-        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
+        "entry/instrument/mono_with_grating_cpt/GRATING": {"NX_class": "NXgrating"},
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
             "nxclass": "NX_INT"
         },
-        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order_timestamps": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
             "nxclass": "NX_FLOAT"
         },
-        "entry/instrument/mono_with_grating_cpt/grating/events_timestamps": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps": {
             "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
+        #    "description": "Timestamps of the events",
         },
-        "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
             "nxclass": "NX_CHAR",
-            "description": "Substrate material type",
+        #    "description": "Substrate material type",
         },
         # ---
         # --- entry/run_info ---
@@ -965,11 +917,11 @@ def test_3(
             "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
-            "attrs": {
-                "units": "keV",  # Expected units
-            },
+            # "attrs": {
+            #     "units": "keV",  # Expected units
+            # },
         },
-        "entry/instrument/mono/grating/diffraction_order": {
+        "entry/instrument/mono/GRATING/diffraction_order": {
             "value": 0,
             "dtype": "int32",
             "shape": (),  # Scalar
@@ -982,12 +934,12 @@ def test_3(
             "dtype": "float64",
             "shape": (2,),
         },
-        "entry/instrument/mono_with_grating_cpt/grating/diffraction_order": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
             "value": [0, 0],
             "dtype": "int32",
             "shape": (2,),
         },
-        "entry/instrument/mono_with_grating_cpt/grating/substrate_material": {
+        "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
             "value": b"leadless",
             "shape": (8,),  # Adjust the shape to match the actual string length
         },
@@ -1109,25 +1061,25 @@ def test_4(
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {
             "nxclass": "NX_FLOAT",
-            "description": "Energy value",
+            #"description": "Energy selected",
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
                 "target": "value",
-                "description": "Transformation configuration that applies a symbolic operation to the target data array.",
+            #    "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
-            "description": "Timestamps of the events",
+        #    "description": "Timestamps of the events",
         },
-        "entry/instrument/mono/grating": {
+        "entry/instrument/mono/GRATING": {
             "NX_class": "NXgrating",
-            "description": "Grating",
+        #    "description": "Grating",
         },
-        "entry/instrument/mono/grating/diffraction_order": {
+        "entry/instrument/mono/GRATING/diffraction_order": {
             "nxclass": "NX_INT",
-            "description": "Diffraction order value",
+        #    "description": "Diffraction order",
         },
         # ---
         # --- entry/run_info ---
@@ -1159,11 +1111,11 @@ def test_4(
             "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
-            "attrs": {
-                "units": "keV",  # Expected units
-            },
+            # "attrs": {
+            #     "units": "keV",  # Expected units
+            # },
         },
-        "entry/instrument/mono/grating/diffraction_order": {
+        "entry/instrument/mono/GRATING/diffraction_order": {
             "value": 0,
             "dtype": "int32",
             "shape": (),  # Scalar

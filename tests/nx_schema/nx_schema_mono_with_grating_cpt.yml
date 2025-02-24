@@ -6,7 +6,7 @@ energy:
   dtype: float64
   attrs:
     units: "keV"
-grating:
+GRATING:
   nxclass: NXgrating
   diffraction_order:
     nxclass: NX_INT

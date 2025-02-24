@@ -9,7 +9,7 @@ energy:
   transformation:
     expression: 3 * x**2 + np.exp(np.log(5)) + 1 # Symbolic expression for the transformation
     target: value # Specifies the name of array to which expression is applied
-grating:
+GRATING:
   nxclass: NXgrating
   diffraction_order:
     nxclass: NX_INT

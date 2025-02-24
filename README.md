@@ -110,7 +110,7 @@ class NXmonochromatorModel(NXgroupModel):
     default: NXattrModelWithString = Field(
         NXattrModel(value="energy"), description="Default"
     )
-    energy: NXfieldModelWithPrePostRunString = Field(None, description="Energy value")
+    energy: NXfieldModelWithPrePostRunString = Field(None, description="Energy selected")
     grating: NXgratingModel = Field(None, description="Grating")
 
 ```
