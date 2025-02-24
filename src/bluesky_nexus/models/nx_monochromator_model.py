@@ -28,5 +28,5 @@ class NXmonochromatorModel(NXgroupModel):
     CRYSTAL: Optional[NXcrystalModel] = Field(None, description="Use as many crystals as necessary to describe")
     GRATING: Optional[NXgratingModel] = Field(None, description="For diffraction grating based monochromators")
     TRANSFORMATIONS: Optional[NXtransformationsModel] = Field(None, description="This is the group recommended for holding the chain of translation and rotation operations necessary to position the component within the instrument. ")
-    #description: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Description of the monochromator")
+    description: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Description of the monochromator")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
