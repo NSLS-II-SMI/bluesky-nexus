@@ -220,24 +220,9 @@ class NXfieldModel(NXobjectModel):
 class NXfieldModelWithPrePostRunString(NXfieldModel):
     value: PrePostRunString = Field(..., description="Value of the field.")
     transformation: Optional[TransformationModel] = Field(None, description="Transformation configuration that applies a symbolic operation to the target data array.")
+    
+    class AttributesModel(BaseModel):
+        units: Optional[str] = Field(None, description="Units")
+        model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to a given value.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-# class NXfieldModelWithInt(NXfieldModel):
-#     value: int = Field(..., description="Value of the field with int type")
-#     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-# class NXfieldModelWithFloat(NXfieldModel):
-#     value: float = Field(..., description="Value of the field with float type")
-#     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-# class NXfieldModelWithStr(NXfieldModel):
-#     value: str = Field(..., description="Value of the field with str type")
-#     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-# class NXfieldModelWithNumber(NXfieldModel):
-#     value: Union[int, float] = Field(..., description="Value of the field with int or float type")
-#     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-# class NXfieldModelWithBool(NXfieldModel):
-#     value: bool = Field(..., description="Value of the field with bool type")
-#     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
