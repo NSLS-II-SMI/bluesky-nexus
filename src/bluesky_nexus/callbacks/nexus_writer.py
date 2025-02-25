@@ -673,6 +673,7 @@ def add_group_or_field(group, data):
     """
     for key, value in data.items():
         if isinstance(value, dict):
+
             ###
             ### Handle NeXus fields
             ###
@@ -716,6 +717,7 @@ def add_group_or_field(group, data):
                         if isinstance(attr_value, (dict, list)):
                             attr_value = str(attr_value)
                         dataset.attrs[attr_name] = attr_value
+                        #print(f"Add attr_value: {attr_value} to dataset with key: {key}:") # Debug only
 
                     if "shape" in value.keys():
                         dataset.attrs["shape"] = value["shape"]
@@ -799,6 +801,7 @@ def add_group_or_field(group, data):
                 if "attrs" in value:
                     for attr_key, attr_value in value["attrs"].items():
                         subgroup.attrs[attr_key] = attr_value
+                        #print(f"Add attr_value: {attr_value} to group with key: {key}:") # Debug only
 
                 # Recursively add fields or subgroups
                 add_group_or_field(
@@ -813,7 +816,7 @@ def add_group_or_field(group, data):
         else:
             # Handle as attribute of the group
             group.attrs[key] = value
-
+            #print(f"Assign to group attr named {key} the value: {value}") # Debug only
 
 def write_collection(group, data: dict):
     """
