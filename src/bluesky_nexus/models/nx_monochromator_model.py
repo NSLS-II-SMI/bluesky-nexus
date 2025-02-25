@@ -5,7 +5,6 @@ from bluesky_nexus.models.nx_core_models import (
     ConfigDict,
     NXattrModel,
     NXgroupModel,
-    NXfieldModel,
     NXfieldModelWithPrePostRunString
 )
 
@@ -29,4 +28,4 @@ class NXmonochromatorModel(NXgroupModel):
     GRATING: Optional[NXgratingModel] = Field(None, description="For diffraction grating based monochromators")
     TRANSFORMATIONS: Optional[NXtransformationsModel] = Field(None, description="This is the group recommended for holding the chain of translation and rotation operations necessary to position the component within the instrument. ")
     description: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Description of the monochromator")
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
