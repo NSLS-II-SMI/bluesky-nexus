@@ -118,6 +118,47 @@ class NXobjectModel(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
+    # The new version of model_dump to debug
+    # def model_dump(self, exclude_none: bool = True) -> Dict:
+    #     """
+    #     Override `model_dump` to include 'description' in metadata (not in values) to avoid HDF5 issues.
+    #     """
+
+    #     # Generate the initial dump
+    #     base_dump = super().model_dump(exclude_none=exclude_none)
+
+    #     def inject_descriptions(dump: dict, fields: dict, metadata: dict):
+    #         """
+    #         Recursively traverse the dump dictionary and store descriptions separately in metadata.
+    #         """
+    #         for key, value in dump.items():
+    #             if key in fields:
+    #                 field = fields[key]
+    #                 description = field.description
+
+    #                 # If a description exists, store it in metadata
+    #                 if description is not None:
+    #                     metadata[key] = {"description": description}
+
+    #             # If the value is a nested model (dict), recurse into it
+    #             if isinstance(value, dict) and key in fields:
+    #                 nested_fields = getattr(fields[key].annotation, "model_fields", None)
+    #                 if nested_fields:
+    #                     metadata[key] = metadata.get(key, {})  # Ensure nested metadata exists
+    #                     inject_descriptions(value, nested_fields, metadata[key])
+
+    #     # Metadata structure to store descriptions separately
+    #     metadata = {}
+
+    #     # Inject descriptions separately into metadata
+    #     inject_descriptions(base_dump, self.model_fields, metadata)
+
+    #     # Attach metadata under a special key (e.g., `_meta`)
+    #     base_dump["_meta"] = metadata
+
+    #     return base_dump
+
+
     # TODO: Modify to support args that are from BaseModel
 
     # def model_dump(self, exclude_none: bool = True) -> Dict:
