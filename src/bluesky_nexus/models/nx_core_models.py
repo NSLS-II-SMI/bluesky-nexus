@@ -90,32 +90,6 @@ class NXobjectModel(BaseModel):
     nxroot: Optional["NXgroupModel"] = Field(None, description="The root object of the NeXus" " tree containing this " "object.")
     nxfile: Optional["NXFileModel"] = Field(None, description="The file handle of the root object of the NeXus tree containing this object.")
     nxfilename: Optional[str] = Field(None, description="The file name of NeXus object's " "tree file handle.")
-    attrs: Optional[BaseModel]= Field(None, description="The NeXus object's attributes.")
-    active: Optional[bool] = Field(None, description="Object is active or not. Not active object will be filtered by the NXobjectModel")
-
-    @model_validator(mode="before")
-    def filter_inactive_fields(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        ACTIVE_LABEL: str = "active"
-
-        def recursively_filter_inactive(data: Dict[str, Any]) -> Dict[str, Any]:
-            filtered_data = {}
-            for key, value in data.items():
-                if key == ACTIVE_LABEL:
-                    continue  # Skip 'active' keys altogether
-
-                # If value is a nested dictionary, check 'active' flag
-                if isinstance(value, dict):
-                    if value.get(ACTIVE_LABEL, True):  # Process only if active is True
-                        filtered_value = recursively_filter_inactive(value)
-                        filtered_data[key] = filtered_value
-                else:
-                    # If value is not a dictionary, add it directly
-                    filtered_data[key] = value
-
-            return filtered_data
-
-        return recursively_filter_inactive(values)
-
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     # The new version of model_dump to debug
@@ -258,12 +232,16 @@ class NXfieldModel(NXobjectModel):
     dtype: Optional[str] = Field(None, description="Data type of the field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
+
+class NXfieldModelForAttribute(NXfieldModel):
+    value: Union[PrePostRunString, str] = Field(..., description="Value of the attribute field.")
+
 class NXfieldModelWithPrePostRunString(NXfieldModel):
     value: PrePostRunString = Field(..., description="Value of the field.")
     transformation: Optional[TransformationModel] = Field(None, description="Transformation configuration that applies a symbolic operation to the target data array.")
     
     class AttributesModel(BaseModel):
-        units: Optional[str] = Field(None, description="Units")
+        units: Optional[NXfieldModelForAttribute] = Field(None, description="Units")
         model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-    attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to a given value.")
+    attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to a given value.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")

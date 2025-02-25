@@ -4,8 +4,11 @@ energy:
   nxclass: NX_FLOAT
   value: $post-run:engry
   dtype: float64
-  attrs:
-    units: "keV"
+  attributes:
+    units:
+      nxclass: NX_CHAR
+      value: "keV"
+      dtype: str
 GRATING:
   nxclass: NXgrating
   diffraction_order:

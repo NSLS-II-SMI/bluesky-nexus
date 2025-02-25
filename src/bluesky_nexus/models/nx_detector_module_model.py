@@ -2,25 +2,25 @@
 from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
     BaseModel,
-    Number,
     Field,
     ConfigDict,
     NXattrModel,
     NXgroupModel,
+    NXfieldModelForAttribute,
     NXfieldModelWithPrePostRunString
 )
 
 class NXdetector_moduleModel(NXgroupModel):
     
     class CommonModel(NXfieldModelWithPrePostRunString):
-        class AttributesModel(BaseModel):
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
             transformation_type: Optional[str] = Field(None, description="Obligatory value: translation")
-            vector: Optional[Number] = Field(None, description="Three values that define the axis for this transformation")
-            offset: Optional[Number] = Field(None, description="A fixed offset applied before the transformation (three vector components).")
-            offset_units: Optional[str] = Field(None, description="Units of the offset.")
-            depends_on: Optional[str] = Field(None, description="Points to the path of the next element in the geometry chain.")
+            vector: Optional[NXfieldModelForAttribute] = Field(None, description="Three values that define the axis for this transformation")
+            offset: Optional[NXfieldModelForAttribute] = Field(None, description="A fixed offset applied before the transformation (three vector components).")
+            offset_units: Optional[NXfieldModelForAttribute] = Field(None, description="Units of the offset.")
+            depends_on: Optional[NXfieldModelForAttribute] = Field(None, description="Points to the path of the next element in the geometry chain.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to field.")
 
     default: NXattrModel = Field(NXattrModel(value="TBD"), description='Default')
     data_origin: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="A dimension-2 or dimension-3 field which gives the indices of the origin of the hyperslab of data for this module in the main area detector image in the parent NXdetector module.")

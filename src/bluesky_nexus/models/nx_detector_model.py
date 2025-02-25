@@ -7,6 +7,7 @@ from bluesky_nexus.models.nx_core_models import (
     ConfigDict,
     NXattrModel,
     NXgroupModel,
+    NXfieldModelForAttribute,
     NXfieldModelWithPrePostRunString
 )
 from bluesky_nexus.models.nx_detector_channel_model import NXdetector_channelModel
@@ -23,13 +24,13 @@ class NXdetectorModel(NXgroupModel):
     # ----- time_of_flight -----
     class time_of_flightModel(NXfieldModelWithPrePostRunString):
 
-        class AttributesModel(BaseModel):
-            axis: Optional[int] = Field(None, gt=0, description="Obligatory value: 3")
-            primary: Optional[int] = Field(None, gt=0, description="Obligatory value: 1")
-            long_name: Optional[str] = Field(None, description="Total time of flight")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 3")
+            primary: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1")
+            long_name: Optional[NXfieldModelForAttribute] = Field(None, description="Total time of flight")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
             
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the time_of_flight field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the time_of_flight field.")
 
     time_of_flight: Optional[time_of_flightModel]= Field(None, description="Total time of flight")
     
@@ -37,11 +38,11 @@ class NXdetectorModel(NXgroupModel):
     # ----- raw_time_of_flight -----
     class raw_time_of_flightModel(NXfieldModelWithPrePostRunString):
 
-        class AttributesModel(BaseModel):
-            frequency: Optional[Number] = Field(None, description="Clock frequency in Hz")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            frequency: Optional[NXfieldModelForAttribute] = Field(None, description="Clock frequency in Hz")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the raw_time_of_flight field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the raw_time_of_flight field.")
 
     raw_time_of_flight: Optional[raw_time_of_flightModel]= Field(None, description="In DAQ clock pulses")
     detector_number: Optional[int]= Field(None, description="Identifier for detector (pixels) Can be multidimensional, if needed")
@@ -49,12 +50,12 @@ class NXdetectorModel(NXgroupModel):
     # ----- data -----
     class dataModel(NXfieldModelWithPrePostRunString):
 
-        class AttributesModel(BaseModel):
-            long_name: Optional[str] = Field(None, gt=0, description="Title of measurement")
-            check_sum: Optional[int] = Field(None, description="Integral of data as check of data integrity")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            long_name: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Title of measurement")
+            check_sum: Optional[NXfieldModelForAttribute] = Field(None, description="Integral of data as check of data integrity")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the data field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the data field.")
 
     data: Optional[dataModel]= Field(None, description="Data values from the detector. The rank and dimension ordering should follow a principle of slowest to fastest measurement axes and may be explicitly specified in application definitions.")
     data_errors: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="The best estimate of the uncertainty in the data value (array size should match the data field). Where possible, this should be the standard deviation, which has the same units as the data.")
@@ -62,13 +63,13 @@ class NXdetectorModel(NXgroupModel):
     # ----- x_pixel_offset -----
     class x_pixel_offsetModel(NXfieldModelWithPrePostRunString):
 
-        class AttributesModel(BaseModel):
-            axis: Optional[int] = Field(None, gt=0, description="Obligatory value: 1")
-            primary: Optional[int] = Field(None, gt=0, description="Obligatory value: 1")
-            long_name: Optional[str] = Field(None, description="x-axis offset from detector center")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1")
+            primary: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1")
+            long_name: Optional[NXfieldModelForAttribute] = Field(None, description="x-axis offset from detector center")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the x_pixel_offset field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the x_pixel_offset field.")
 
     x_pixel_offset: Optional[x_pixel_offsetModel]= Field(None, description="Offset from the detector center in x-direction. Can be multidimensional when needed.")
 
@@ -76,13 +77,13 @@ class NXdetectorModel(NXgroupModel):
     # ----- y_pixel_offset -----
     class y_pixel_offsetModel(NXfieldModelWithPrePostRunString):
 
-        class AttributesModel(BaseModel):
-            axis: Optional[int] = Field(None, gt=0, description="Obligatory value: 1")
-            primary: Optional[int] = Field(None, gt=0, description="Obligatory value: 1")
-            long_name: Optional[str] = Field(None, description="y-axis offset from detector center")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1")
+            primary: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1")
+            long_name: Optional[NXfieldModelForAttribute] = Field(None, description="y-axis offset from detector center")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the y_pixel_offset field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the y_pixel_offset field.")
 
     y_pixel_offset: Optional[y_pixel_offsetModel]= Field(None, description="Offset from the detector center in y-direction. Can be multidimensional when needed.")    
 
@@ -90,13 +91,13 @@ class NXdetectorModel(NXgroupModel):
     # ----- z_pixel_offset -----
     class z_pixel_offsetModel(NXfieldModelWithPrePostRunString):
 
-        class AttributesModel(BaseModel):
-            axis: Optional[int] = Field(None, gt=0, description="Obligatory value: 1")
-            primary: Optional[int] = Field(None, gt=0, description="Obligatory value: 1")
-            long_name: Optional[str] = Field(None, description="z-axis offset from detector center")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1")
+            primary: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1")
+            long_name: Optional[NXfieldModelForAttribute] = Field(None, description="z-axis offset from detector center")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the z_pixel_offset field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the z_pixel_offset field.")
 
     z_pixel_offset: Optional[z_pixel_offsetModel]= Field(None, description="Offset from the detector center in z-direction. Can be multidimensional when needed.")    
     
@@ -115,27 +116,27 @@ class NXdetectorModel(NXgroupModel):
     
     # ----- crate -----
     class crateModel(NXfieldModelWithPrePostRunString):
-        class AttributesModel(BaseModel):
-            local_name: Optional[str] = Field(None, description="Equivalent local term")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            local_name: Optional[NXfieldModelForAttribute] = Field(None, description="Equivalent local term")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the crate field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the crate field.")
     crate: Optional[crateModel]= Field(None, description="Crate number of detector")    
 
     # ----- slot -----
     class slotModel(NXfieldModelWithPrePostRunString):
-        class AttributesModel(BaseModel):
-            local_name: Optional[str] = Field(None, description="Equivalent local term")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            local_name: Optional[NXfieldModelForAttribute] = Field(None, description="Equivalent local term")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the slot field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the slot field.")
     slot: Optional[slotModel]= Field(None, description="Slot number of detector")   
 
 
     # ----- input -----
     class inputModel(NXfieldModelWithPrePostRunString):
-        class AttributesModel(BaseModel):
-            local_name: Optional[str] = Field(None, description="Equivalent local term")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            local_name: Optional[NXfieldModelForAttribute] = Field(None, description="Equivalent local term")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the input field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the input field.")
     input: Optional[inputModel]= Field(None, description="Input number of detector")   
     
     type: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="Description of type such as He3 gas cylinder, He3 PSD, scintillator, fission chamber, proportion counter, ion chamber, ccd, pixel, image plate, CMOS, …")
@@ -143,18 +144,18 @@ class NXdetectorModel(NXgroupModel):
     
     # ----- start_time -----
     class start_timeModel(NXfieldModelWithPrePostRunString):
-        class AttributesModel(BaseModel):
-            start: Optional[float] = Field(None, description="absolute reference")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            start: Optional[NXfieldModelForAttribute] = Field(None, description="absolute reference")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the start_time field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the start_time field.")
     start_time: Optional[start_timeModel]= Field(None, description="start time for each frame, with the start attribute as absolute reference")   
 
     # ----- stop_time -----
     class stop_timeModel(NXfieldModelWithPrePostRunString):
-        class AttributesModel(BaseModel):
-            start: Optional[float] = Field(None, description="absolute reference")
+        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+            start: Optional[NXfieldModelForAttribute] = Field(None, description="absolute reference")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the stop_time field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the stop_time field.")
     stop_time: Optional[stop_timeModel]= Field(None, description="stop time for each frame, with the start attribute as absolute reference")
     
     calibration_date: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="date of last calibration (geometry and/or efficiency) measurements")
@@ -196,12 +197,12 @@ class NXdetectorModel(NXgroupModel):
     
     # ----- efficiency -----
     class efficiencyModel(NXdataModel):
-        class AttributesModel(BaseModel):
-            signal: Optional[str] = Field(None, description="Obligatory value: efficiency")
-            axes: Optional[str] = Field(None, description="Any of these values: . | . . | . . . | . . . . | wavelength")
-            wavelength_indices: Optional[str] = Field(None, description="Obligatory value: 0")
+        class AttributesModel(NXdataModel.AttributesModel):
+            signal: Optional[NXfieldModelForAttribute] = Field(None, description="Obligatory value: efficiency")
+            axes: Optional[NXfieldModelForAttribute] = Field(None, description="Any of these values: . | . . | . . . | . . . . | wavelength")
+            wavelength_indices: Optional[NXfieldModelForAttribute] = Field(None, description="Obligatory value: 0")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-        attrs: Optional[AttributesModel] = Field(None, description="Attributes specific to the efficiency field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the efficiency field.")
     efficiency: Optional[efficiencyModel]= Field(None, description="Spectral efficiency of detector with respect to e.g. wavelength")
     
     calibration_method: Optional[NXnoteModel]= Field(None, description="summary of conversion of array data to pixels (e.g. polynomial approximations) and location of details of the calibrations")
