@@ -19,7 +19,7 @@ class NXtransformationsModel(NXgroupModel):
 
         class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
             transformation_type: Optional[NXfieldModelForAttribute] = Field(None, description="The transformation_type may be translation, in which case the values are linear displacements along the axis, rotation, in which case the values are angular rotations around the axis.")
-            vector: Optional[NXfieldModelForAttribute] = Field(None, description="Three values that define the axis for this transformation.")
+            vector: NXfieldModelForAttribute = Field(..., description="Three values that define the axis for this transformation.")
             offset: Optional[NXfieldModelForAttribute] = Field(None, description="A fixed offset applied before the transformation (three vector components). ")
             offset_units: Optional[NXfieldModelForAttribute] = Field(None, description="Units of the offset. Values should be consistent with NX_LENGTH.")
             depends_on: Optional[NXfieldModelForAttribute] = Field(None, description="Points to the path to a field defining the axis on which this depends or the string “.”.")
