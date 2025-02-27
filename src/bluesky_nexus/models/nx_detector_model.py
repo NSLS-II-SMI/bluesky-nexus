@@ -3,7 +3,6 @@ from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
     BaseModel,
     Field,
-    Number,
     ConfigDict,
     NXattrModel,
     NXgroupModel,
