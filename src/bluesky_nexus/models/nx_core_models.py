@@ -69,7 +69,7 @@ class NXattrModel(BaseModel):
         ..., description="Value of the attribute."
     )
     dtype: Optional[str] = Field(None, description="Data type of the attribute.")
-    shape: Optional[Union[list, Tuple[int]]] = Field(None, description="Shape of the " "attribute.")
+    shape: Optional[Union[list, Tuple[int]]] = Field(None, description="Shape of the attribute.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 
@@ -226,9 +226,7 @@ class TransformationModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 class NXfieldModel(NXobjectModel):
-    nxclass: Optional[str] = Field("NXfield", description="The class of the NXfield.")
     value: Any = Field(None, description="Value of the field.")
-    shape: Optional[Tuple[int, ...]] = Field(None, description="Shape of the field.")
     dtype: Optional[str] = Field(None, description="Data type of the field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
