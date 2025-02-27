@@ -1,26 +1,20 @@
 nx_model: NXmonochromatorModel
 nxclass: NXmonochromator
 energy:
-  nxclass: NX_FLOAT
   value: $post-run:engry
   dtype: float64
   attributes:
     units:
-      nxclass: NX_CHAR
       value: "keV"
       dtype: str
 GRATING:
   nxclass: NXgrating
   diffraction_order:
-    nxclass: NX_INT
     value: $post-run:grating_diffraction_order
     dtype: int32
   substrate_material:
-    nxclass: NX_CHAR
     value: $pre-run-md:grating_substrate_material
     dtype: str
-
 description:
-  nxclass: NX_CHAR
   value: $pre-run-md:description
   dtype: str

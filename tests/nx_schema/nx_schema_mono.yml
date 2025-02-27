@@ -1,25 +1,47 @@
-nx_model: NXmonochromatorModel
+#nx_model: NXmonochromatorModel
+nx_model: NXgeneralModel
 nxclass: NXmonochromator
+attributes:
+  calibration:
+    value: $post-run:en
+    dtype: float64
+  calibParams:
+    value: [1.23, 4.56]
+    dtype: float64
 energy:
-  nxclass: NX_FLOAT
   value: $post-run:en
   dtype: float64
+  attrs:
+    units: "keV"
+    prices: "Euro"
+    days: ["Mo", "We"]
   attributes:
-    units:
-      nxclass: NX_CHAR
-      value: "keV"
+    nicePreRun:
+      value: $pre-run-md:calibration_on
+      dtype: bool
+    niceFloat64List:
+      value: [6.78, 9.12]
+      dtype: float64
+    nicePostRunEn:
+      value: $post-run:en
+      dtype: float64
+    niceFloat64:
+      value: 13.1415
+      dtype: float64
+    niceString:
+      value: Hi
       dtype: str
+    niceInt32List:
+      value: [1,2,3,4]
+      dtype: int32
   transformation:
     expression: 3 * x**2 + np.exp(np.log(5)) + 1 # Symbolic expression for the transformation
     target: value # Specifies the name of array to which expression is applied
 GRATING:
   nxclass: NXgrating
   diffraction_order:
-    nxclass: NX_INT
     value: $pre-run-cpt:grating
     dtype: int32
-
 description:
-  nxclass: NX_CHAR
   value: $pre-run-md:description
   dtype: str

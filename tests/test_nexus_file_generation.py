@@ -7,16 +7,19 @@ import types
 import unittest
 from bluesky import RunEngine
 from bluesky.plans import scan
-from devices.monochromators import Mono, MonoWithGratingCpt
+from tests.devices.monochromators import Mono, MonoWithGratingCpt
 from ophyd.sim import motor
-from preprocessors.baseline import SupplementalDataBaseline
+from tests.preprocessors.baseline import SupplementalDataBaseline
 
-from bluesky_nexus.bluesky_nexus_const import NX_FILE_EXTENSION
+from bluesky_nexus.bluesky_nexus_const import NX_FILE_EXTENSION, CALLBACK_FILE_EXTENSION
 from bluesky_nexus.callbacks.nexus_writer import NexusWriter
 from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
+from tests.auxiliary.callbacks import WriteToFileFormattedCallback
 
 # Constants: Define paths
 NX_FILE_DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "nx_file"))
+CALLBACK_FILE_DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "callback_file"))
+
 NX_SCHEMA_DIR_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "nx_schema")
 )
@@ -31,7 +34,16 @@ def create_nx_file_dir():
         os.makedirs(NX_FILE_DIR_PATH)
 
 
-# Fixture: Get the path to `nx_file`
+# Fixture: Ensure the `callback_file` directory exists
+@pytest.fixture
+def create_callback_file_dir():
+    """
+    Creates the `callback_file` directory if it doesn't already exist and cleans up after the tests.
+    """
+    if not os.path.exists(CALLBACK_FILE_DIR_PATH):
+        os.makedirs(CALLBACK_FILE_DIR_PATH)
+
+# Fixture: Get the path to `nx_file` directory
 @pytest.fixture
 def nx_file_dir_path():
     """
@@ -39,6 +51,13 @@ def nx_file_dir_path():
     """
     return NX_FILE_DIR_PATH
 
+# Fixture: Get the path to `callback_file` directory
+@pytest.fixture
+def callback_file_dir_path():
+    """
+    Returns the absolute path to the `callback_file` directory for storing callback files.
+    """
+    return CALLBACK_FILE_DIR_PATH
 
 # Test: Example test that writes to `nx_file`
 @pytest.mark.skip(reason="Temporarily disabling this test_write_to_nx_file_dir")
@@ -238,13 +257,24 @@ def generate_md(nx_file_name: str, title: str, definition: str, test_dict: dict)
 
 
 # Helper: to get file path to the nexus file
-def get_nx_file_path(nx_file_dir_path: str, nx_file_name: str) -> str:
+def get_nx_file_path(file_dir_path: str, file_name: str) -> str:
     # Add extension to file name
-    if not nx_file_name.endswith(NX_FILE_EXTENSION):
-        nx_file_name = nx_file_name + NX_FILE_EXTENSION
+    if not file_name.endswith(NX_FILE_EXTENSION):
+        file_name = file_name + NX_FILE_EXTENSION
 
     # Define nexus file path
-    file_path: str = os.path.join(nx_file_dir_path, nx_file_name)
+    file_path: str = os.path.join(file_dir_path, file_name)
+    return file_path
+
+
+# Helper: to get file path to the callback file
+def get_callback_file_path(file_dir_path: str, file_name: str) -> str:
+    # Add extension to file name
+    if not file_name.endswith(CALLBACK_FILE_EXTENSION):
+        file_name = file_name + CALLBACK_FILE_EXTENSION
+
+    # Define file path
+    file_path: str = os.path.join(file_dir_path, file_name)
     return file_path
 
 
@@ -269,11 +299,10 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
 
             # Validate group attributes
             for attr_key, attr_value in group_attrs.items():
-                
-                print("attr_key:", attr_key)
-                print("attr_key:", attr_value)
-                
-                
+
+                # print("attr_key:", attr_key) # Debug only
+                # print("attr_key:", attr_value) # Debug only
+
                 assert (
                     attr_key in current.attrs
                 ), f"Missing attribute: {attr_key} in group: {group_path}"
@@ -292,7 +321,7 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
                 expected_data_value = expected_value.get("value")
                 expected_dtype = expected_value.get("dtype")
                 expected_shape = expected_value.get("shape")
-                expected_attrs = expected_value.get("attrs", {})
+                expected_attrs = expected_value.get("attributes", {})
             else:
                 # If expected_value is not a dictionary, it represents just the value to check
                 expected_data_value = expected_value
@@ -320,7 +349,7 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
                         )
                     assert (
                         actual_value == expected_data_value
-                    ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
+                    ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value!r}, Found {actual_value!r}"
 
                 else:
                     # Validate dtype
@@ -394,6 +423,7 @@ def test_1(
     devices_dictionary,
     baseline_1,
     my_motor,
+    callback_file_dir_path,
     nx_file_dir_path,
     nx_schema_dir_path,
     plan_step_number,
@@ -417,8 +447,16 @@ def test_1(
         {"a": 1, "b": 2, "c": {"d": 3, "e": 4}},
     )
 
+    # Define: callback_writer
+    callback_file_path = get_callback_file_path(callback_file_dir_path, f"callback_file_{request.node.name}.json")
+    callback_writer = WriteToFileFormattedCallback(callback_file_path)
+    RE.subscribe(callback_writer)
+
     # Execute the plan
     execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
+
+    # Close the callback_writer
+    callback_writer.close()
 
     # Define Nexus file path
     nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
@@ -440,7 +478,6 @@ def test_1(
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {
-            "nxclass": "NX_FLOAT",
         #    "description": "Energy selected",
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
@@ -448,6 +485,10 @@ def test_1(
         #        "description": "Transformation configuration that applies a symbolic operation to the target data array.",
             },
         },
+        ##"entry/instrument/mono/energy/attributes/units": {"nxclass": "NX_CHAR"}, It does not work since the attributes is not created
+        
+        
+                
         "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
         "entry/instrument/mono/events_timestamps": {
             "nxclass": "NX_FLOAT",
@@ -458,7 +499,6 @@ def test_1(
         #    "description": "Grating",
         },
         "entry/instrument/mono/GRATING/diffraction_order": {
-            "nxclass": "NX_INT",
         #    "description": "Diffraction order",
         },
         # ---
@@ -466,7 +506,6 @@ def test_1(
         # ---
         "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono_with_grating_cpt/energy": {
-            "nxclass": "NX_FLOAT",
         #    "description": "Energy selected",
         },
         "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
@@ -478,7 +517,6 @@ def test_1(
         },
         "entry/instrument/mono_with_grating_cpt/GRATING": {"NX_class": "NXgrating"},
         "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
-            "nxclass": "NX_INT"
         },
         "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
             "nxclass": "NX_FLOAT"
@@ -488,7 +526,6 @@ def test_1(
         #    "description": "Timestamps of the events",
         },
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
-            "nxclass": "NX_CHAR",
         #    "description": "Substrate material type",
         },
 
@@ -523,8 +560,8 @@ def test_1(
             "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
-            # "attrs": {
-            #     "units": "keV",  # Expected units
+            # "attributes": {
+            # "units": {"value": "keV"},  # Expected units
             # },
         },
         "entry/instrument/mono/GRATING/diffraction_order": {
@@ -611,6 +648,8 @@ def test_1(
 
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
+    # Remove the callback file after successful creation
+    clean_up(callback_file_path)
 
 
 # Test function
@@ -620,6 +659,7 @@ def test_2(
     devices_dictionary,
     baseline_2,
     my_motor,
+    callback_file_dir_path,
     nx_file_dir_path,
     nx_schema_dir_path,
     plan_step_number,
@@ -643,8 +683,17 @@ def test_2(
         {"a": 11, "b": 12, "c": {"d": 13, "e": 14}},
     )
 
+
+    # Define: callback_writer
+    callback_file_path = get_callback_file_path(callback_file_dir_path, f"callback_file_{request.node.name}.json")
+    callback_writer = WriteToFileFormattedCallback(callback_file_path)
+    RE.subscribe(callback_writer)
+
     # Execute the plan
     execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
+
+    # Close the callback file
+    callback_writer.close()
 
     # Define Nexus file path
     nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
@@ -666,7 +715,6 @@ def test_2(
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {
-            "nxclass": "NX_FLOAT",
         #    "description": "Energy selected",
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
@@ -684,7 +732,6 @@ def test_2(
         #    "description": "Grating",
         },
         "entry/instrument/mono/GRATING/diffraction_order": {
-            "nxclass": "NX_INT",
         #    "description": "Diffraction order",
         },
         # ---
@@ -783,6 +830,8 @@ def test_2(
 
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
+    # Remove the callback file after successful creation
+    clean_up(callback_file_path)
 
 
 # Test function
@@ -792,6 +841,7 @@ def test_3(
     devices_dictionary,
     baseline_3,
     my_motor,
+    callback_file_dir_path,
     nx_file_dir_path,
     nx_schema_dir_path,
     plan_step_number,
@@ -815,8 +865,16 @@ def test_3(
         {"a": 21, "b": 22, "c": {"d": 23, "e": 24}},
     )
 
+    # Define: callback_writer
+    callback_file_path = get_callback_file_path(callback_file_dir_path, f"callback_file_{request.node.name}.json")
+    callback_writer = WriteToFileFormattedCallback(callback_file_path)
+    RE.subscribe(callback_writer)
+
     # Execute the plan
     execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
+
+    # Close the callback file
+    callback_writer.close()
 
     # Define Nexus file path
     nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
@@ -838,7 +896,6 @@ def test_3(
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {
-            "nxclass": "NX_FLOAT",
         #    "description": "Energy selected",
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
@@ -856,14 +913,13 @@ def test_3(
         #    "description": "Grating",
         },
         "entry/instrument/mono/GRATING/diffraction_order": {
-            "nxclass": "NX_INT",
         #    "description": "Diffraction order",
         },
         # ---
         # --- entry/instrument/mono_with_grating_cpt ---
         # ---
         "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono_with_grating_cpt/energy": {"nxclass": "NX_FLOAT"},
+        "entry/instrument/mono_with_grating_cpt/energy": {},
         "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
             "nxclass": "NX_FLOAT"
         },
@@ -873,7 +929,6 @@ def test_3(
         },
         "entry/instrument/mono_with_grating_cpt/GRATING": {"NX_class": "NXgrating"},
         "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
-            "nxclass": "NX_INT"
         },
         "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
             "nxclass": "NX_FLOAT"
@@ -883,7 +938,6 @@ def test_3(
         #    "description": "Timestamps of the events",
         },
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
-            "nxclass": "NX_CHAR",
         #    "description": "Substrate material type",
         },
         # ---
@@ -1005,6 +1059,8 @@ def test_3(
 
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
+    # Remove the callback file after successful creation
+    clean_up(callback_file_path)
 
 
 # Test function
@@ -1014,6 +1070,7 @@ def test_4(
     devices_dictionary,
     baseline_4,
     my_motor,
+    callback_file_dir_path,
     nx_file_dir_path,
     nx_schema_dir_path,
     plan_step_number,
@@ -1037,8 +1094,17 @@ def test_4(
         {"a": 31, "b": 32, "c": {"d": 33, "e": 34}},
     )
 
+
+    # Define: callback_writer
+    callback_file_path = get_callback_file_path(callback_file_dir_path, f"callback_file_{request.node.name}.json")
+    callback_writer = WriteToFileFormattedCallback(callback_file_path)
+    RE.subscribe(callback_writer)
+
     # Execute the plan
     execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
+
+    # Close the callback file
+    callback_writer.close()
 
     # Define Nexus file path
     nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
@@ -1060,7 +1126,6 @@ def test_4(
         # ---
         "entry/instrument/mono": {"NX_class": "NXmonochromator"},
         "entry/instrument/mono/energy": {
-            "nxclass": "NX_FLOAT",
             #"description": "Energy selected",
             "transformation": {
                 "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
@@ -1078,7 +1143,6 @@ def test_4(
         #    "description": "Grating",
         },
         "entry/instrument/mono/GRATING/diffraction_order": {
-            "nxclass": "NX_INT",
         #    "description": "Diffraction order",
         },
         # ---
@@ -1176,6 +1240,8 @@ def test_4(
 
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
+    # Remove the callback file after successful creation
+    clean_up(callback_file_path)
 
 
 # ---------- DEBUG ONLY
