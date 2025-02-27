@@ -87,7 +87,7 @@ class NXobjectModel(BaseModel):
     nxfile: Optional["NXFileModel"] = Field(None, description="The file handle of the root object of the NeXus tree containing this object.")
     nxfilename: Optional[str] = Field(None, description="The file name of NeXus object's " "tree file handle.")
     attrs: Optional[Dict[str, Any]] = Field(default={}, description="Arbitrary attributes belonging to a dataset assigned by a user.")
-    attributes: Optional[BaseModel] = Field(None, description="Optional attributes belonging to a field or to a group as by prescribed by NeXus base class.")
+    description: Optional[Any] = Field(None, description="Optional description of the object")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     # The new version of model_dump to debug
