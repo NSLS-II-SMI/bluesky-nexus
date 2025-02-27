@@ -30,11 +30,12 @@ Notes:
 import copy
 import os
 import re
-from collections import deque, OrderedDict
-from typing import Optional, Union
+from collections import deque
+from typing import Optional, Union, Any
 
 import h5py
 import numpy as np
+import json
 from bluesky.callbacks.core import CollectThenCompute
 from h5py import Group
 
@@ -481,9 +482,9 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     obj["attrs"]["external"] = external
 
                 # Extract precision (optional key)
-                precision = obj.get("precision", desc.get("precision", None))
+                precision = obj["attrs"].get("precision", desc.get("precision", None))
                 if precision is not None:
-                    obj["precision"] = precision
+                    obj["attrs"]["precision"] = precision
 
                 # Extract and set lower_ctrl_limit (optional key)
                 lower_ctrl_limit = obj["attrs"].get("lower_ctrl_limit", desc.get("lower_ctrl_limit", None))
@@ -525,11 +526,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
 
             if isinstance(tree, dict):
                 for key, value in tree.items():
-                    if (
-                        isinstance(value, dict)
-                        and "nxclass" in value
-                        and "value" in value
-                    ):
+                    if (isinstance(value, dict) and "value" in value and "dtype" in value):
                         tree[key] = func(dev_name, value)
                     tree[key] = replace_values(dev_name, value, func)
             elif isinstance(tree, list):
@@ -613,17 +610,20 @@ def create_nexus_file(file_path, data_dict):
         f.attrs["default"] = "entry"
 
         # Create the NXentry group
-        entry: Group = f.create_group("entry")
+        entry = f.create_group("entry")
         entry.attrs["NX_class"] = "NXentry"
-        # entry.attrs["default"] = "data" # Deactivate since NXdata group does not exist
+        entry.attrs["Application name"] = "bluesky_nexus"
+        entry.attrs["Application version"] = "TBD"
+        entry.attrs["Content"] = "'NXinstrument' group and 'NXcollection' group"
 
         for key, value in data_dict.items():
             # Create instrument group under 'entry' group
             if "instrument" == key:
                 # Create instrument group
-                instrument_group: Group = entry.create_group(key)
+                instrument_group = entry.create_group(key)
                 # Add attribute
                 instrument_group.attrs["NX_class"] = "NXinstrument"
+                instrument_group.attrs["Description"] = "Instruments involved in the bluesky plan"
 
                 # Add group or fieled to instrument_group
                 add_group_or_field(instrument_group, value)
@@ -634,6 +634,7 @@ def create_nexus_file(file_path, data_dict):
                 run_info_group = entry.create_group(key)
                 # Add attribute
                 run_info_group.attrs["NX_class"] = "NXcollection"
+                run_info_group.attrs["Description"] = "Copy of the start and stop document from the bluesky run"
                 # Write data to the run_info_group
                 write_collection(run_info_group, value)
 
@@ -671,13 +672,94 @@ def add_group_or_field(group, data):
         }
         add_group_or_field(parent_group, data)
     """
+
+    def add_attrs_to_dataset(dataset: h5py.Dataset, attrs: dict) -> None:
+        """
+        Adds attributes to an h5py dataset, automatically determining their type.
+
+        Parameters:
+        - dataset (h5py.Dataset): The dataset to which attributes should be added.
+        - attrs (dict): A dictionary where keys are attribute names and values are attribute values.
+        """
+        for key, value in attrs.items():
+            # Automatically determine the type and convert accordingly
+            
+            if isinstance(value, dict):
+                dataset.attrs[key] = str(value)  # Convert dict to str
+            
+            elif isinstance(value, str):
+                dataset.attrs[key] = value  # Save string directly
+            
+            elif isinstance(value, (int, np.integer)):
+                dataset.attrs[key] = np.int64(value)  # Store as int64 (safe for large numbers)
+            
+            elif isinstance(value, (float, np.floating)):
+                dataset.attrs[key] = np.float64(value)  # Store as float64 for precision
+            
+            elif isinstance(value, bool):
+                dataset.attrs[key] = np.bool_(value)  # Store as a NumPy boolean
+            
+            elif isinstance(value, (list, tuple, np.ndarray)):
+                # Convert to NumPy array to ensure consistent storage
+                value = np.array(value)
+                if value.dtype.kind in {'i', 'u'}:  # Integer types
+                    dataset.attrs[key] = value.astype(np.int64)
+                elif value.dtype.kind == 'f':  # Floating point types
+                    dataset.attrs[key] = value.astype(np.float64)
+                elif value.dtype.kind == 'b':  # Boolean array
+                    dataset.attrs[key] = value.astype(np.bool_)
+                elif value.dtype.kind == 'U' or value.dtype.kind == 'O':  # Strings
+                    dataset.attrs[key] = np.array(value, dtype=h5py.special_dtype(vlen=str))
+                else:
+                    raise ValueError(f"Unsupported array data type for attribute '{key}': {value.dtype}")
+
+            else:
+                raise ValueError(f"Unsupported attribute type for '{key}': {type(value)}")
+
+
+    def add_attributes_to_dataset_or_group(dataset: Union[h5py.Dataset, h5py.Group], attributes: dict) -> None:
+        """
+        Adds attributes to a dataset (field) from a dictionary of attributes.
+
+        Parameters:
+        - dataset (h5py.Dataset): The dataset to which attributes should be added.
+        - attributes (dict): A dictionary of attributes to add, each with 'value' and 'dtype' keys.
+        """
+        for attr_name, attr_data in attributes.items():
+            value: Any = attr_data["value"]
+            dtype: str = attr_data["dtype"]
+
+            # Check if the value is already an array (either a NumPy array or a list)
+            if isinstance(value, (np.ndarray, list)):
+                # If it's an array, ensure it's a numpy array and convert its dtype
+                value = np.array(value, dtype=dtype)
+            else:
+                # If it's not an array, convert based on dtype
+                if dtype == "str":
+                    value = str(value)
+                elif dtype == "float64":
+                    value = np.float64(value)
+                elif dtype == "float32":
+                    value = np.float32(value)
+                elif dtype == "int64":
+                    value = np.int64(value)
+                elif dtype == "int32":
+                    value = np.int32(value)
+                elif dtype == "bool":
+                    value = bool(value)
+                else:
+                    raise ValueError(f"Unsupported dtype: {dtype}")
+
+            # Set the attribute to the dataset
+            dataset.attrs[attr_name] = value
+
     for key, value in data.items():
         if isinstance(value, dict):
 
             ###
             ### Handle NeXus fields
             ###
-            if "nxclass" in value and "value" in value:
+            if "value" in value:
                 dtype = value.get("dtype", None)
 
                 if dtype in VALID_NXFIELD_DTYPES:
@@ -709,35 +791,26 @@ def add_group_or_field(group, data):
                     dataset = group.create_dataset(
                         key, data=value["value"], dtype=dtype
                     )
-                    dataset.attrs["nxclass"] = value["nxclass"]
 
                     # Add attributes to the dataset
-                    for attr_name, attr_value in value.get("attrs", {}).items():
-                        # Convert non-compatible types to strings
-                        if isinstance(attr_value, (dict, list)):
-                            attr_value = str(attr_value)
-                        dataset.attrs[attr_name] = attr_value
-                        #print(f"Add attr_value: {attr_value} to dataset with key: {key}:") # Debug only
+                    # In the schema file, attributes of a field are introduced by the word "attributes"
+                    # Each attribute has a value and dtype
+                    # Attribute of dataset can be: integer, float, string, bool, array
+                    # Attribute of dataset can be of type: str, int32, int64, float32, float64, bool
+                    if "attributes" in value:
+                        add_attributes_to_dataset_or_group(dataset, value["attributes"])
 
-                    if "shape" in value.keys():
+                    # Add attribute shape (obligatory)
+                    if "shape" in value:
                         dataset.attrs["shape"] = value["shape"]
 
-                    # Handle any additional keys in the dictionary as attributes
-                    for extra_key, extra_value in value.items():
-                        if extra_key not in {
-                            "value",
-                            "dtype",
-                            "attrs",
-                            "nxclass",
-                            "shape",
-                            "events_cpt_timestamps",
-                            "events_timestamps",
-                            "descriptor_cpt_timestamp"
-                        }:
-                            # Convert non-compatible types to strings
-                            if isinstance(extra_value, (dict, list)):
-                                extra_value = str(extra_value)
-                            dataset.attrs[extra_key] = extra_value
+                    # Add attribute transformation (optional)
+                    if "transformation" in value:
+                        dataset.attrs["transformation"] = str(value["transformation"]) # convert dict to  string
+
+                    # Add all attributes defined in 'attrs'
+                    if "attrs" in value:
+                        add_attrs_to_dataset(dataset, value['attrs'])
 
                     ### Create dataset for 'events_cpt_timestamps'
                     if "events_cpt_timestamps" in value:
@@ -751,7 +824,7 @@ def add_group_or_field(group, data):
                         dataset.attrs["description"] = (
                             f"Timestamps of the component: {key} extracted from the events"
                         )
-                        
+
                     ### Create dataset for 'descriptor_cpt_timestamp'
                     if "descriptor_cpt_timestamp" in value:
                         dataset = group.create_dataset(
@@ -791,17 +864,24 @@ def add_group_or_field(group, data):
             ### Handle NeXus groups
             ###
             elif "nxclass" in value:
+
+                # Create group
                 subgroup = group.create_group(key)
 
+                # Add "NX_class" attribute expected by nexus convention for groups
                 subgroup.attrs["NX_class"] = value["nxclass"]
 
+                # Add "default" attribute expected by nexus convention for groups if defined for the group
                 if "default" in value:
                     subgroup.attrs["default"] = value["default"]["value"]
 
-                if "attrs" in value:
-                    for attr_key, attr_value in value["attrs"].items():
-                        subgroup.attrs[attr_key] = attr_value
-                        #print(f"Add attr_value: {attr_value} to group with key: {key}:") # Debug only
+                # Add attributes to the group defined in the schema
+                # In the schema file, attributes of a group are introduced by the word "attributes"
+                # Each attribute has a value and dtype
+                # Attribute of a group can be: integer, float, string, bool, array
+                # Attribute of a group can be of type: str, int32, int64, float32, float64, bool
+                if "attributes" in value:
+                    add_attributes_to_dataset_or_group(subgroup, value["attributes"])
 
                 # Recursively add fields or subgroups
                 add_group_or_field(
@@ -809,7 +889,7 @@ def add_group_or_field(group, data):
                     {
                         k: v
                         for k, v in value.items()
-                        if k != "nxclass" and k != "default" and k != "attrs"
+                        if k != "nxclass" and k != "default" and k != "attributes"
                     },
                 )
 

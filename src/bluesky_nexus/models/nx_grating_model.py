@@ -13,7 +13,7 @@ from bluesky_nexus.models.nx_transformations_model import NXtransformationsModel
 
 class NXgratingModel(NXgroupModel):
     
-    default: NXattrModel = Field(NXattrModel(value="TBD"), description='Default')
+    default: NXattrModel = Field(NXattrModel(value="diffraction_order"), description='Default')
     angles: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Blaze or trapezoidal angles, with the angle of the upstream facing edge listed first. Blazed gratings can be identified by the low value of the first-listed angle.")
     period: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="List of polynomial coefficients describing the spatial separation of lines/grooves as a function of position along the grating, in increasing powers of position. Gratings which do not have variable line spacing will only have a single coefficient (constant).")
     duty_cycle: Optional[NXfieldModelWithPrePostRunString] = Field(None)
