@@ -20,13 +20,12 @@ class NXdataModel(NXgroupModel):
         AXISNAME_indices: Optional[NXfieldModelForAttribute]  = Field(None, description="The AXISNAME_indices attribute is a single integer or an array of integers that defines which data dimension(s) are spanned by the corresponding axis. The first dimension index is 0 (zero).")
         axes: Optional[NXfieldModelForAttribute]  = Field(None, description="The axes attribute is a list of strings which are the names of the AXISNAME fields that contain the values of the coordinates along the data dimensions.")
         model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-    attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the NXdata group.")
+    attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'NXdata' group.")
 
     # ----- AXISNAME -----
     class AXISNAMEModel(NXfieldModelWithPrePostRunString):
-        
-        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+
+        class AttributesModel(BaseModel):
             long_name: Optional[NXfieldModelForAttribute] = Field(None, description="Axis label")
             units: Optional[NXfieldModelForAttribute] = Field(None, description="Unit in which the coordinate values are expressed")
             distribution: Optional[NXfieldModelForAttribute] = Field(None, description="0|false: single value, 1|true: multiple values")
@@ -34,20 +33,18 @@ class NXdataModel(NXgroupModel):
             last_good: Optional[NXfieldModelForAttribute] = Field(None, description="Index of last good value")
             axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Index (positive integer) identifying this specific set of numbers.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-            
-        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the AXISNAME field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'AXISNAME' field.")
 
     AXISNAME: Optional[AXISNAMEModel]= Field(None, description='Coordinate values along one or more data dimensions.')
 
     # ----- DATA -----
     class DATAModel(NXfieldModelWithPrePostRunString):
-        class AttributesModel(NXfieldModelWithPrePostRunString.AttributesModel):
+        class AttributesModel(BaseModel):
             signal: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Plottable (independent) axis, indicate index number. ")
             axes: Optional[NXfieldModelForAttribute] = Field(None, description="Defines the names of the coordinates (independent axes) for this data set as a colon-delimited array")
             long_name: Optional[NXfieldModelForAttribute] = Field(None, description="data label")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the DATA field.")
+        attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'DATA' field.")
 
     DATA: Optional[DATAModel] = Field(None, description='Data values to be used as the NeXus plottable data. ')
     FIELDNAME_errors: Optional[NXfieldModelWithPrePostRunString] = Field(None, description='“Errors” (meaning uncertainties or standard deviations) associated with any field named FIELDNAME in this NXdata group (e.g. an axis, signal or auxiliary signal).')
