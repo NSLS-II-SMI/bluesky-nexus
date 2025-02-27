@@ -62,16 +62,12 @@ class PrePostRunString(str):
             )
         return cls(value)
 
-
 class NXattrModel(BaseModel):
     nxclass: Optional[str] = Field("NXattr", description="The class of the NXattr.")
-    value: Union[PrePostRunString, Scalar, ArrayLike] = Field(
-        ..., description="Value of the attribute."
-    )
+    value: Union[PrePostRunString, Scalar, ArrayLike] = Field(..., description="Value of the attribute.")
     dtype: Optional[str] = Field(None, description="Data type of the attribute.")
     shape: Optional[Union[list, Tuple[int]]] = Field(None, description="Shape of the attribute.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
 
 class NXFileModel(BaseModel):
     nxclass: str = Field("NXFile", description="The class of the NXFile.")
@@ -90,6 +86,8 @@ class NXobjectModel(BaseModel):
     nxroot: Optional["NXgroupModel"] = Field(None, description="The root object of the NeXus" " tree containing this " "object.")
     nxfile: Optional["NXFileModel"] = Field(None, description="The file handle of the root object of the NeXus tree containing this object.")
     nxfilename: Optional[str] = Field(None, description="The file name of NeXus object's " "tree file handle.")
+    attrs: Optional[Dict[str, Any]] = Field(default={}, description="Arbitrary attributes belonging to a dataset assigned by a user.")
+    attributes: Optional[BaseModel] = Field(None, description="Optional attributes belonging to a field or to a group as by prescribed by NeXus base class.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     # The new version of model_dump to debug
@@ -213,9 +211,8 @@ class NXobjectModel(BaseModel):
 
     #     return base_dump
 
-
 class NXgroupModel(NXobjectModel):
-    nxclass: Optional[str] = Field("NXgroup", description="The class of the NXgroup.")
+    nxclass: Optional[str] = Field("NXgroup", description="The class of the group.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
 class TransformationModel(BaseModel):
@@ -230,16 +227,10 @@ class NXfieldModel(NXobjectModel):
     dtype: Optional[str] = Field(None, description="Data type of the field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
+class NXfieldModelWithPrePostRunString(NXfieldModel):
+    value: PrePostRunString = Field(..., description="Value of the field.")
+    transformation: Optional[TransformationModel] = Field(None, description="Transformation configuration that applies a symbolic operation to the target field.")
 
 class NXfieldModelForAttribute(NXfieldModel):
     value: Union[PrePostRunString, str] = Field(..., description="Value of the attribute field.")
-
-class NXfieldModelWithPrePostRunString(NXfieldModel):
-    value: PrePostRunString = Field(..., description="Value of the field.")
-    transformation: Optional[TransformationModel] = Field(None, description="Transformation configuration that applies a symbolic operation to the target data array.")
-    
-    class AttributesModel(BaseModel):
-        units: Optional[NXfieldModelForAttribute] = Field(None, description="Units")
-        model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-    attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to a given value.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
