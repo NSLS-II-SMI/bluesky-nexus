@@ -2,7 +2,6 @@
 from typing import List, Optional, Union
 from bluesky_nexus.models.nx_core_models import (
     BaseModel,
-    Scalar,
     Field,
     ConfigDict,
     NXgroupModel,
