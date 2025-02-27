@@ -14,8 +14,8 @@ class NXdetector_moduleModel(NXgroupModel):
     
     class CommonModel(NXfieldModelWithPrePostRunString):
         class AttributesModel(BaseModel):
-            transformation_type: Optional[str] = Field(None, description="Obligatory value: translation")
-            vector: Optional[NXfieldModelForAttribute] = Field(None, description="Three values that define the axis for this transformation")
+            transformation_type: Optional[str] = Field(None, description="Obligatory value: translation.")
+            vector: Optional[NXfieldModelForAttribute] = Field(None, description="Three values that define the axis for this transformation.")
             offset: Optional[NXfieldModelForAttribute] = Field(None, description="A fixed offset applied before the transformation (three vector components).")
             offset_units: Optional[NXfieldModelForAttribute] = Field(None, description="Units of the offset.")
             depends_on: Optional[NXfieldModelForAttribute] = Field(None, description="Points to the path of the next element in the geometry chain.")
