@@ -15,7 +15,7 @@ from bluesky_nexus.models.nx_transformations_model import NXtransformationsModel
 
 class NXcrystalModel(NXgroupModel):
 
-    default: NXattrModel = Field(NXattrModel(value="TBD"), description='Default')
+    default: NXattrModel = Field(NXattrModel(value="wavelength"), description='Default')
     usage: Optional[NXfieldModelWithPrePostRunString] = Field(None, description = "How this crystal is used. Choices are in the list.")
     type: Optional[NXfieldModelWithPrePostRunString] = Field(None, description = "Type or material of monochromating substance.")  
     chemical_formula: Optional[NXfieldModelWithPrePostRunString] = Field(None, description = 'The chemical formula specified using CIF conventions.')
