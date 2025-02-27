@@ -15,6 +15,7 @@ class MetadataMono:
         "z": "7.8000000000000009",
     }
     description: str = "I am the best mono at the bessyii facility"
+    calibration_on:bool = True
     baseline: str = "True"
 
     def get_attributes(self):
@@ -23,6 +24,7 @@ class MetadataMono:
             "worldPosition": self.worldPosition,
             "description": self.description,
             "baseline": self.baseline,
+            "calibration_on": self.calibration_on
         }
         return attributes
 
