@@ -9,7 +9,7 @@ from bluesky_nexus.models.nx_core_models import (
 )
 
 class NXnoteModel(NXgroupModel):
-    default: NXattrModel = Field(NXattrModel(value="TBD"), description='Default')
+    default: NXattrModel = Field(NXattrModel(value="author"), description='Default')
     author: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Author or creator of note")
     date: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Date note created/added")
     type: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Mime content type of note data field e.g. image/jpeg, text/plain, text/html")
