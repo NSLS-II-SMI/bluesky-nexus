@@ -12,7 +12,7 @@ from bluesky_nexus.models.nx_core_models import (
 
 class NXlogModel(NXgroupModel):
     
-    default: NXattrModel = Field(NXattrModel(value="TBD"), description='Default')
+    default: NXattrModel = Field(NXattrModel(value="value"), description='Default')
 
     # ----- time -----
     class timeModel(NXfieldModelWithPrePostRunString):
