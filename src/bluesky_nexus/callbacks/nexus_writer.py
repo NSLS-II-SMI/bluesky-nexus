@@ -873,7 +873,7 @@ def add_group_or_field(group, data):
 
                 # Add "default" attribute expected by nexus convention for groups if defined for the group
                 if "default" in value:
-                    subgroup.attrs["default"] = value["default"]["value"]
+                    subgroup.attrs["default"] = value["default"]["value"] # Presence of “value” in the “default” guaranteed by NXattrModel.
 
                 # Add attributes to the group defined in the schema
                 # In the schema file, attributes of a group are introduced by the word "attributes"
@@ -883,13 +883,17 @@ def add_group_or_field(group, data):
                 if "attributes" in value:
                     add_attributes_to_dataset_or_group(subgroup, value["attributes"])
 
+                # Add all attributes defined in 'attrs'
+                if "attrs" in value:
+                    add_attrs_to_dataset(subgroup, value['attrs'])
+
                 # Recursively add fields or subgroups
                 add_group_or_field(
                     subgroup,
                     {
                         k: v
                         for k, v in value.items()
-                        if k != "nxclass" and k != "default" and k != "attributes"
+                        if k != "nxclass" and k != "default" and k != "attributes" and k != "attrs"
                     },
                 )
 
