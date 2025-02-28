@@ -623,7 +623,7 @@ def create_nexus_file(file_path, data_dict):
                 instrument_group = entry.create_group(key)
                 # Add attribute
                 instrument_group.attrs["NX_class"] = "NXinstrument"
-                instrument_group.attrs["Description"] = "Instruments involved in the bluesky plan"
+                instrument_group.attrs["description"] = "Instruments involved in the bluesky plan"
 
                 # Add group or fieled to instrument_group
                 add_group_or_field(instrument_group, value)
@@ -634,7 +634,7 @@ def create_nexus_file(file_path, data_dict):
                 run_info_group = entry.create_group(key)
                 # Add attribute
                 run_info_group.attrs["NX_class"] = "NXcollection"
-                run_info_group.attrs["Description"] = "Copy of the start and stop document from the bluesky run"
+                run_info_group.attrs["description"] = "Copy of the start and stop document from the bluesky run"
                 # Write data to the run_info_group
                 write_collection(run_info_group, value)
 
