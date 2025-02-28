@@ -726,8 +726,8 @@ def add_group_or_field(group, data):
         - attributes (dict): A dictionary of attributes to add, each with 'value' and 'dtype' keys.
         """
         for attr_name, attr_data in attributes.items():
-            value: Any = attr_data["value"]
-            dtype: str = attr_data["dtype"]
+            value: Any = attr_data["value"] # Facultative, guaranteed by NXfieldModelForAttribute
+            dtype: str = attr_data["dtype"] # Facultative, guaranteed by NXfieldModelForAttribute
 
             # Check if the value is already an array (either a NumPy array or a list)
             if isinstance(value, (np.ndarray, list)):
@@ -752,6 +752,7 @@ def add_group_or_field(group, data):
 
             # Set the attribute to the dataset
             dataset.attrs[attr_name] = value
+
 
     for key, value in data.items():
         if isinstance(value, dict):
@@ -803,6 +804,10 @@ def add_group_or_field(group, data):
                     # Add attribute shape (obligatory)
                     if "shape" in value:
                         dataset.attrs["shape"] = value["shape"]
+
+                    # Add optionally "NX_class" attribute that is not expected by nexus convention for datasets
+                    if "nxclass" in value:
+                        dataset.attrs["NX_class"] = value["nxclass"]
 
                     # Add attribute transformation (optional)
                     if "transformation" in value:
