@@ -1,3 +1,24 @@
+"""
+Module: nx_crystal_model.py
+
+This module defines the NXcrystalModel, a NeXus-compliant model for representing 
+crystal-related metadata in scientific experiments. The model extends NXgroupModel 
+and includes various attributes describing the crystal structure, material properties, 
+and experimental conditions.
+
+The NXcrystalModel is useful for storing and validating data related to monochromator 
+crystals, sample crystals, and other crystal components used in scattering and diffraction 
+experiments.
+
+Dependencies:
+- NXgroupModel (Base class for NeXus groups)
+- NXattrModel (For attributes within the model)
+- NXfieldModelWithPrePostRunString (For handling pre- and post-run string fields)
+- NXlogModel (For logging temperature data)
+- NXdataModel (For reflectivity and transmission data)
+- NXoff_geometryModel (For describing the crystal's geometry)
+- NXtransformationsModel (For defining position and orientation transformations)
+"""
 
 from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
@@ -14,6 +35,50 @@ from bluesky_nexus.models.nx_off_geometry_model import NXoff_geometryModel
 from bluesky_nexus.models.nx_transformations_model import NXtransformationsModel
 
 class NXcrystalModel(NXgroupModel):
+    """
+    Pydantic model representing an NXcrystal (NeXus crystal group).
+
+    This model defines the metadata for characterizing crystals used in 
+    scattering, diffraction, and monochromator experiments. It provides 
+    detailed information about the crystal structure, composition, 
+    orientation, and experimental properties.
+
+    Attributes:
+    - `default` (NXattrModel): Default attribute value (e.g., wavelength).
+    - `usage` (Optional[NXfieldModelWithPrePostRunString]): Specifies how the crystal is used.
+    - `type` (Optional[NXfieldModelWithPrePostRunString]): Type or material of the crystal.
+    - `chemical_formula` (Optional[NXfieldModelWithPrePostRunString]): Chemical formula (CIF conventions).
+    - `order_no` (Optional[NXfieldModelWithPrePostRunString]): Position in a multi-crystal system.
+    - `cut_angle` (Optional[NXfieldModelWithPrePostRunString]): Cut angle of the crystal.
+    - `space_group` (Optional[NXfieldModelWithPrePostRunString]): Crystal space group.
+    - `unit_cell_*` (Optional[NXfieldModelWithPrePostRunString]): Unit cell parameters (lengths, angles, volume).
+    - `orientation_matrix` (Optional[NXfieldModelWithPrePostRunString]): Orientation matrix (Busing-Levy convention).
+    - `wavelength` (Optional[NXfieldModelWithPrePostRunString]): Optimal diffracted wavelength.
+    - `d_spacing` (Optional[NXfieldModelWithPrePostRunString]): Spacing between crystal planes.
+    - `scattering_vector` (Optional[NXfieldModelWithPrePostRunString]): Scattering vector Q of nominal reflection.
+    - `reflection` (Optional[NXfieldModelWithPrePostRunString]): Miller indices (hkl) values of nominal reflection.
+    - `thickness` (Optional[NXfieldModelWithPrePostRunString]): Crystal thickness (for Laue orientations).
+    - `density` (Optional[NXfieldModelWithPrePostRunString]): Mass density of the crystal.
+    - `segment_*` (Optional[NXfieldModelWithPrePostRunString]): Segmented crystal parameters (width, height, thickness, gap, rows, columns).
+    - `mosaic_*` (Optional[NXfieldModelWithPrePostRunString]): Mosaic spread properties (horizontal/vertical).
+    - `curvature_*` (Optional[NXfieldModelWithPrePostRunString]): Curvature properties for focusing crystals.
+    - `is_cylindrical` (Optional[NXfieldModelWithPrePostRunString]): Specifies if the crystal is cylindrically bent.
+    - `cylindrical_orientation_angle` (Optional[NXfieldModelWithPrePostRunString]): Orientation angle if cylindrical.
+    - `polar_angle` (Optional[NXfieldModelWithPrePostRunString]): Polar (scattering) angle.
+    - `azimuthal_angle` (Optional[NXfieldModelWithPrePostRunString]): Azimuthal positioning angle.
+    - `bragg_angle` (Optional[NXfieldModelWithPrePostRunString]): Bragg angle of nominal reflection.
+    - `temperature` (Optional[NXfieldModelWithPrePostRunString]): Average crystal temperature.
+    - `temperature_coefficient` (Optional[NXfieldModelWithPrePostRunString]): Lattice parameter change with temperature.
+    - `depends_on` (Optional[NXfieldModelWithPrePostRunString]): Transformation reference for positioning.
+    - `temperature_log` (Optional[NXlogModel]): Log of temperature variations.
+    - `reflectivity` (Optional[NXdataModel]): Crystal reflectivity vs. wavelength.
+    - `transmission` (Optional[NXdataModel]): Crystal transmission vs. wavelength.
+    - `OFF_GEOMETRY` (Optional[NXoff_geometryModel]): Physical shape description.
+    - `TRANSFORMATIONS` (Optional[NXtransformationsModel]): Position and orientation transformations.
+
+    Configuration:
+    - `model_config`: Allows arbitrary types but forbids extra fields.
+    """
 
     default: NXattrModel = Field(NXattrModel(value="wavelength"), description='Default.')
     usage: Optional[NXfieldModelWithPrePostRunString] = Field(None, description = "How this crystal is used. Choices are in the list.")

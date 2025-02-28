@@ -1,3 +1,13 @@
+"""
+nx_log_model: Model for organizing and logging time-series data.
+
+This module provides a model for handling time-series data logging in various scientific or experimental contexts.
+It is designed to record time, value, and associated metadata for logged entries, including raw and processed data.
+Additionally, the model accommodates attributes such as uncertainty, duration, and timestamps that relate the log to other components.
+
+Class:
+    - NXlogModel: A model for managing time-series data logs, with attributes for time, logged values, uncertainty, and other related metadata.
+"""
 
 from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
@@ -11,11 +21,25 @@ from bluesky_nexus.models.nx_core_models import (
 )
 
 class NXlogModel(NXgroupModel):
-    
+    """
+    Model for managing time-series data logs, including time, values, and metadata.
+
+    This class provides a structure for organizing time-series data, including the time of each entry, 
+    the logged value (such as temperature), raw measurements, statistical aggregates (e.g., averages, 
+    minimum and maximum values), and uncertainty information. The model also supports timestamps and cue indices 
+    for relating the logged data to external events or other measurements in the system.
+    """
+
     default: NXattrModel = Field(NXattrModel(value="value"), description='Default')
 
     # ----- time -----
     class timeModel(NXfieldModelWithPrePostRunString):
+        """
+        Model for attributes related to time in the log.
+
+        This class defines the time attributes for each logged entry, including the start time 
+        and the scaling factor that can be applied to the time values.
+        """
         class AttributesModel(BaseModel):
             start: Optional[NXfieldModelForAttribute] = Field(None)
             scaling_factor: Optional[NXfieldModelForAttribute] = Field(None)
@@ -33,7 +57,14 @@ class NXlogModel(NXgroupModel):
     duration: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Total time log was taken.")
 
     class cue_timestamp_zeroModel(NXfieldModelWithPrePostRunString):
+        """
+        Model for attributes related to cue timestamps in the log.
+        """
         class AttributesModel(BaseModel):
+            """
+            Attributes for the 'cue_timestamp_zero' field, which defines the timestamps associated with 
+            the specific cue points in the logged data.
+            """
             start: Optional[NXfieldModelForAttribute] = Field(None, description="If missing start is assumed to be the same as for 'time'.")
             scaling_factor: Optional[NXfieldModelForAttribute] = Field(None, description="If missing start is assumed to be the same as for 'time'.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")

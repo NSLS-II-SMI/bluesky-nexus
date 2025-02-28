@@ -1,3 +1,17 @@
+"""
+nx_detector_model.py
+
+This module defines the `NXdetectorModel` class, which represents a NeXus-compliant detector group model. 
+It extends `NXgroupModel` and includes various fields and attributes related to detector properties, 
+such as time-of-flight, pixel offsets, acquisition settings, calibration data, and more.
+
+Classes:
+    - NXdetectorModel: Represents a detector in a NeXus file, storing metadata, calibration, 
+      and measurement data.
+
+The model follows NeXus conventions and ensures data integrity for detector-related NeXus entries.
+
+"""
 
 from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
@@ -17,12 +31,96 @@ from bluesky_nexus.models.nx_detector_module_model import NXdetector_moduleModel
 from bluesky_nexus.models.nx_transformations_model import NXtransformationsModel
 
 class NXdetectorModel(NXgroupModel):
+    """
+    NXdetectorModel represents the configuration and metadata of a detector in the NeXus format, 
+    providing fields for essential detector properties and attributes. This model includes metadata 
+    related to the detector's position, performance, geometry, calibration, and more.
+
+    Attributes:
+        default: Default configuration for the detector (default value is "data").
+        time_of_flight: The total time of flight associated with the detector.
+        raw_time_of_flight: Raw time of flight measurement in DAQ clock pulses.
+        detector_number: Identifier for the detector (or pixels). Can be multidimensional if needed.
+        data: Field holding the data values from the detector. The rank and dimension follow the 
+              principle of slowest to fastest measurement axes and may be explicitly defined.
+        data_errors: Best estimate of uncertainty in the data value (standard deviation or similar).
+        x_pixel_offset: The offset from the detector center in the x-direction. Can be multidimensional.
+        y_pixel_offset: The offset from the detector center in the y-direction. Can be multidimensional.
+        z_pixel_offset: The offset from the detector center in the z-direction. Can be multidimensional.
+        distance: The distance to the previous component in the instrument, often the sample.
+        polar_angle: Polar angle of the detector relative to the previous component.
+        azimuthal_angle: Azimuthal angle of the detector relative to the previous component.
+        description: Metadata such as manufacturer, model, or other description of the detector.
+        serial_number: The serial number of the detector.
+        local_name: A local name for the detector.
+        solid_angle: The solid angle subtended by the detector at the sample.
+        x_pixel_size: The size of each detector pixel along the x-axis.
+        y_pixel_size: The size of each detector pixel along the y-axis.
+        dead_time: The dead time for the detector, during which it cannot detect further events.
+        gas_pressure: The gas pressure in the detector.
+        detection_gas_path: The maximum drift space dimension for the detection gas.
+        crate: The crate number of the detector.
+        slot: The slot number where the detector is located.
+        input: The input number for the detector.
+        type: Describes the type of the detector, such as He3 gas cylinder, scintillator, or pixel detector.
+        real_time: Real-time exposure data if exposure time varies for each array element.
+        start_time: The start time for each frame with an absolute reference.
+        stop_time: The stop time for each frame with an absolute reference.
+        calibration_date: The date of the last calibration for geometry and/or efficiency.
+        layout: Describes how the detector is represented (e.g., point, linear, area).
+        count_time: The actual counting time for the detector.
+        sequence_number: Sequence number for ordering frames in multi-frame experiments.
+        beam_center_x: The x-position of the direct beam on the detector.
+        beam_center_y: The y-position of the direct beam on the detector.
+        frame_start_number: The start number for the first frame in a scan.
+        diameter: The diameter of a cylindrical detector.
+        acquisition_mode: Describes the acquisition mode (e.g., gated, triggered, event).
+        angular_calibration_applied: Indicates whether angular calibration has been applied.
+        angular_calibration: Data related to the angular calibration.
+        flatfield_applied: Indicates whether flat-field correction has been applied.
+        flatfield: Data related to flat-field correction.
+        flatfield_errors: Errors associated with the flat-field correction data.
+        pixel_mask_applied: Indicates whether pixel mask correction has been applied.
+        pixel_mask: A 32-bit mask for the detector pixels, representing valid/invalid pixels.
+        image_key: Identifies different exposure types to the same detector "data" field.
+        countrate_correction_applied: Indicates whether count-rate correction has been applied.
+        countrate_correction_lookup_table: Lookup table for count-rate correction.
+        virtual_pixel_interpolation_applied: Indicates whether virtual pixel interpolation has been applied.
+        bit_depth_readout: The number of bits the detector electronics reads per pixel.
+        detector_readout_time: Time it takes to read out the detector.
+        trigger_delay_time: The delay time between receiving a trigger signal and starting exposure.
+        trigger_delay_time_set: The user-specified trigger delay.
+        trigger_internal_delay_time: Time it takes for the detector hardware to react to a trigger.
+        trigger_dead_time: Time during which no new trigger signal can be accepted.
+        frame_time: The time required for each frame (exposure time + readout time).
+        gain_setting: The gain setting for the detector during data collection.
+        saturation_value: The value at which the detector saturates, rendering data invalid above this value.
+        underload_value: The lowest value at which pixels can be reasonably measured.
+        number_of_cycles: The number of short exposures used to sum images for an image.
+        sensor_material: The material of a converter like a scintillator if the detector does not sense radiation directly.
+        sensor_thickness: The thickness of the converter material for detecting radiation.
+        threshold_energy: Energy setting for optimal performance in photon counting detectors.
+        depends_on: The set of translations and rotations that position the component within the instrument.
+        CHANNELNAME_channel: A group containing metadata for a single channel from a multi-channel detector.
+        efficiency: Spectral efficiency of the detector with respect to, e.g., wavelength.
+        calibration_method: A summary of the conversion process for array data to pixels and calibration details.
+        data_file: A reference to the data file related to the detector's measurements.
+        COLLECTION: A group for additional data related to the detector.
+        DETECTOR_MODULE: Used for special cases where detector data is represented in separate parts.
+        TRANSFORMATIONS: A group for holding translation and rotation operations to position the component.
+    """
 
     default: NXattrModel = Field(NXattrModel(value="data"), description='Default')
 
     # ----- time_of_flight -----
     class time_of_flightModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the total time of flight measurement.
+        """
         class AttributesModel(BaseModel):
+            """
+            Defines attributes for the `time_of_flight` field, including axis, primary flag, and long name.
+            """
             axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 3.")
             primary: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1.")
             long_name: Optional[NXfieldModelForAttribute] = Field(None, description="Total time of flight.")
@@ -33,7 +131,13 @@ class NXdetectorModel(NXgroupModel):
 
     # ----- raw_time_of_flight -----
     class raw_time_of_flightModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the raw time of flight measured in DAQ clock pulses.
+        """
         class AttributesModel(BaseModel):
+            """
+            Defines attributes for the `raw_time_of_flight` field, such as clock frequency.
+            """
             frequency: Optional[NXfieldModelForAttribute] = Field(None, description="Clock frequency in Hz.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
         attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'raw_time_of_flight' field.")
@@ -43,7 +147,18 @@ class NXdetectorModel(NXgroupModel):
     
     # ----- data -----
     class dataModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the detector data values, defining the rank and dimension ordering.
+        """
         class AttributesModel(BaseModel):
+            """
+            Stores metadata attributes related to the detector data field.
+            Attributes:
+                long_name (Optional[NXfieldModelForAttribute]): 
+                    The title or descriptive name of the measurement.
+                check_sum (Optional[NXfieldModelForAttribute]): 
+                    The integral of the data, used as a check for data integrity.
+            """
             long_name: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Title of measurement.")
             check_sum: Optional[NXfieldModelForAttribute] = Field(None, description="Integral of data as check of data integrity.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
@@ -54,7 +169,9 @@ class NXdetectorModel(NXgroupModel):
 
     # ----- x_pixel_offset -----
     class x_pixel_offsetModel(NXfieldModelWithPrePostRunString):
+        """Represents the x-axis offset from the detector center."""
         class AttributesModel(BaseModel):
+            """Metadata attributes for the x-axis pixel offset."""
             axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1.")
             primary: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1.")
             long_name: Optional[NXfieldModelForAttribute] = Field(None, description="x-axis offset from detector center.")
@@ -65,8 +182,11 @@ class NXdetectorModel(NXgroupModel):
 
     # ----- y_pixel_offset -----
     class y_pixel_offsetModel(NXfieldModelWithPrePostRunString):
-
+        """
+        Represents the y-axis offset from the detector center.
+        """
         class AttributesModel(BaseModel):
+            """Metadata attributes for the y-axis pixel offset."""
             axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1.")
             primary: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1.")
             long_name: Optional[NXfieldModelForAttribute] = Field(None, description="y-axis offset from detector center.")
@@ -77,7 +197,13 @@ class NXdetectorModel(NXgroupModel):
 
     # ----- z_pixel_offset -----
     class z_pixel_offsetModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the z-axis offset from the detector center, potentially multidimensional.
+        """
         class AttributesModel(BaseModel):
+            """
+            Metadata attributes for the z-axis pixel offset.
+            """
             axis: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1.")
             primary: Optional[NXfieldModelForAttribute] = Field(None, gt=0, description="Obligatory value: 1.")
             long_name: Optional[NXfieldModelForAttribute] = Field(None, description="z-axis offset from detector center.")
@@ -101,7 +227,15 @@ class NXdetectorModel(NXgroupModel):
     
     # ----- crate -----
     class crateModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the crate number of the detector.
+        This model stores the crate number, which identifies the physical location of the detector.
+        """
         class AttributesModel(BaseModel):
+            """
+            Metadata attributes for the crate field.
+            Includes a local term equivalent for better contextual understanding.
+            """
             local_name: Optional[NXfieldModelForAttribute] = Field(None, description="Equivalent local term.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
         attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'crate' field.")
@@ -109,7 +243,14 @@ class NXdetectorModel(NXgroupModel):
 
     # ----- slot -----
     class slotModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the slot number of the detector.
+        """
         class AttributesModel(BaseModel):
+            """
+            Metadata attributes for the slot field.
+            Includes a local term equivalent for easier contextual understanding.
+            """
             local_name: Optional[NXfieldModelForAttribute] = Field(None, description="Equivalent local term.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
         attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'slot' field.")
@@ -117,7 +258,14 @@ class NXdetectorModel(NXgroupModel):
 
     # ----- input -----
     class inputModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the input number of the detector.
+        """
         class AttributesModel(BaseModel):
+            """
+            Metadata attributes for the input field.
+            Includes a local term equivalent for better contextual understanding.
+            """
             local_name: Optional[NXfieldModelForAttribute] = Field(None, description="Equivalent local term.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
         attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'input' field.")
@@ -128,7 +276,15 @@ class NXdetectorModel(NXgroupModel):
     
     # ----- start_time -----
     class start_timeModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the start time for each frame with an absolute reference.
+        This model stores the start time of a frame, using the 'start' attribute as an absolute reference.
+        """
         class AttributesModel(BaseModel):
+            """
+            Metadata attributes for the start_time field.
+            Includes the absolute reference for the start time.
+            """
             start: Optional[NXfieldModelForAttribute] = Field(None, description="Absolute reference.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
         attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'start_time' field.")
@@ -136,7 +292,15 @@ class NXdetectorModel(NXgroupModel):
 
     # ----- stop_time -----
     class stop_timeModel(NXfieldModelWithPrePostRunString):
+        """
+        Represents the stop time for each frame with an absolute reference.
+        This model stores the stop time of a frame, using the 'start' attribute as an absolute reference.
+        """
         class AttributesModel(BaseModel):
+            """
+            Metadata attributes for the stop_time field.
+            Includes the absolute reference for the stop time.
+            """
             start: Optional[NXfieldModelForAttribute] = Field(None, description="Absolute reference.")
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
         attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'stop_time' field.")
@@ -181,7 +345,15 @@ class NXdetectorModel(NXgroupModel):
     
     # ----- efficiency -----
     class efficiencyModel(NXdataModel):
+        """
+        Represents the spectral efficiency of the detector, typically with respect to wavelength.
+        This model stores the efficiency data for the detector, including its signal, axes, 
+        and wavelength indices.
+        """
         class AttributesModel(NXdataModel.AttributesModel):
+            """
+            Metadata attributes for the efficiency field.
+            """
             signal: Optional[NXfieldModelForAttribute] = Field(None, description="Obligatory value: efficiency.")
             axes: Optional[NXfieldModelForAttribute] = Field(None, description="Any of these values: . | . . | . . . | . . . . | wavelength.")
             wavelength_indices: Optional[NXfieldModelForAttribute] = Field(None, description="Obligatory value: 0.")

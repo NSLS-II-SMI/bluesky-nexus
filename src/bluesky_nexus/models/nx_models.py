@@ -1,6 +1,17 @@
 """
-Module: nexusformat_models_hzb.py
+nx_models: A module defining and mapping various models used in the NeXus data format.
 
+This module provides a collection of models representing different components in a scientific 
+experiment setup, including detectors, general configurations, and monochromators. These models 
+are part of the Bluesky Nexus framework for organizing metadata and experimental data.
+
+Classes:
+    - NXdetectorModel: Model for representing detector-related metadata and configuration.
+    - NXgeneralModel: General model for grouping metadata and configuration.
+    - NXmonochromatorModel: Model for managing monochromator-related metadata and configuration.
+
+Mappings:
+    - MODEL_NAME_TO_CLASS_MAPPING: A dictionary mapping model names to their corresponding model classes.
 """
 
 from bluesky_nexus.models.nx_detector_model import NXdetectorModel

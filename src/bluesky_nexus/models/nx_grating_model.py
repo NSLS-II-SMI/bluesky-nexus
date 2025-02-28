@@ -1,3 +1,16 @@
+"""
+nx_grating_model: Model for organizing grating-related metadata and configuration.
+
+This module defines a model for organizing and managing metadata and configuration 
+specifically related to optical gratings. It provides a flexible structure for handling 
+various attributes of gratings used in optical systems, such as grating parameters, material 
+properties, diffraction characteristics, and dependencies. This model also allows integration 
+with other related models such as transformations and off-geometry definitions.
+
+Class:
+    - NXgratingModel: A model for managing metadata and configuration related to optical gratings, 
+      including material properties, grating geometry, and transformations.
+"""
 
 from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
@@ -12,7 +25,15 @@ from bluesky_nexus.models.nx_off_geometry_model import NXoff_geometryModel
 from bluesky_nexus.models.nx_transformations_model import NXtransformationsModel
 
 class NXgratingModel(NXgroupModel):
-    
+    """
+    Model for managing grating-related metadata and configuration.
+
+    This class provides a flexible structure for managing metadata and configuration 
+    for optical gratings in a system. It supports various attributes, including material 
+    properties, diffraction characteristics, and transformation settings. The model 
+    allows customization through a configuration that accepts arbitrary types and extra fields 
+    for a wide range of grating parameters and dependencies.
+    """
     default: NXattrModel = Field(NXattrModel(value="diffraction_order"), description='Default.')
     angles: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Blaze or trapezoidal angles, with the angle of the upstream facing edge listed first. Blazed gratings can be identified by the low value of the first-listed angle.")
     period: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="List of polynomial coefficients describing the spatial separation of lines/grooves as a function of position along the grating, in increasing powers of position. Gratings which do not have variable line spacing will only have a single coefficient (constant).")

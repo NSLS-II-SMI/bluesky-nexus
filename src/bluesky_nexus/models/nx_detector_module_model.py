@@ -1,4 +1,13 @@
 
+"""
+nx_detector_module_model: Module representing a detector module in a detector system.
+
+This module contains the configuration and metadata for a detector module, including
+the data origin, size, offsets, pixel directions, and dependencies. It provides a structure
+for defining and managing the attributes of a detector module and its relationships to other 
+modules or components within the system.
+"""
+
 from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
     BaseModel,
@@ -11,9 +20,19 @@ from bluesky_nexus.models.nx_core_models import (
 )
 
 class NXdetector_moduleModel(NXgroupModel):
-    
+    """
+    Represents a detector module in the context of the NXdetector.
+    This model includes metadata and attributes describing the module's data origin, 
+    size, offset, and directions in a detector system.
+    """
     class CommonModel(NXfieldModelWithPrePostRunString):
+        """
+        Common model for transformations, offsets, and directions within the detector module.
+        """
         class AttributesModel(BaseModel):
+            """
+            Metadata attributes for module_offset, fast_pixel_direction and slow_pixel_direction  fields.
+            """
             transformation_type: Optional[str] = Field(None, description="Obligatory value: translation.")
             vector: Optional[NXfieldModelForAttribute] = Field(None, description="Three values that define the axis for this transformation.")
             offset: Optional[NXfieldModelForAttribute] = Field(None, description="A fixed offset applied before the transformation (three vector components).")
