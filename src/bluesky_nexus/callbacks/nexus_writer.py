@@ -673,7 +673,7 @@ def add_group_or_field(group, data):
         add_group_or_field(parent_group, data)
     """
 
-    def add_attrs_to_dataset(dataset: h5py.Dataset, attrs: dict) -> None:
+    def add_attrs(dataset: h5py.Dataset, attrs: dict) -> None:
         """
         Adds attributes to an h5py dataset, automatically determining their type.
 
@@ -717,7 +717,7 @@ def add_group_or_field(group, data):
                 raise ValueError(f"Unsupported attribute type for '{key}': {type(value)}")
 
 
-    def add_attributes_to_dataset_or_group(dataset: Union[h5py.Dataset, h5py.Group], attributes: dict) -> None:
+    def add_attributes(dataset: Union[h5py.Dataset, h5py.Group], attributes: dict) -> None:
         """
         Adds attributes to a dataset (field) from a dictionary of attributes.
 
@@ -799,7 +799,7 @@ def add_group_or_field(group, data):
                     # Attribute of dataset can be: integer, float, string, bool, array
                     # Attribute of dataset can be of type: str, int32, int64, float32, float64, bool
                     if "attributes" in value:
-                        add_attributes_to_dataset_or_group(dataset, value["attributes"])
+                        add_attributes(dataset, value["attributes"])
 
                     # Add attribute shape (obligatory)
                     if "shape" in value:
@@ -815,7 +815,7 @@ def add_group_or_field(group, data):
 
                     # Add all attributes defined in 'attrs'
                     if "attrs" in value:
-                        add_attrs_to_dataset(dataset, value['attrs'])
+                        add_attrs(dataset, value['attrs'])
 
                     ### Create dataset for 'events_cpt_timestamps'
                     if "events_cpt_timestamps" in value:
@@ -886,11 +886,11 @@ def add_group_or_field(group, data):
                 # Attribute of a group can be: integer, float, string, bool, array
                 # Attribute of a group can be of type: str, int32, int64, float32, float64, bool
                 if "attributes" in value:
-                    add_attributes_to_dataset_or_group(subgroup, value["attributes"])
+                    add_attributes(subgroup, value["attributes"])
 
                 # Add all attributes defined in 'attrs'
                 if "attrs" in value:
-                    add_attrs_to_dataset(subgroup, value['attrs'])
+                    add_attrs(subgroup, value['attrs'])
 
                 # Recursively add fields or subgroups
                 add_group_or_field(
