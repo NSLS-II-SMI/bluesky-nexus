@@ -327,4 +327,5 @@ class NXfieldModelForAttribute(NXfieldModel):
     """
 
     value: Union[PrePostRunString, str] = Field(..., description="Value of the attribute field.")
+    dtype: str = Field(..., description="Data type of the attribute field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
