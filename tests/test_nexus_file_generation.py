@@ -1,5 +1,5 @@
+import ast
 import os
-
 import h5py
 import numpy as np
 import pytest
@@ -10,6 +10,7 @@ from bluesky.plans import scan
 from tests.devices.monochromators import Mono, MonoWithGratingCpt
 from ophyd.sim import motor
 from tests.preprocessors.baseline import SupplementalDataBaseline
+from typing import Any
 
 from bluesky_nexus.bluesky_nexus_const import NX_FILE_EXTENSION, CALLBACK_FILE_EXTENSION
 from bluesky_nexus.callbacks.nexus_writer import NexusWriter
@@ -285,49 +286,82 @@ def clean_up(file_path: str):
     print(f"Proc info: Clean up of file: {file_path} finished.")
 
 
-# Helper: Validate Nexus file structure and contents
-def validate_nexus_file(file_path: str, expected_structure: dict, expected_data: dict):
-    """Validate the Nexus file structure and its data."""
+# Helper: Verify NeXus file structure and contents
+def verify_nexus_file(file_path: str, expected_structure: dict, expected_data: dict):
+    """Verify the NeXus file structure and its data."""
     with h5py.File(file_path, "r") as f:
-        # Validate structure
-        for group_path, group_attrs in expected_structure.items():
-            keys = group_path.split("/")
+
+        ###
+        ### Verify groups/datasets, i.e. their existence and existence of their attributes
+        ###
+        for item_path, item_attrs in expected_structure.items():
+
+            # Verify existance of the group/dataset
+            keys = item_path.split("/")
             current = f
             for key in keys:
-                assert key in current, f"Missing group: {key} in path: {group_path}"
+                assert key in current, f"Missing group: {key} in path: {item_path}"
                 current = current[key]
 
-            # Validate group attributes
-            for attr_key, attr_value in group_attrs.items():
+            # Verify group/dataset attributes
+            for attr_key, attr_value in item_attrs.items():
 
                 # print("attr_key:", attr_key) # Debug only
-                # print("attr_key:", attr_value) # Debug only
+                # print("attr_value:", attr_value) # Debug only
 
+                # Ckeck if attribute is contained in the group/dataset
                 assert (
                     attr_key in current.attrs
-                ), f"Missing attribute: {attr_key} in group: {group_path}"
+                ), f"Missing attribute: {attr_key} in group: {item_path}"
 
-                # Convert to str since e.g. expected transformation
-                # is a dictionary and transformation read from nxs file is a string
-                assert str(current.attrs[attr_key]) == str(attr_value), (
-                    f"Mismatch in attribute: {attr_key} in group: {group_path}: "
-                    f"Expected {attr_value}, Found {current.attrs[attr_key]}"
-                )
+                # Save under a more suitable name
+                nexus_value: Any = current.attrs[attr_key]
 
-        # Validate datasets
+                # Check value of the attribute
+                if isinstance(nexus_value, str) and isinstance(attr_value, str):
+                    assert nexus_value == attr_value, f"Mismatch in string: Expected {attr_value}, Found {nexus_value}"
+
+                elif isinstance(nexus_value, (int, float)) and isinstance(attr_value, (int, float)):
+                    assert np.isclose(nexus_value, attr_value), f"Mismatch in float: Expected {attr_value}, Found {nexus_value}"
+
+                elif isinstance(nexus_value, np.ndarray) or isinstance(attr_value, list):
+                    # Convert lists to NumPy arrays for comparison
+                    if isinstance(attr_value, list):
+                        attr_value = np.array(attr_value)
+
+                    # Ensure the arrays contain numerical data before using np.allclose
+                    if np.issubdtype(nexus_value.dtype, np.number) and np.issubdtype(attr_value.dtype, np.number):
+                        assert np.allclose(nexus_value, attr_value), f"Mismatch in array: Expected {attr_value}, Found {nexus_value}"
+                    else:
+                        assert np.array_equal(nexus_value, attr_value), f"Mismatch in array: Expected {attr_value}, Found {nexus_value}"
+
+                elif (isinstance(nexus_value, str) and nexus_value.startswith("{") and nexus_value.endswith("}")) or isinstance(attr_value, dict):
+                    # Convert stringified dictionary to actual dictionary
+                    try:
+                        nexus_dict = ast.literal_eval(nexus_value) if isinstance(nexus_value, str) else nexus_value
+                        attr_value_dict = ast.literal_eval(attr_value) if isinstance(attr_value, str) else attr_value
+                    except (SyntaxError, ValueError):
+                        raise ValueError(f"Invalid dictionary format: nexus_value={nexus_value}, attr_value={attr_value}")
+
+                    assert nexus_dict == attr_value_dict, f"Mismatch in dictionary: Expected {attr_value_dict}, Found {nexus_dict}"
+
+                else:
+                    assert nexus_value == attr_value, f"Mismatch in value: Expected {attr_value}, Found {nexus_value}"
+
+        ###
+        ### Verify datasets,i.e: value, dtype, shape
+        ###
         for dataset_path, expected_value in expected_data.items():
             # Check if the expected_value is a dictionary (i.e., it may contain dtype, shape, and value)
             if isinstance(expected_value, dict):
                 expected_data_value = expected_value.get("value")
                 expected_dtype = expected_value.get("dtype")
                 expected_shape = expected_value.get("shape")
-                expected_attrs = expected_value.get("attributes", {})
             else:
                 # If expected_value is not a dictionary, it represents just the value to check
                 expected_data_value = expected_value
                 expected_dtype = None
                 expected_shape = None
-                expected_attrs = {}
 
             keys = dataset_path.split("/")
             current = f
@@ -352,65 +386,57 @@ def validate_nexus_file(file_path: str, expected_structure: dict, expected_data:
                     ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value!r}, Found {actual_value!r}"
 
                 else:
-                    # Validate dtype
+                    # Verify dtype
                     if expected_dtype:
                         assert (
                             actual_value.dtype == np.dtype(expected_dtype)
                         ), f"Mismatch in dtype for dataset: {dataset_path}: Expected {expected_dtype}, Found {actual_value.dtype}"
-                    # Validate shape
+                    # Verify shape
                     if expected_shape:
                         assert (
                             actual_value.shape == expected_shape
                         ), f"Mismatch in shape for dataset: {dataset_path}: Expected {expected_shape}, Found {actual_value.shape}"
-                    if isinstance(actual_value, np.ndarray):
-                        # Convert expected_data_value in np array
-                        expected_data_value = np.array(expected_data_value)
+                    # Verify value
+                    if expected_data_value:
+                        if isinstance(actual_value, np.ndarray):
+                            # Convert expected_data_value in np array
+                            expected_data_value = np.array(expected_data_value)
 
-                        ### ---------- DEBUG ONLY
-                        # Print array info
-                        # print_array_info(actual_value, "actual_value")
-                        # print_array_info(expected_data_value, "expected_data_value")
+                            ### ---------- DEBUG ONLY
+                            # Print array info
+                            # print_array_info(actual_value, "actual_value")
+                            # print_array_info(expected_data_value, "expected_data_value")
 
-                        # Print array comparison info
-                        # print_arrays_comparison_info(
-                        #     actual_value,
-                        #     "actual_value",
-                        #     expected_data_value,
-                        #     "expected_data_value",
-                        # )
-                        ### ---------- END OF DEBUG ONLY
+                            # Print array comparison info
+                            # print_arrays_comparison_info(
+                            #     actual_value,
+                            #     "actual_value",
+                            #     expected_data_value,
+                            #     "expected_data_value",
+                            # )
+                            ### ---------- END OF DEBUG ONLY
 
-                        # Check if the array contains string values
-                        if actual_value.dtype.kind == "U":
-                            assert np.array_equal(
-                                actual_value,
-                                expected_data_value,
+                            # Check if the array contains string values
+                            if actual_value.dtype.kind == "U":
+                                assert np.array_equal(
+                                    actual_value,
+                                    expected_data_value,
+                                ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
+
+                            # Check if the array contains numeric values
+                            elif (
+                                actual_value.dtype.kind == "f" or actual_value.dtype.kind == "i"
+                            ):  # 'f' for float, 'i' for integer
+                                assert np.allclose(
+                                    actual_value,
+                                    expected_data_value,
+                                    atol=1e-8,  # Use tolerance of 1e-8 (adjust as needed)
+                                ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
+
+                        else:
+                            assert (
+                                actual_value == expected_data_value
                             ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
-
-                        # Check if the array contains numeric values
-                        elif (
-                            actual_value.dtype.kind == "fi"
-                        ):  # 'f' for float, 'i' for integer
-                            assert np.allclose(
-                                actual_value,
-                                expected_data_value,
-                                atol=1e-8,  # Use tolerance of 1e-8 (adjust as needed)
-                            ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
-
-                    else:
-                        assert (
-                            actual_value == expected_data_value
-                        ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
-
-                # Validate attributes
-                for attr_name, expected_attr_value in expected_attrs.items():
-                    assert (
-                        attr_name in current.attrs
-                    ), f"Missing attribute: {attr_name} in dataset {dataset_path}"
-                    assert current.attrs[attr_name] == expected_attr_value, (
-                        f"Mismatch in attribute: {attr_name} for {dataset_path}: "
-                        f"Expected {expected_attr_value}, Found {current.attrs[attr_name]}"
-                    )
 
             else:
                 raise TypeError(f"{dataset_path} is not a dataset")
@@ -430,9 +456,9 @@ def test_1(
     request,
 ):
     """
-    Integration test for generating and validating a Nexus file.
+    Integration test for generating and varyfing a Nexus file.
     - Configures metadata and baseline devices.
-    - Executes a plan and validates the resulting Nexus file's structure and data.
+    - Executes a plan and verifies the resulting Nexus file's structure and data.
     """
 
     # Add preprocessors to the RunEngine
@@ -466,75 +492,320 @@ def test_1(
         nx_file_path
     ), f"Nexus file: {nx_file_path} was not created while executing test: {request.node.name}."
 
-    # Expected structure
+    ###
+    ### Verify existence of the groups/fields and their attributes
+    ###
     expected_structure: dict = {
         # ---
-        # --- entry/instrument ---
+        # --- group: entry and its attributes ---
         # ---
-        "entry": {"NX_class": "NXentry"},
-        "entry/instrument": {"NX_class": "NXinstrument"},
+        "entry": {"NX_class": "NXentry",
+                  "Application name": "bluesky_nexus",
+                  "Content": "'NXinstrument' group and 'NXcollection' group"},
+
         # ---
-        # --- entry/instrument/mono ---
+        # --- group: entry/instrument and its attributes---
+        # ---       
+        "entry/instrument": {"NX_class": "NXinstrument", 
+                            "description": "Instruments involved in the bluesky plan"},
+
         # ---
-        "entry/instrument/mono": {"NX_class": "NXmonochromator"},
+        # --- group: entry/instrument/mono and its attributes ---
+        # ---
+        "entry/instrument/mono": {"NX_class": "NXmonochromator", 
+                                  "nx_model": "NXmonochromatorModel", 
+                                  "attr_0" : 3.1415,
+                                  "attr_1" : {'a':'2'},
+                                  "attr_2" : "{'b':'1'}",
+                                  "attr_3" : [1.02, 3.04, 5.06],
+                                  "attr_4" : 1,
+                                  "default" : "energy",
+                                  "value" : "3.1415",
+                                  },
+
+        # ---
+        # --- field: entry/instrument/mono/energy and its attributes ---
+        # ---
         "entry/instrument/mono/energy": {
-        #    "description": "Energy selected",
-            "transformation": {
-                "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
-                "target": "value",
-        #        "description": "Transformation configuration that applies a symbolic operation to the target data array.",
-            },
-        },
-        ##"entry/instrument/mono/energy/attributes/units": {"nxclass": "NX_CHAR"}, It does not work since the attributes is not created
-        
-        
-                
-        "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
-        "entry/instrument/mono/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-        #    "description": "Timestamps of the events",
-        },
-        "entry/instrument/mono/GRATING": {
-            "NX_class": "NXgrating",
-        #    "description": "Grating",
-        },
-        "entry/instrument/mono/GRATING/diffraction_order": {
-        #    "description": "Diffraction order",
-        },
-        # ---
-        # --- entry/instrument/mono_with_grating_cpt ---
-        # ---
-        "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono_with_grating_cpt/energy": {
-        #    "description": "Energy selected",
-        },
-        "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
-            "nxclass": "NX_FLOAT"
-        },
-        "entry/instrument/mono_with_grating_cpt/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-        #    "description": "Timestamps of the events",
-        },
-        "entry/instrument/mono_with_grating_cpt/GRATING": {"NX_class": "NXgrating"},
-        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
-        },
-        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
-            "nxclass": "NX_FLOAT"
-        },
-        "entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-        #    "description": "Timestamps of the events",
-        },
-        "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
-        #    "description": "Substrate material type",
+            "NX_class" : "NX_FLOAT",
+            "PI" : 3.1415,
+            "days" : ["Mo", "We"],
+            "destination" : "{'departement': 'A23'}",
+            "factors" : [1.34, 2.78],
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "prices" : "Euro",
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+            "transformation" : "{'expression': '3 * x**2 + np.exp(np.log(5)) + 1', 'target': 'value'}",
+            "units" : "keV",
+            "value" : 12.34,
         },
 
         # ---
-        # --- entry/run_info ---
+        # --- field: entry/instrument/mono/energy_timestamps and its attributes ---
         # ---
-        "entry/run_info": {"NX_class": "NXcollection"},
+        "entry/instrument/mono/energy_timestamps": {"NX_class": "NX_FLOAT",
+                                                    "shape": [10],
+                                                    "description" : "Timestamps of the component: energy extracted from the events"
+                                                    },
+
         # ---
-        # --- entry/run_info/start ---
+        # --- field: entry/instrument/mono/events_timestamps and its attributes ---
+        # ---        
+        "entry/instrument/mono/events_timestamps": {
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "description" : "Timestamps of the events"
+        },
+
+        # ---
+        # --- field: entry/instrument/mono/someDataset and its attributes ---
+        # ---        
+        "entry/instrument/mono/someDataset": {
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "precision" : 3,
+             "object_name" : "mono_en",
+             "source": "SIM:mono_en"
+        },
+
+        # ---
+        # --- field: entry/instrument/mono/someDataset_timestamps and its attributes ---
+        # ---        
+        "entry/instrument/mono/someDataset_timestamps": {
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "description" : "Timestamps of the component: someDataset extracted from the events",
+        },
+
+        # ---
+        # --- group: entry/instrument/mono/GRATING and its attributes ---
+        # ---  
+        "entry/instrument/mono/GRATING": {
+            "NX_class": "NXgrating",
+            "attr_0" : "new",
+            "default" : "diffraction_order",
+            "value" : 167,
+        },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/GRATING/diffraction_order and its attributes ---
+        # ---  
+        "entry/instrument/mono/GRATING/diffraction_order": {
+            "NX_class": "NX_INT",
+            "at_0" : 13.14,
+            "at_1" : [2.03, 4.05],
+            "value" : "some_value"
+        },
+
+        # ---
+        # --- group: entry/instrument/mono/TRANSFORMATIONS and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS": {
+            "NX_class": "NXtransformations",
+            "attr_0" : 3.1415,
+            "attr_1" : "{'a': '2'}",
+            "attr_2" : [1.01, 2.02],
+            "default" : "vector",
+            "value" : "3.1",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+            "NX_class": "NX_CHAR",
+            "depends_on" : "sth",
+            "equipment_component" : "A.71",
+            "offset" : "34.56",
+            "offset_units" : "um",
+            "units" : "um",
+            "value" : 123,
+            "vector" : "123",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+            "NX_class": "NX_FLOAT",
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the component: AXISNAME_end extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+            "NX_class" : "NX_INT",
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en"
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the component: AXISNAME_increment_set extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- group: entry/instrument/mono/someGroup and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup": {
+          "NX_class" : "NXsomeClass",
+          "attr_1" : "{'a': '2'}",
+          "attr_2" : [5.06, 7.08],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/energy": {
+            "NX_class" : "NX_FLOAT",
+            "attr_1" : "PI",
+            "attr_2" : 3.1415,
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/energy_timestamps": {
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the component: energy extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/events_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/events_timestamps": {
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- group: entry/instrument/mono_with_grating_cpt and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt": {
+            "NX_class" : "NXmonochromator",
+            "default" : "energy",
+            "nx_model" : "NXmonochromatorModel",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/energy/ and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/energy": {
+          "NX_class" : "NX_FLOAT",
+          "currency" : "Euro",
+          "object_name" : "mono_with_grating_cpt",
+          "precision" : 3,
+          "shape" : [2],
+          "source" : "SIM:mono_with_grating_cpt_engry",
+          "units" : "keV"
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/energy_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
+          "NX_class" : "NX_FLOAT",
+          "description" : "Timestamps of the component: energy extracted from the events",
+          "shape" : [2],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/events_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/events_timestamps": {
+          "NX_class" : "NX_FLOAT",
+          "description" : "Timestamps of the events",
+          "shape" : [2],
+        },
+
+        # ---
+        # --- group: entry/instrument/mono_with_grating_cpt/GRATING and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/GRATING": {
+        "NX_class" : "NXgrating",
+        "default" : "diffraction_order",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
+            "NX_class" : "NX_INT",
+            "object_name" : "mono_with_grating_cpt",
+            "shape" : [2],
+            "source" : "SIM:mono_with_grating_cpt_grating_diffraction_order",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the component: diffraction_order extracted from the events",
+            "shape" : [2],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps": {
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the events",
+            "shape" : [2],
+        },
+        
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/substrate_material and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
+            "NX_class" : "NX_CHAR",
+        },
+
+        # ---
+        # --- group: entry/run_info ---
+        # ---
+        "entry/run_info": {"NX_class": "NXcollection",
+                            "description" : "Copy of the start and stop document from the bluesky run",
+                          },
+        
+        # ---
+        # --- groups of: entry/run_info/start ---
         # ---
         "entry/run_info/start": {},
         "entry/run_info/start/device_md/mono": {},
@@ -545,47 +816,208 @@ def test_1(
         "entry/run_info/start/test_dict": {},
         "entry/run_info/start/versions": {},
         # ---
-        # --- entry/run_info/stop ---
+        # --- groups of: entry/run_info/stop ---
         # ---
         "entry/run_info/stop": {},
         "entry/run_info/stop/num_events": {},
     }
 
-    # Expected data
+    ###
+    ### Verify expected data in datasets. I.e. verify: value, dtype, shape
+    ###
     expected_data: dict = {
         # ---
-        # --- entry/instrument/mono ---
+        # --- dataset: entry/instrument/mono/energy ---
         # ---
         "entry/instrument/mono/energy": {
             "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
-            # "attributes": {
-            # "units": {"value": "keV"},  # Expected units
-            # },
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono/energy_timestamps ---
+        # ---
+        "entry/instrument/mono/energy_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/events_timestamps ---
+        # ---
+        "entry/instrument/mono/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/someDataset ---
+        # ---
+        "entry/instrument/mono/someDataset": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someDataset_timestamps ---
+        # ---
+        "entry/instrument/mono/someDataset_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/GRATING/diffraction_order ---
+        # ---
         "entry/instrument/mono/GRATING/diffraction_order": {
             "value": 0,
             "dtype": "int32",
-            "shape": (),  # Scalar
+            "shape": (), # Scalar
         },
+
         # ---
-        # --- entry/instrument/mono_with_grating_cpt ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+            "value": b"x",
+            "shape": (1,), # Scalar
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "int32",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy ---
+        # ---
+        "entry/instrument/mono/someGroup/energy": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy_timestamps ---
+        # ---
+        "entry/instrument/mono/someGroup/energy_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/events_timestamps ---
+        # ---
+        "entry/instrument/mono/someGroup/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/description ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/description": {
+            "value": b'I am the best mono with grating cpt at the bessyii facility',
+            "shape": (59,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/energy ---
         # ---
         "entry/instrument/mono_with_grating_cpt/energy": {
-            "value": [0, 0],
+            "value": [0.0] * 2,
             "dtype": "float64",
             "shape": (2,),
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/energy_timestamps ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
+            "dtype": "float64",
+            "shape": (2,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/events_timestamps ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/events_timestamps": {
+            "dtype": "float64",
+            "shape": (2,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order ---
+        # ---
         "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
-            "value": [0, 0],
+            "value": [0.0] * 2,
             "dtype": "int32",
             "shape": (2,),
         },
+        
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
+            "dtype": "float64",
+            "shape": (2,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps": {
+            "dtype": "float64",
+            "shape": (2,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps ---
+        # ---
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
             "value": b"leadless",
-            "shape": (8,),  # Adjust the shape to match the actual string length
+            "shape": (8,),
         },
+
         # ---
         # --- entry/run_info/start ---
         # ---
@@ -643,9 +1075,8 @@ def test_1(
         "entry/run_info/stop/reason": b"",
     }
 
-    # Validate file contents
-    validate_nexus_file(nx_file_path, expected_structure, expected_data)
-
+    # Verify file contents
+    verify_nexus_file(nx_file_path, expected_structure, expected_data)
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
     # Remove the callback file after successful creation
@@ -668,7 +1099,7 @@ def test_2(
     """
     Integration test for generating and validating a Nexus file.
     - Configures metadata and baseline devices.
-    - Executes a plan and validates the resulting Nexus file's structure and data.
+    - Executes a plan and verifies the resulting Nexus file's structure and data.
     """
 
     # Add preprocessors to the RunEngine
@@ -682,7 +1113,6 @@ def test_2(
         "NX_def",
         {"a": 11, "b": 12, "c": {"d": 13, "e": 14}},
     )
-
 
     # Define: callback_writer
     callback_file_path = get_callback_file_path(callback_file_dir_path, f"callback_file_{request.node.name}.json")
@@ -702,44 +1132,236 @@ def test_2(
     assert os.path.exists(
         nx_file_path
     ), f"Nexus file: {nx_file_path} was not created while executing test: {request.node.name}."
-
-    # Expected structure
+    
+    ###
+    ### Verify existence of the groups/fields and their attributes
+    ###
     expected_structure: dict = {
         # ---
-        # --- entry/instrument ---
+        # --- group: entry and its attributes ---
         # ---
-        "entry": {"NX_class": "NXentry"},
-        "entry/instrument": {"NX_class": "NXinstrument"},
+        "entry": {"NX_class": "NXentry",
+                  "Application name": "bluesky_nexus",
+                  "Content": "'NXinstrument' group and 'NXcollection' group"},
+
         # ---
-        # --- entry/instrument/mono ---
+        # --- group: entry/instrument and its attributes---
+        # ---       
+        "entry/instrument": {"NX_class": "NXinstrument", 
+                            "description": "Instruments involved in the bluesky plan"},
+
         # ---
-        "entry/instrument/mono": {"NX_class": "NXmonochromator"},
+        # --- group: entry/instrument/mono and its attributes ---
+        # ---
+        "entry/instrument/mono": {"NX_class": "NXmonochromator", 
+                                  "nx_model": "NXmonochromatorModel", 
+                                  "attr_0" : 3.1415,
+                                  "attr_1" : {'a':'2'},
+                                  "attr_2" : "{'b':'1'}",
+                                  "attr_3" : [1.02, 3.04, 5.06],
+                                  "attr_4" : 1,
+                                  "default" : "energy",
+                                  "value" : "3.1415",
+                                  },
+        # ---
+        # --- field: entry/instrument/mono/energy and its attributes ---
+        # ---
         "entry/instrument/mono/energy": {
-        #    "description": "Energy selected",
-            "transformation": {
-                "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
-                "target": "value",
-        #        "description": "Transformation configuration that applies a symbolic operation to the target data array.",
-            },
+            "NX_class" : "NX_FLOAT",
+            "PI" : 3.1415,
+            "days" : ["Mo", "We"],
+            "destination" : "{'departement': 'A23'}",
+            "factors" : [1.34, 2.78],
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "prices" : "Euro",
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+            "transformation" : "{'expression': '3 * x**2 + np.exp(np.log(5)) + 1', 'target': 'value'}",
+            "units" : "keV",
+            "value" : 12.34,
         },
-        "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
+
+        # ---
+        # --- field: entry/instrument/mono/energy_timestamps and its attributes ---
+        # ---
+        "entry/instrument/mono/energy_timestamps": {"NX_class": "NX_FLOAT",
+                                                    "shape": [10],
+                                                    "description" : "Timestamps of the component: energy extracted from the events"
+                                                    },
+
+        # ---
+        # --- field: entry/instrument/mono/events_timestamps and its attributes ---
+        # ---        
         "entry/instrument/mono/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-        #    "description": "Timestamps of the events",
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "description" : "Timestamps of the events"
         },
+
+        # ---
+        # --- field: entry/instrument/mono/someDataset and its attributes ---
+        # ---        
+        "entry/instrument/mono/someDataset": {
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "precision" : 3,
+             "object_name" : "mono_en",
+             "source": "SIM:mono_en"
+        },
+
+        # ---
+        # --- field: entry/instrument/mono/someDataset_timestamps and its attributes ---
+        # ---        
+        "entry/instrument/mono/someDataset_timestamps": {
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "description" : "Timestamps of the component: someDataset extracted from the events",
+        },
+
+        # ---
+        # --- group: entry/instrument/mono/GRATING and its attributes ---
+        # ---  
         "entry/instrument/mono/GRATING": {
             "NX_class": "NXgrating",
-        #    "description": "Grating",
+            "attr_0" : "new",
+            "default" : "diffraction_order",
+            "value" : 167,
         },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/GRATING/diffraction_order and its attributes ---
+        # ---  
         "entry/instrument/mono/GRATING/diffraction_order": {
-        #    "description": "Diffraction order",
+            "NX_class": "NX_INT",
+            "at_0" : 13.14,
+            "at_1" : [2.03, 4.05],
+            "value" : "some_value"
         },
+
         # ---
-        # --- entry/run_info ---
+        # --- group: entry/instrument/mono/TRANSFORMATIONS and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS": {
+            "NX_class": "NXtransformations",
+            "attr_0" : 3.1415,
+            "attr_1" : "{'a': '2'}",
+            "attr_2" : [1.01, 2.02],
+            "default" : "vector",
+            "value" : "3.1",
+        },
+
         # ---
-        "entry/run_info": {"NX_class": "NXcollection"},
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+            "NX_class": "NX_CHAR",
+            "depends_on" : "sth",
+            "equipment_component" : "A.71",
+            "offset" : "34.56",
+            "offset_units" : "um",
+            "units" : "um",
+            "value" : 123,
+            "vector" : "123",
+        },
+
         # ---
-        # --- entry/run_info/start ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+            "NX_class": "NX_FLOAT",
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the component: AXISNAME_end extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+            "NX_class" : "NX_INT",
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en"
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the component: AXISNAME_increment_set extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- group: entry/instrument/mono/someGroup and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup": {
+          "NX_class" : "NXsomeClass",
+          "attr_1" : "{'a': '2'}",
+          "attr_2" : [5.06, 7.08],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/energy": {
+            "NX_class" : "NX_FLOAT",
+            "attr_1" : "PI",
+            "attr_2" : 3.1415,
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/energy_timestamps": {
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the component: energy extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/events_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/events_timestamps": {
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- group: entry/run_info ---
+        # ---
+        "entry/run_info": {"NX_class": "NXcollection",
+                            "description" : "Copy of the start and stop document from the bluesky run",
+                          },
+        # ---
+        # --- groups of: entry/run_info/start ---
         # ---
         "entry/run_info/start": {},
         "entry/run_info/start/device_md/mono": {},
@@ -749,30 +1371,142 @@ def test_2(
         "entry/run_info/start/test_dict": {},
         "entry/run_info/start/versions": {},
         # ---
-        # --- entry/run_info/stop ---
+        # --- groups of: entry/run_info/stop ---
         # ---
         "entry/run_info/stop": {},
         "entry/run_info/stop/num_events": {},
     }
 
-    # Expected data
+    ###
+    ### Verify expected data in datasets. I.e. verify: value, dtype, shape
+    ###
     expected_data: dict = {
         # ---
-        # --- entry/instrument/mono ---
+        # --- dataset: entry/instrument/mono/energy ---
         # ---
         "entry/instrument/mono/energy": {
             "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
-            # "attrs": {
-            #     "units": "keV",  # Expected units
-            # },
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono/energy_timestamps ---
+        # ---
+        "entry/instrument/mono/energy_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/events_timestamps ---
+        # ---
+        "entry/instrument/mono/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/someDataset ---
+        # ---
+        "entry/instrument/mono/someDataset": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someDataset_timestamps ---
+        # ---
+        "entry/instrument/mono/someDataset_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/GRATING/diffraction_order ---
+        # ---
         "entry/instrument/mono/GRATING/diffraction_order": {
             "value": 0,
             "dtype": "int32",
-            "shape": (),  # Scalar
+            "shape": (), # Scalar
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+            "value": b"x",
+            "shape": (1,), # Scalar
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "int32",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy ---
+        # ---
+        "entry/instrument/mono/someGroup/energy": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy_timestamps ---
+        # ---
+        "entry/instrument/mono/someGroup/energy_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/events_timestamps ---
+        # ---
+        "entry/instrument/mono/someGroup/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
         # ---
         # --- entry/run_info/start ---
         # ---
@@ -825,9 +1559,8 @@ def test_2(
         "entry/run_info/stop/reason": b"",
     }
 
-    # Validate file contents
-    validate_nexus_file(nx_file_path, expected_structure, expected_data)
-
+    # Verify file contents
+    verify_nexus_file(nx_file_path, expected_structure, expected_data)
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
     # Remove the callback file after successful creation
@@ -850,7 +1583,7 @@ def test_3(
     """
     Integration test for generating and validating a Nexus file.
     - Configures metadata and baseline devices.
-    - Executes a plan and validates the resulting Nexus file's structure and data.
+    - Executes a plan and verifiess the resulting Nexus file's structure and data.
     """
 
     # Add preprocessors to the RunEngine
@@ -884,71 +1617,117 @@ def test_3(
         nx_file_path
     ), f"Nexus file: {nx_file_path} was not created while executing test: {request.node.name}."
 
-    # Expected structure
+    ###
+    ### Verify existence of the groups/fields and their attributes
+    ###
     expected_structure: dict = {
         # ---
-        # --- entry/instrument ---
+        # --- group: entry and its attributes ---
         # ---
-        "entry": {"NX_class": "NXentry"},
-        "entry/instrument": {"NX_class": "NXinstrument"},
+        "entry": {"NX_class": "NXentry",
+                  "Application name": "bluesky_nexus",
+                  "Content": "'NXinstrument' group and 'NXcollection' group"},
+
         # ---
-        # --- entry/instrument/mono ---
+        # --- group: entry/instrument and its attributes---
+        # ---       
+        "entry/instrument": {"NX_class": "NXinstrument", 
+                            "description": "Instruments involved in the bluesky plan"},
+
         # ---
-        "entry/instrument/mono": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono/energy": {
-        #    "description": "Energy selected",
-            "transformation": {
-                "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
-                "target": "value",
-        #        "description": "Transformation configuration that applies a symbolic operation to the target data array.",
-            },
+        # --- group: entry/instrument/mono_with_grating_cpt and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt": {
+            "NX_class" : "NXmonochromator",
+            "default" : "energy",
+            "nx_model" : "NXmonochromatorModel",
         },
-        "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
-        "entry/instrument/mono/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-        #    "description": "Timestamps of the events",
-        },
-        "entry/instrument/mono/GRATING": {
-            "NX_class": "NXgrating",
-        #    "description": "Grating",
-        },
-        "entry/instrument/mono/GRATING/diffraction_order": {
-        #    "description": "Diffraction order",
-        },
+
         # ---
-        # --- entry/instrument/mono_with_grating_cpt ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/energy/ and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/energy": {
+          "NX_class" : "NX_FLOAT",
+          "currency" : "Euro",
+          "object_name" : "mono_with_grating_cpt",
+          "precision" : 3,
+          "shape" : [2],
+          "source" : "SIM:mono_with_grating_cpt_engry",
+          "units" : "keV"
+        },
+
         # ---
-        "entry/instrument/mono_with_grating_cpt": {"NX_class": "NXmonochromator"},
-        "entry/instrument/mono_with_grating_cpt/energy": {},
+        # --- dataset: entry/instrument/mono_with_grating_cpt/energy_timestamps and its attributes ---
+        # ---  
         "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
-            "nxclass": "NX_FLOAT"
+          "NX_class" : "NX_FLOAT",
+          "description" : "Timestamps of the component: energy extracted from the events",
+          "shape" : [2],
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/events_timestamps and its attributes ---
+        # ---  
         "entry/instrument/mono_with_grating_cpt/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-        #    "description": "Timestamps of the events",
+          "NX_class" : "NX_FLOAT",
+          "description" : "Timestamps of the events",
+          "shape" : [2],
         },
-        "entry/instrument/mono_with_grating_cpt/GRATING": {"NX_class": "NXgrating"},
+
+        # ---
+        # --- group: entry/instrument/mono_with_grating_cpt/GRATING and its attributes ---
+        # ---  
+        "entry/instrument/mono_with_grating_cpt/GRATING": {
+        "NX_class" : "NXgrating",
+        "default" : "diffraction_order",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order and its attributes ---
+        # ---  
         "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
+            "NX_class" : "NX_INT",
+            "object_name" : "mono_with_grating_cpt",
+            "shape" : [2],
+            "source" : "SIM:mono_with_grating_cpt_grating_diffraction_order",
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps and its attributes ---
+        # ---  
         "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
-            "nxclass": "NX_FLOAT"
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the component: diffraction_order extracted from the events",
+            "shape" : [2],
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps and its attributes ---
+        # ---  
         "entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-        #    "description": "Timestamps of the events",
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the events",
+            "shape" : [2],
         },
+        
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/substrate_material and its attributes ---
+        # ---  
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
-        #    "description": "Substrate material type",
+            "NX_class" : "NX_CHAR",
         },
+
         # ---
-        # --- entry/run_info ---
+        # --- group: entry/run_info ---
         # ---
-        "entry/run_info": {"NX_class": "NXcollection"},
+        "entry/run_info": {"NX_class": "NXcollection",
+                            "description" : "Copy of the start and stop document from the bluesky run",
+                          },
+        
         # ---
-        # --- entry/run_info/start ---
+        # --- groups of: entry/run_info/start ---
         # ---
         "entry/run_info/start": {},
-        "entry/run_info/start/device_md/mono": {},
         "entry/run_info/start/device_md/mono_with_grating_cpt": {},
         "entry/run_info/start/hints": {},
         "entry/run_info/start/plan_args": {},
@@ -956,57 +1735,86 @@ def test_3(
         "entry/run_info/start/test_dict": {},
         "entry/run_info/start/versions": {},
         # ---
-        # --- entry/run_info/stop ---
+        # --- groups of: entry/run_info/stop ---
         # ---
         "entry/run_info/stop": {},
         "entry/run_info/stop/num_events": {},
     }
 
-    # Expected data
+    ###
+    ### Verify expected data in datasets. I.e. verify: value, dtype, shape
+    ###
     expected_data: dict = {
         # ---
-        # --- entry/instrument/mono ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/description ---
         # ---
-        "entry/instrument/mono/energy": {
-            "value": [6.0] * plan_step_number,
-            "dtype": "float64",
-            "shape": (plan_step_number,),
-            # "attrs": {
-            #     "units": "keV",  # Expected units
-            # },
+        "entry/instrument/mono_with_grating_cpt/description": {
+            "value": b'I am the best mono with grating cpt at the bessyii facility',
+            "shape": (59,),
         },
-        "entry/instrument/mono/GRATING/diffraction_order": {
-            "value": 0,
-            "dtype": "int32",
-            "shape": (),  # Scalar
-        },
+
         # ---
-        # --- entry/instrument/mono_with_grating_cpt ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/energy ---
         # ---
         "entry/instrument/mono_with_grating_cpt/energy": {
-            "value": [0, 0],
+            "value": [0.0] * 2,
             "dtype": "float64",
             "shape": (2,),
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/energy_timestamps ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/energy_timestamps": {
+            "dtype": "float64",
+            "shape": (2,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/events_timestamps ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/events_timestamps": {
+            "dtype": "float64",
+            "shape": (2,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order ---
+        # ---
         "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order": {
-            "value": [0, 0],
+            "value": [0.0] * 2,
             "dtype": "int32",
             "shape": (2,),
         },
+        
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/GRATING/diffraction_order_timestamps": {
+            "dtype": "float64",
+            "shape": (2,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps ---
+        # ---
+        "entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps": {
+            "dtype": "float64",
+            "shape": (2,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps ---
+        # ---
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
             "value": b"leadless",
-            "shape": (8,),  # Adjust the shape to match the actual string length
+            "shape": (8,),
         },
+
         # ---
         # --- entry/run_info/start ---
         # ---
         "entry/run_info/start/definition": b"NX_ghi",
-        "entry/run_info/start/detectors": [b"mono_en"],
-        "entry/run_info/start/device_md/mono/baseline": b"True",
-        "entry/run_info/start/device_md/mono/grating_substrate_material": b"lead",
-        "entry/run_info/start/device_md/mono/worldPosition/x": b"1.2000000000000003",
-        "entry/run_info/start/device_md/mono/worldPosition/y": b"4.5000000000000006",
-        "entry/run_info/start/device_md/mono/worldPosition/z": b"7.8000000000000009",
         "entry/run_info/start/device_md/mono_with_grating_cpt/baseline": b"True",
         "entry/run_info/start/device_md/mono_with_grating_cpt/grating_substrate_material": b"leadless",
         "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/x": b"11.120000013",
@@ -1054,9 +1862,8 @@ def test_3(
         "entry/run_info/stop/reason": b"",
     }
 
-    # Validate file contents
-    validate_nexus_file(nx_file_path, expected_structure, expected_data)
-
+    # Verify file contents
+    verify_nexus_file(nx_file_path, expected_structure, expected_data)
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
     # Remove the callback file after successful creation
@@ -1079,7 +1886,7 @@ def test_4(
     """
     Integration test for generating and validating a Nexus file.
     - Configures metadata and baseline devices.
-    - Executes a plan and validates the resulting Nexus file's structure and data.
+    - Executes a plan and verfifies the resulting Nexus file's structure and data.
     """
 
     # Add preprocessors to the RunEngine
@@ -1114,43 +1921,239 @@ def test_4(
         nx_file_path
     ), f"Nexus file: {nx_file_path} was not created while executing test: {request.node.name}."
 
-    # Expected structure
+
+
+    ###
+    ### Verify existence of the groups/fields and their attributes
+    ###
     expected_structure: dict = {
         # ---
-        # --- entry/instrument ---
+        # --- group: entry and its attributes ---
         # ---
-        "entry": {"NX_class": "NXentry"},
-        "entry/instrument": {"NX_class": "NXinstrument"},
+        "entry": {"NX_class": "NXentry",
+                  "Application name": "bluesky_nexus",
+                  "Content": "'NXinstrument' group and 'NXcollection' group"},
+
         # ---
-        # --- entry/instrument/mono ---
+        # --- group: entry/instrument and its attributes---
+        # ---       
+        "entry/instrument": {"NX_class": "NXinstrument", 
+                            "description": "Instruments involved in the bluesky plan"},
+
         # ---
-        "entry/instrument/mono": {"NX_class": "NXmonochromator"},
+        # --- group: entry/instrument/mono and its attributes ---
+        # ---
+        "entry/instrument/mono": {"NX_class": "NXmonochromator", 
+                                  "nx_model": "NXmonochromatorModel", 
+                                  "attr_0" : 3.1415,
+                                  "attr_1" : {'a':'2'},
+                                  "attr_2" : "{'b':'1'}",
+                                  "attr_3" : [1.02, 3.04, 5.06],
+                                  "attr_4" : 1,
+                                  "default" : "energy",
+                                  "value" : "3.1415",
+                                  },
+
+        # ---
+        # --- field: entry/instrument/mono/energy and its attributes ---
+        # ---
         "entry/instrument/mono/energy": {
-            #"description": "Energy selected",
-            "transformation": {
-                "expression": "3 * x**2 + np.exp(np.log(5)) + 1",
-                "target": "value",
-            #    "description": "Transformation configuration that applies a symbolic operation to the target data array.",
-            },
+            "NX_class" : "NX_FLOAT",
+            "PI" : 3.1415,
+            "days" : ["Mo", "We"],
+            "destination" : "{'departement': 'A23'}",
+            "factors" : [1.34, 2.78],
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "prices" : "Euro",
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+            "transformation" : "{'expression': '3 * x**2 + np.exp(np.log(5)) + 1', 'target': 'value'}",
+            "units" : "keV",
+            "value" : 12.34,
         },
-        "entry/instrument/mono/energy_timestamps": {"nxclass": "NX_FLOAT"},
+
+        # ---
+        # --- field: entry/instrument/mono/energy_timestamps and its attributes ---
+        # ---
+        "entry/instrument/mono/energy_timestamps": {"NX_class": "NX_FLOAT",
+                                                    "shape": [10],
+                                                    "description" : "Timestamps of the component: energy extracted from the events"
+                                                    },
+
+        # ---
+        # --- field: entry/instrument/mono/events_timestamps and its attributes ---
+        # ---        
         "entry/instrument/mono/events_timestamps": {
-            "nxclass": "NX_FLOAT",
-        #    "description": "Timestamps of the events",
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "description" : "Timestamps of the events"
         },
+
+        # ---
+        # --- field: entry/instrument/mono/someDataset and its attributes ---
+        # ---        
+        "entry/instrument/mono/someDataset": {
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "precision" : 3,
+             "object_name" : "mono_en",
+             "source": "SIM:mono_en"
+        },
+
+        # ---
+        # --- field: entry/instrument/mono/someDataset_timestamps and its attributes ---
+        # ---        
+        "entry/instrument/mono/someDataset_timestamps": {
+             "NX_class": "NX_FLOAT",
+             "shape" : [10],
+             "description" : "Timestamps of the component: someDataset extracted from the events",
+        },
+
+        # ---
+        # --- group: entry/instrument/mono/GRATING and its attributes ---
+        # ---  
         "entry/instrument/mono/GRATING": {
             "NX_class": "NXgrating",
-        #    "description": "Grating",
+            "attr_0" : "new",
+            "default" : "diffraction_order",
+            "value" : 167,
         },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/GRATING/diffraction_order and its attributes ---
+        # ---  
         "entry/instrument/mono/GRATING/diffraction_order": {
-        #    "description": "Diffraction order",
+            "NX_class": "NX_INT",
+            "at_0" : 13.14,
+            "at_1" : [2.03, 4.05],
+            "value" : "some_value"
         },
+
         # ---
-        # --- entry/run_info ---
+        # --- group: entry/instrument/mono/TRANSFORMATIONS and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS": {
+            "NX_class": "NXtransformations",
+            "attr_0" : 3.1415,
+            "attr_1" : "{'a': '2'}",
+            "attr_2" : [1.01, 2.02],
+            "default" : "vector",
+            "value" : "3.1",
+        },
+
         # ---
-        "entry/run_info": {"NX_class": "NXcollection"},
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+            "NX_class": "NX_CHAR",
+            "depends_on" : "sth",
+            "equipment_component" : "A.71",
+            "offset" : "34.56",
+            "offset_units" : "um",
+            "units" : "um",
+            "value" : 123,
+            "vector" : "123",
+        },
+
         # ---
-        # --- entry/run_info/start ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+            "NX_class": "NX_FLOAT",
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the component: AXISNAME_end extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+            "NX_class" : "NX_INT",
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en"
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the component: AXISNAME_increment_set extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
+            "NX_class": "NX_FLOAT",
+            "description" : "Timestamps of the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- group: entry/instrument/mono/someGroup and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup": {
+          "NX_class" : "NXsomeClass",
+          "attr_1" : "{'a': '2'}",
+          "attr_2" : [5.06, 7.08],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/energy": {
+            "NX_class" : "NX_FLOAT",
+            "attr_1" : "PI",
+            "attr_2" : 3.1415,
+            "object_name" : "mono_en",
+            "precision" : 3,
+            "shape" : [10],
+            "source" : "SIM:mono_en",
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/energy_timestamps": {
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the component: energy extracted from the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/events_timestamps and its attributes ---
+        # ---  
+        "entry/instrument/mono/someGroup/events_timestamps": {
+            "NX_class" : "NX_FLOAT",
+            "description" : "Timestamps of the events",
+            "shape" : [10],
+        },
+
+        # ---
+        # --- group: entry/run_info ---
+        # ---
+        "entry/run_info": {"NX_class": "NXcollection",
+                            "description" : "Copy of the start and stop document from the bluesky run",
+                          },
+        
+        # ---
+        # --- groups of: entry/run_info/start ---
         # ---
         "entry/run_info/start": {},
         "entry/run_info/start/device_md/mono": {},
@@ -1160,30 +2163,142 @@ def test_4(
         "entry/run_info/start/test_dict": {},
         "entry/run_info/start/versions": {},
         # ---
-        # --- entry/run_info/stop ---
+        # --- groups of: entry/run_info/stop ---
         # ---
         "entry/run_info/stop": {},
         "entry/run_info/stop/num_events": {},
     }
 
-    # Expected data
+    ###
+    ### Verify expected data in datasets. I.e. verify: value, dtype, shape
+    ###
     expected_data: dict = {
         # ---
-        # --- entry/instrument/mono ---
+        # --- dataset: entry/instrument/mono/energy ---
         # ---
         "entry/instrument/mono/energy": {
             "value": [6.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
-            # "attrs": {
-            #     "units": "keV",  # Expected units
-            # },
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono/energy_timestamps ---
+        # ---
+        "entry/instrument/mono/energy_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/events_timestamps ---
+        # ---
+        "entry/instrument/mono/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/someDataset ---
+        # ---
+        "entry/instrument/mono/someDataset": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someDataset_timestamps ---
+        # ---
+        "entry/instrument/mono/someDataset_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/GRATING/diffraction_order ---
+        # ---
         "entry/instrument/mono/GRATING/diffraction_order": {
             "value": 0,
             "dtype": "int32",
-            "shape": (),  # Scalar
+            "shape": (), # Scalar
         },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+            "value": b"x",
+            "shape": (1,), # Scalar
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+        
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "int32",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps ---
+        # ---
+        "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy ---
+        # ---
+        "entry/instrument/mono/someGroup/energy": {
+            "value": [0.0] * plan_step_number,
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/energy_timestamps ---
+        # ---
+        "entry/instrument/mono/someGroup/energy_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
+        # ---
+        # --- dataset: entry/instrument/mono/someGroup/events_timestamps ---
+        # ---
+        "entry/instrument/mono/someGroup/events_timestamps": {
+            "dtype": "float64",
+            "shape": (plan_step_number,),
+        },
+
         # ---
         # --- entry/run_info/start ---
         # ---
@@ -1235,9 +2350,8 @@ def test_4(
         "entry/run_info/stop/reason": b"",
     }
 
-    # Validate file contents
-    validate_nexus_file(nx_file_path, expected_structure, expected_data)
-
+    # Verify file contents
+    verify_nexus_file(nx_file_path, expected_structure, expected_data)
     # Remove the nexus file after successful validation
     clean_up(nx_file_path)
     # Remove the callback file after successful creation
@@ -1257,6 +2371,4 @@ def print_arrays_comparison_info(
 ):
     print(f"Is {arr1_name} equal to {arr2_name}: {np.array_equal(arr1, arr2)}")
     print(f"Is {arr1_name} close to {arr2_name}: {np.allclose(arr1, arr2, atol=1e-8)}")
-
-
 # ---------- END OF DEBUG ONLY
