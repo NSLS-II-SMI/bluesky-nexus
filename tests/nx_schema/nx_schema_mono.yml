@@ -1,47 +1,107 @@
-#nx_model: NXmonochromatorModel
-nx_model: NXgeneralModel
-nxclass: NXmonochromator
-attributes:
-  calibration:
-    value: $post-run:en
-    dtype: float64
-  calibParams:
-    value: [1.23, 4.56]
-    dtype: float64
-energy:
+nx_model: NXmonochromatorModel # pydantic model associated with this schema
+nxclass: NXmonochromator # group: NXmonochromator
+
+energy: # Field: "energy" belongs to NXmonochromator group
   value: $post-run:en
   dtype: float64
-  attrs:
+  nxclass: NX_FLOAT
+  attrs:  # attrs belong to field: "energy"
     units: "keV"
     prices: "Euro"
     days: ["Mo", "We"]
-  attributes:
-    nicePreRun:
-      value: $pre-run-md:calibration_on
-      dtype: bool
-    niceFloat64List:
-      value: [6.78, 9.12]
-      dtype: float64
-    nicePostRunEn:
-      value: $post-run:en
-      dtype: float64
-    niceFloat64:
-      value: 13.1415
-      dtype: float64
-    niceString:
-      value: Hi
-      dtype: str
-    niceInt32List:
-      value: [1,2,3,4]
-      dtype: int32
+    factors: [1.34, 2.78]
+    destination: {"departement": "A23"}
+    value: 12.34
+    PI: 3.1415
   transformation:
     expression: 3 * x**2 + np.exp(np.log(5)) + 1 # Symbolic expression for the transformation
     target: value # Specifies the name of array to which expression is applied
-GRATING:
+GRATING:  # Group: 'GRATING' belongs to NXmonochromator group
   nxclass: NXgrating
-  diffraction_order:
+  attrs: # attrs belong to group "GRATING"
+    attr_0: "new"
+    value: 167
+  diffraction_order: # Field: "diffraction_order" belongs to group "GRATING"
     value: $pre-run-cpt:grating
     dtype: int32
-description:
-  value: $pre-run-md:description
+    nxclass: NX_INT
+    attrs: # attrs belong to field "diffraction_order"
+      at_0: 13.14
+      at_1: [2.03, 4.05]
+      value: "some_value"
+TRANSFORMATIONS: # Group: 'TRANSFORMATIONS' belongs to NXmonochromator group
+  nxclass: NXtransformations
+  attrs: # attrs belong to group "TRANSFORMATIONS"
+    attr_0: 3.1415
+    value: "3.1"
+    attr_1: {"a":"2"}
+    attr_2: [1.01, 2.02]
+  AXISNAME: # Field: 'AXISNAME' belong to group "TRANSFORMATIONS"
+    value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
+    dtype: str
+    nxclass: NX_CHAR
+    attrs: # attrs belong to field "AXISNAME"
+      units: "um"
+      value: 123
+    attributes: # Attributes of the AXISNAME
+      vector: # Obligatory attribute of the AXISNAME
+        value: "123"
+        dtype: str
+        attrs: # attrs belong to attribute "vector" of "AXISNAME"
+          attr_0: 1.1
+          value: 23
+      offset: # Facultative attribute of the AXISNAME
+        value: "34.56"
+        dtype: str
+        attrs: # attrs belong to attribute "offset" of "AXISNAME"
+          attr_0: 2.2
+      offset_units: # Facultative attribute of the AXISNAME
+        value: "um"
+        dtype: str
+        attrs: # attrs belong to attribute "offset_units" of "AXISNAME"
+          attr_0: 3.3
+      depends_on: # Facultative attribute of the AXISNAME
+        value: "sth"
+        dtype: str
+      equipment_component: # Facultative attribute of "AXISNAME"
+        value: "A.71"
+        dtype: str
+  AXISNAME_end: # Field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
+    value: $post-run:en
+    dtype: float64
+    nxclass: NX_FLOAT
+  AXISNAME_increment_set: # Field: 'AXISNAME_increment_set' of group "TRANSFORMATIONS"
+    value: $post-run:en
+    dtype: int32
+    nxclass: NX_INT
+description: # Field: 'description' belongs to NXmonochromator group
+  value: $pre-run-md:description # fetch it from the device metadata (happi)
   dtype: str
+  nxclass: NX_CHAR
+attrs:  # attrs belong to NXmonochromator group
+  attr_0: 3.1415
+  value: "3.1415"
+  attr_1: {'a':'2'}
+  attr_2: "{'b':'1'}"
+  attr_3: [1.02, 3.04, 5.06]
+  attr_4: True
+
+###
+### NXmonochromator group allows extra groups/fields that are not explicitly defined in the model
+###
+someGroup: # Additional group: "someGroup"
+  nxclass: NXsomeClass
+  attrs:
+    attr_1: {"a":"2"}
+    attr_2: [5.06, 7.08]
+  energy: # Field energy belonging to someGroup
+    value: $post-run:en
+    dtype: float64
+    nxclass: NX_FLOAT
+    attrs:
+      attr_1: "PI"
+      attr_2: 3.1415
+someDataset: # Additional dataset: "someDataset"
+  value: $post-run:en
+  dtype: float64
+  nxclass: NX_FLOAT

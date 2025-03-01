@@ -1,20 +1,24 @@
-nx_model: NXmonochromatorModel
-nxclass: NXmonochromator
-energy:
+nx_model: NXmonochromatorModel # pydantic model associated with this schema
+nxclass: NXmonochromator # group: NXmonochromator
+
+energy: # Field: "energy" belongs to NXmonochromator group
+  nxclass: NX_FLOAT
   value: $post-run:engry
   dtype: float64
-  attributes:
-    units:
-      value: "keV"
-      dtype: str
-GRATING:
+  attrs: # attrs belong to field: "energy"
+    units: "keV"
+    currency: "Euro"
+GRATING: # Group: 'GRATING' belongs to NXmonochromator group
   nxclass: NXgrating
-  diffraction_order:
+  diffraction_order: # Field: "diffraction_order" belongs to group "GRATING"
+    nxclass: NX_INT
     value: $post-run:grating_diffraction_order
     dtype: int32
-  substrate_material:
+  substrate_material: # Field: "substrate_material" belongs to group "GRATING"
+    nxclass: NX_CHAR
     value: $pre-run-md:grating_substrate_material
     dtype: str
-description:
-  value: $pre-run-md:description
+description: # Field: 'description' belongs to NXmonochromator group
+  nxclass: NX_CHAR
+  value: $pre-run-md:description # fetch it from the device metadata (happi)
   dtype: str
