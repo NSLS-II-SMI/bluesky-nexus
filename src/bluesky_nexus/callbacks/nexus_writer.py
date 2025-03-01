@@ -16,7 +16,7 @@ Example Usage:
 
     # Example of using the module to create a NeXus file
     data = {
-        "instrument": {"mono": {"nxclass": "NXmonochromator", "value": 123.4}},
+        "instrument": {"mono": {"NX_class": "NXmonochromator", "value": 123.4}},
         "run_info": {"start_time": "2023-12-01T12:00:00"},
     }
     create_nexus_file("example.nxs", data)
@@ -599,7 +599,7 @@ def create_nexus_file(file_path, data_dict):
 
     Example:
         data = {
-            "instrument": {"mono": {"nxclass": "NXmonochromator", "value": 123.4}},
+            "instrument": {"mono": {"NX_class": "NXmonochromator", "value": 123.4}},
             "run_info": {"start_time": "2023-12-01T12:00:00"},
         }
         create_nexus_file("example.nxs", data)
@@ -656,7 +656,7 @@ def add_group_or_field(group, data):
         group (h5py.Group): The parent group to which fields or subgroups will be added.
         data (dict): A dictionary describing the NeXus structure. Keys represent names
                      of groups or fields, and values provide detailed metadata such as
-                     `nxclass`, `value`, `dtype`, and attributes.
+                     `NX_class`, `value`, `dtype`, and attributes.
 
     Raises:
         ValueError: If invalid `dtype` is encountered for a dataset.
@@ -664,7 +664,7 @@ def add_group_or_field(group, data):
     Example:
         data = {
             "mono": {
-                "nxclass": "NXmonochromator",
+                "NX_class": "NXmonochromator",
                 "value": 123.4,
                 "dtype": "float64",
                 "attrs": {"units": "keV"}
@@ -824,7 +824,7 @@ def add_group_or_field(group, data):
                             data=value["events_cpt_timestamps"],
                             dtype=value["events_cpt_timestamps"].dtype,
                         )
-                        dataset.attrs["nxclass"] = "NX_FLOAT"
+                        dataset.attrs["NX_class"] = "NX_FLOAT"
                         dataset.attrs["shape"] = list(value["events_cpt_timestamps"].shape)
                         dataset.attrs["description"] = (
                             f"Timestamps of the component: {key} extracted from the events"
@@ -837,7 +837,7 @@ def add_group_or_field(group, data):
                             data=value["descriptor_cpt_timestamp"],
                             dtype=value["descriptor_cpt_timestamp"].dtype,
                         )
-                        dataset.attrs["nxclass"] = "NX_FLOAT"
+                        dataset.attrs["NX_class"] = "NX_FLOAT"
                         dataset.attrs["shape"] = list(value["descriptor_cpt_timestamp"].shape)
                         dataset.attrs["description"] = (
                             f"Timestamp of the component: {key} extracted from the descriptor"
@@ -856,7 +856,7 @@ def add_group_or_field(group, data):
                                 dtype=value["events_timestamps"].dtype,
                             )
                             # Add attributes to the dataset
-                            dataset.attrs["nxclass"] = "NX_FLOAT"
+                            dataset.attrs["NX_class"] = "NX_FLOAT"
                             dataset.attrs["shape"] = list(value["events_timestamps"].shape)
                             dataset.attrs["description"] = "Timestamps of the events"
 
