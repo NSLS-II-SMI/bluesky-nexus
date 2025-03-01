@@ -17,6 +17,7 @@ class MetadataMono:
     description: str = "I am the best mono at the bessyii facility"
     calibration_on:bool = True
     baseline: str = "True"
+    transformations_axisname:str = "x"
 
     def get_attributes(self):
         attributes = {
@@ -24,7 +25,8 @@ class MetadataMono:
             "worldPosition": self.worldPosition,
             "description": self.description,
             "baseline": self.baseline,
-            "calibration_on": self.calibration_on
+            "calibration_on": self.calibration_on,
+            "transformations_axisname": self.transformations_axisname,
         }
         return attributes
 
