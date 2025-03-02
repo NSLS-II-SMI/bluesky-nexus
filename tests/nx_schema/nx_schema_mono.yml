@@ -45,18 +45,23 @@ TRANSFORMATIONS: # Group: 'TRANSFORMATIONS' belongs to NXmonochromator group
       value: 123
     attributes: # Attributes of the AXISNAME
       vector: # Obligatory attribute of the AXISNAME
+        nxclass: "NX_NUMBER"
         value: "123"
         dtype: str
       offset: # Facultative attribute of the AXISNAME
+        nxclass: "NX_NUMBER"
         value: "34.56"
         dtype: str
       offset_units: # Facultative attribute of the AXISNAME
+        nxclass: "NX_CHAR"
         value: "um"
         dtype: str
       depends_on: # Facultative attribute of the AXISNAME
+        nxclass: "NX_CHAR"
         value: "sth"
         dtype: str
       equipment_component: # Facultative attribute of "AXISNAME"
+        nxclass: "NX_CHAR"
         value: "A.71"
         dtype: str
   AXISNAME_end: # Field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
