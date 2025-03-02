@@ -2,9 +2,9 @@ nx_model: NXmonochromatorModel # pydantic model associated with this schema
 nxclass: NXmonochromator # group: NXmonochromator
 
 energy: # Field: "energy" belongs to NXmonochromator group
+  nxclass: NX_FLOAT
   value: $post-run:en
   dtype: float64
-  nxclass: NX_FLOAT
   attrs:  # attrs belong to field: "energy"
     units: "keV"
     prices: "Euro"
@@ -22,9 +22,9 @@ GRATING:  # Group: 'GRATING' belongs to NXmonochromator group
     attr_0: "new"
     value: 167
   diffraction_order: # Field: "diffraction_order" belongs to group "GRATING"
+    nxclass: NX_INT
     value: $pre-run-cpt:grating
     dtype: int32
-    nxclass: NX_INT
     attrs: # attrs belong to field "diffraction_order"
       at_0: 13.14
       at_1: [2.03, 4.05]
@@ -37,9 +37,9 @@ TRANSFORMATIONS: # Group: 'TRANSFORMATIONS' belongs to NXmonochromator group
     attr_1: {"a":"2"}
     attr_2: [1.01, 2.02]
   AXISNAME: # Field: 'AXISNAME' belong to group "TRANSFORMATIONS"
+    nxclass: NX_CHAR
     value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
     dtype: str
-    nxclass: NX_CHAR
     attrs: # attrs belong to field "AXISNAME"
       units: "um"
       value: 123
@@ -47,19 +47,12 @@ TRANSFORMATIONS: # Group: 'TRANSFORMATIONS' belongs to NXmonochromator group
       vector: # Obligatory attribute of the AXISNAME
         value: "123"
         dtype: str
-        attrs: # attrs belong to attribute "vector" of "AXISNAME"
-          attr_0: 1.1
-          value: 23
       offset: # Facultative attribute of the AXISNAME
         value: "34.56"
         dtype: str
-        attrs: # attrs belong to attribute "offset" of "AXISNAME"
-          attr_0: 2.2
       offset_units: # Facultative attribute of the AXISNAME
         value: "um"
         dtype: str
-        attrs: # attrs belong to attribute "offset_units" of "AXISNAME"
-          attr_0: 3.3
       depends_on: # Facultative attribute of the AXISNAME
         value: "sth"
         dtype: str
@@ -67,17 +60,17 @@ TRANSFORMATIONS: # Group: 'TRANSFORMATIONS' belongs to NXmonochromator group
         value: "A.71"
         dtype: str
   AXISNAME_end: # Field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
+    nxclass: NX_FLOAT
     value: $post-run:en
     dtype: float64
-    nxclass: NX_FLOAT
   AXISNAME_increment_set: # Field: 'AXISNAME_increment_set' of group "TRANSFORMATIONS"
+    nxclass: NX_INT
     value: $post-run:en
     dtype: int32
-    nxclass: NX_INT
 description: # Field: 'description' belongs to NXmonochromator group
+  nxclass: NX_CHAR
   value: $pre-run-md:description # fetch it from the device metadata (happi)
   dtype: str
-  nxclass: NX_CHAR
 attrs:  # attrs belong to NXmonochromator group
   attr_0: 3.1415
   value: "3.1415"
@@ -95,13 +88,14 @@ someGroup: # Additional group: "someGroup"
     attr_1: {"a":"2"}
     attr_2: [5.06, 7.08]
   energy: # Field energy belonging to someGroup
+    nxclass: NX_FLOAT
     value: $post-run:en
     dtype: float64
-    nxclass: NX_FLOAT
     attrs:
       attr_1: "PI"
       attr_2: 3.1415
 someDataset: # Additional dataset: "someDataset"
+  nxclass: NX_FLOAT
   value: $post-run:en
   dtype: float64
-  nxclass: NX_FLOAT
+
