@@ -314,9 +314,11 @@ class NXfieldModelWithPrePostRunString(NXfieldModel):
     """
     Extended NXfieldModel where the value must be a PrePostRunString.
     """
-
+    nxclass: str = Field(..., description="The nexus class of the field.")
     value: PrePostRunString = Field(..., description="Value of the field.")
+    dtype: str = Field(..., description="Data type of the field.")
     transformation: Optional[TransformationModel] = Field(None, description="Transformation configuration that applies a symbolic operation to the target field.")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 class NXfieldModelForAttribute(NXfieldModel):
     """
@@ -325,7 +327,7 @@ class NXfieldModelForAttribute(NXfieldModel):
     Attributes:
     - value (Union[PrePostRunString, str]): Value of the attribute field.
     """
-
+    nxclass: str = Field(..., description="The nexus class of the attribute field.")
     value: Union[PrePostRunString, str] = Field(..., description="Value of the attribute field.")
     dtype: str = Field(..., description="Data type of the attribute field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
