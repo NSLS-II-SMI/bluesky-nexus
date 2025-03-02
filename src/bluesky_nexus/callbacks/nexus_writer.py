@@ -726,8 +726,8 @@ def add_group_or_field(group, data):
         - attributes (dict): A dictionary of attributes to add, each with 'value' and 'dtype' keys.
         """
         for attr_name, attr_data in attributes.items():
-            value: Any = attr_data["value"] # Facultative, guaranteed by NXfieldModelForAttribute
-            dtype: str = attr_data["dtype"] # Facultative, guaranteed by NXfieldModelForAttribute
+            value: Any = attr_data["value"] # Mandatory, guaranteed by NXfieldModelForAttribute
+            dtype: str = attr_data["dtype"] # Mandatory, guaranteed by NXfieldModelForAttribute
 
             # Check if the value is already an array (either a NumPy array or a list)
             if isinstance(value, (np.ndarray, list)):
