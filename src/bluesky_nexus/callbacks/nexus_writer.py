@@ -35,14 +35,13 @@ from typing import Optional, Union, Any
 
 import h5py
 import numpy as np
-import json
 from bluesky.callbacks.core import CollectThenCompute
-from h5py import Group
 
 from bluesky_nexus.bluesky_nexus_const import (
     NX_FILE_EXTENSION,
     NX_MD_KEY,
     VALID_NXFIELD_DTYPES,
+    NX_DTYPE_MAP,
 )
 from bluesky_nexus.common.decorator_utils import measure_time
 from bluesky_nexus.common.logging_utils import logger
@@ -430,11 +429,11 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 # Assign 'events_cpt_timestamps'
                 if 'events_cpt_timestamps' in cpt_data:
                     obj["events_cpt_timestamps"] = cpt_data["events_cpt_timestamps"]
-                    
+
                 # Assign 'events_timestamps'
                 if 'events_timestamps' in cpt_data:
                     obj["events_timestamps"] = cpt_data["events_timestamps"]
-                    
+
                 # Assign 'descriptor_cpt_timestamp'
                 if 'descriptor_cpt_timestamp' in cpt_data:
                     obj["descriptor_cpt_timestamp"] = cpt_data["descriptor_cpt_timestamp"]
@@ -526,7 +525,8 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
 
             if isinstance(tree, dict):
                 for key, value in tree.items():
-                    if (isinstance(value, dict) and "value" in value and "dtype" in value):
+                    #if (isinstance(value, dict) and "value" in value and "dtype" in value):
+                    if (isinstance(value, dict) and "value" in value):
                         tree[key] = func(dev_name, value)
                     tree[key] = replace_values(dev_name, value, func)
             elif isinstance(tree, list):
@@ -534,9 +534,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
             return tree
 
         for dev_name in nexus_md.keys():
-            nexus_md[dev_name] = replace_values(
-                dev_name, nexus_md[dev_name], replace_func
-            )
+            nexus_md[dev_name] = replace_values(dev_name, nexus_md[dev_name], replace_func)
 
     # Process post-run placeholders by filling them with data provided by bluesky events
     process_post_run()
@@ -613,7 +611,7 @@ def create_nexus_file(file_path, data_dict):
         entry = f.create_group("entry")
         entry.attrs["NX_class"] = "NXentry"
         entry.attrs["Application name"] = "bluesky_nexus"
-        entry.attrs["Application version"] = "TBD"
+        entry.attrs["Application version"] = "v1.0.0"
         entry.attrs["Content"] = "'NXinstrument' group and 'NXcollection' group"
 
         for key, value in data_dict.items():
@@ -716,50 +714,60 @@ def add_group_or_field(group, data):
             else:
                 raise ValueError(f"Unsupported attribute type for '{key}': {type(value)}")
 
-
-    def add_attributes(dataset: Union[h5py.Dataset, h5py.Group], attributes: dict) -> None:
+    def add_attributes(target: Union[h5py.Dataset, h5py.Group], attributes: dict) -> None:
         """
-        Adds attributes to a dataset (field) from a dictionary of attributes.
+        Adds attributes to an HDF5 dataset or group, enforcing dtype if specified.
 
         Parameters:
-        - dataset (h5py.Dataset): The dataset to which attributes should be added.
+        - target Union[h5py.Dataset, h5py.Group]: The dataset or group to which attributes should be added.
         - attributes (dict): A dictionary of attributes to add, each with 'value' and 'dtype' keys.
         """
+
         for attr_name, attr_data in attributes.items():
-            value: Any = attr_data["value"] # Mandatory, guaranteed by NXfieldModelForAttribute
-            dtype: str = attr_data["dtype"] # Mandatory, guaranteed by NXfieldModelForAttribute
+            value: Any = attr_data["value"]  # Mandatory, guaranteed by NXfieldModelForAttribute
+            dtype_str: str = attr_data["dtype"]  # Expected as a string, facultative for post-run placeholders otherwise mandatory
+            
+            if dtype_str not in NX_DTYPE_MAP:
+                raise ValueError(
+                    f"Invalid dtype: {dtype_str} detected while processing {target.name}.{attr_name}."
+                )
 
-            # Check if the value is already an array (either a NumPy array or a list)
-            if isinstance(value, (np.ndarray, list)):
-                # If it's an array, ensure it's a numpy array and convert its dtype
-                value = np.array(value, dtype=dtype)
-            else:
-                # If it's not an array, convert based on dtype
-                if dtype == "str":
-                    value = str(value)
-                elif dtype == "float64":
-                    value = np.float64(value)
-                elif dtype == "float32":
-                    value = np.float32(value)
-                elif dtype == "int64":
-                    value = np.int64(value)
-                elif dtype == "int32":
-                    value = np.int32(value)
-                elif dtype == "bool":
-                    value = bool(value)
+            try:
+                dtype = NX_DTYPE_MAP[dtype_str]
+
+                # Handle strings explicitly
+                if dtype in {h5py.string_dtype(encoding="utf-8")}:
+                    if isinstance(value, str):
+                        value = np.array(value, dtype=dtype)  # Convert scalar string to numpy array
+                    elif isinstance(value, (list, tuple, np.ndarray)):
+                        value = np.array(value, dtype=dtype)  # Convert list of strings to numpy array
+                    else:
+                        raise TypeError(f"Unexpected type {type(value)} for string attribute {attr_name}")
+
+                # Handle booleans explicitly
+                elif dtype == np.uint8 and isinstance(value, (bool, np.bool_)):
+                    value = np.uint8(value)  # Convert single bool to uint8
+
+                # Convert numpy arrays correctly
+                elif isinstance(value, np.ndarray):
+                    value = value.astype(dtype)
+
+                # Convert scalar values correctly
                 else:
-                    raise ValueError(f"Unsupported dtype: {dtype}")
+                    value = np.array(value, dtype=dtype)
 
-            # Set the attribute to the dataset
-            dataset.attrs[attr_name] = value
+                # Save the attribute
+                target.attrs[attr_name] = value
 
+            except Exception as e:
+                raise TypeError(f"Failed to convert {value} to dtype {dtype_str}: {e}")
 
     for key, value in data.items():
         if isinstance(value, dict):
 
             ###
             ### Handle NeXus fields
-            ###
+            ### value["value"] is in "post-run" case always numpy array
             if "value" in value:
                 dtype = value.get("dtype", None)
 
@@ -796,8 +804,8 @@ def add_group_or_field(group, data):
                     # Add attributes to the dataset
                     # In the schema file, attributes of a field are introduced by the word "attributes"
                     # Each attribute has a value and dtype
-                    # Attribute of dataset can be: integer, float, string, bool, array
-                    # Attribute of dataset can be of type: str, int32, int64, float32, float64, bool
+                    # Attribute of dataset can be: scalar or array
+                    # Attribute of dataset can be of type: defined under VALID_NXFIELD_DTYPES
                     if "attributes" in value:
                         add_attributes(dataset, value["attributes"])
 
