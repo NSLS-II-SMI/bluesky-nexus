@@ -279,7 +279,8 @@ class NXgroupModel(NXobjectModel):
     Inherits from NXobjectModel.
     """
 
-    nxclass: Optional[str] = Field("NXgroup", description="The class of the group.")
+    #nxclass: Optional[str] = Field("NXgroup", description="The class of the group.")
+    nxclass: str = Field(..., description="The class of the group.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
 class TransformationModel(BaseModel):
@@ -316,7 +317,7 @@ class NXfieldModelWithPrePostRunString(NXfieldModel):
     """
     nxclass: str = Field(..., description="The nexus class of the field.")
     value: PrePostRunString = Field(..., description="Value of the field.")
-    dtype: str = Field(..., description="Data type of the field.")
+    dtype: Optional[str] = Field(None, description="Data type of the field.")
     transformation: Optional[TransformationModel] = Field(None, description="Transformation configuration that applies a symbolic operation to the target field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
@@ -327,7 +328,7 @@ class NXfieldModelForAttribute(NXfieldModel):
     Attributes:
     - value (Union[PrePostRunString, str]): Value of the attribute field.
     """
-    nxclass: str = Field(..., description="The nexus class of the attribute field.")
-    value: Union[PrePostRunString, str] = Field(..., description="Value of the attribute field.")
-    dtype: str = Field(..., description="Data type of the attribute field.")
+    nxclass: Optional[str] = Field("NXclass", description="The nexus class of the attribute field.")
+    value: Union[PrePostRunString, Scalar] = Field(..., description="Value of the attribute field.")
+    dtype: Optional[str] = Field(None, description="Data type of the attribute field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
