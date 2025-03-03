@@ -3,7 +3,7 @@ nxclass: NXmonochromator # group: NXmonochromator
 
 energy: # Field: "energy" belongs to NXmonochromator group
   nxclass: NX_FLOAT
-  value: $post-run:en
+  value: $post-run:en # fetch it from the device component 
   dtype: float64
   attrs:  # attrs belong to field: "energy"
     units: "keV"
@@ -46,19 +46,19 @@ TRANSFORMATIONS: # Group: 'TRANSFORMATIONS' belongs to NXmonochromator group
     attributes: # Attributes of the AXISNAME
       vector: # Obligatory attribute of the AXISNAME
         nxclass: "NX_NUMBER"
-        value: "123"
-        dtype: str
+        value: $post-run:en # fetch it from the device component
+        dtype: int32
       offset: # Facultative attribute of the AXISNAME
         nxclass: "NX_NUMBER"
-        value: "34.56"
-        dtype: str
+        value: 34.56
+        dtype: float64
       offset_units: # Facultative attribute of the AXISNAME
         nxclass: "NX_CHAR"
         value: "um"
         dtype: str
       depends_on: # Facultative attribute of the AXISNAME
         nxclass: "NX_CHAR"
-        value: "sth"
+        value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
         dtype: str
       equipment_component: # Facultative attribute of "AXISNAME"
         nxclass: "NX_CHAR"
