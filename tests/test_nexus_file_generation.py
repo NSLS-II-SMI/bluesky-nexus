@@ -616,13 +616,13 @@ def test_1(
         # ---  
         "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
             "NX_class": "NX_CHAR",
-            "depends_on" : "sth",
+            "depends_on" : "x",
             "equipment_component" : "A.71",
-            "offset" : "34.56",
+            "offset" : 34.56,
             "offset_units" : "um",
             "units" : "um",
             "value" : 123,
-            "vector" : "123",
+            "vector" : [0] * plan_step_number,
         },
 
         # ---
@@ -1256,13 +1256,13 @@ def test_2(
         # ---  
         "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
             "NX_class": "NX_CHAR",
-            "depends_on" : "sth",
+            "depends_on" : "x",
             "equipment_component" : "A.71",
-            "offset" : "34.56",
+            "offset" : 34.56,
             "offset_units" : "um",
             "units" : "um",
             "value" : 123,
-            "vector" : "123",
+            "vector" : [0] * plan_step_number,
         },
 
         # ---
@@ -2047,13 +2047,13 @@ def test_4(
         # ---  
         "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
             "NX_class": "NX_CHAR",
-            "depends_on" : "sth",
+            "depends_on" : "x",
             "equipment_component" : "A.71",
-            "offset" : "34.56",
+            "offset" : 34.56,
             "offset_units" : "um",
             "units" : "um",
             "value" : 123,
-            "vector" : "123",
+            "vector" : [0] * plan_step_number,
         },
 
         # ---
