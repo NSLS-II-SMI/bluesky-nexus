@@ -9,30 +9,30 @@
 nx_model: NXgeneralModel # pydantic model associated with this schema
 nxclass: NXmonochromator # group: NXmonochromator
 
-TRANSFORMATIONS: # Group: 'TRANSFORMATIONS' belongs to NXmonochromator group
+TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
   nxclass: NXtransformations
-  attributes: # Attributes of the AXISNAME
-    at_0: # Facultative attribute of the group TRANSFORMATIONS
-      #nxclass: "NX_FLOAT" # Facultative
+  attributes: # attributes of the AXISNAME
+    at_0: # facultative attribute of the group TRANSFORMATIONS
+      #nxclass: "NX_FLOAT" # facultative
       value: $post-run:en # fetch it from the device component
       #dtype: int8
-    at_1: # Facultative attribute of the group TRANSFORMATIONS
+    at_1: # facultative attribute of the group TRANSFORMATIONS
       #nxclass: "NX_CHAR" # Facultative
       value: $pre-run-md:transformations_axisname
       dtype: str
-    at_2: # Facultative attribute of the group TRANSFORMATIONS
+    at_2: # facultative attribute of the group TRANSFORMATIONS
       #nxclass: "NX_CHAR" # Facultative
       value: ["I am" , "string"]
       dtype: str
-    at_3: # Facultative attribute of the group TRANSFORMATIONS
+    at_3: # facultative attribute of the group TRANSFORMATIONS
       #nxclass: "NX_NUMBER" # Facultative
       value: 3.1415
       dtype: float32
-    at_4: # Facultative attribute of the group TRANSFORMATIONS
+    at_4: # facultative attribute of the group TRANSFORMATIONS
       #nxclass: "NX_NUMBER" # Facultative
       value: 14
       dtype: int32
-    at_5: # Facultative attribute of the group TRANSFORMATIONS
+    at_5: # facultative attribute of the group TRANSFORMATIONS
       #nxclass: "NX_BOOLEAN" # Facultative
       value: True
       dtype: bool
