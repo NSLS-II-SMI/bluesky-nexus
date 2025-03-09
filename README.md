@@ -1,29 +1,31 @@
 # bluesky nexus
 
-## Table of Contents
+## Table of contents
 
 - [bluesky nexus](#bluesky-nexus)
-  - [Table of Contents](#table-of-contents)
+  - [Table of contents](#table-of-contents)
   - [Description](#description)
-  - [Pydantic Schema and Model Capabilities](#pydantic-schema-and-model-capabilities)
-    - [Example of Schema YAML file](#example-of-schema-yaml-file)
-  - [Role of the Schema with the Model](#role-of-the-schema-with-the-model)
-    - [Example of Model classes](#example-of-model-classes)
-  - [Unit Definition Strategy](#unit-definition-strategy)
-  - [Placeholder Mechanism](#placeholder-mechanism)
-    - [Placeholder Syntax](#placeholder-syntax)
+  - [Pydantic schema and model capabilities](#pydantic-schema-and-model-capabilities)
+    - [Example of schema yml file](#example-of-schema-yml-file)
+  - [Rules concerning definition of a groups, datasets and their attributes in the schema yml file](#rules-concerning-definition-of-a-groups-datasets-and-their-attributes-in-the-schema-yml-file)
+  - [Role of the schema with the model](#role-of-the-schema-with-the-model)
+    - [Example of model class](#example-of-model-class)
+  - [Unit definition strategy](#unit-definition-strategy)
+  - [Placeholder mechanism](#placeholder-mechanism)
+    - [Placeholder syntax](#placeholder-syntax)
   - [Subscription of devices in the baseline](#subscription-of-devices-in-the-baseline)
-  - [Requirements for Device Classes](#requirements-for-device-classes)
+  - [Requirements for device classes](#requirements-for-device-classes)
     - [Example of custom device](#example-of-custom-device)
-  - [Installation and usage in the context of bluesky container (Bluesky deployment)](#installation-and-usage-in-the-context-of-bluesky-container-bluesky-deployment)
+  - [Installation and usage in the context of bluesky container (bluesky deployment)](#installation-and-usage-in-the-context-of-bluesky-container-bluesky-deployment)
   - [Installation and usage outside the bluesky container](#installation-and-usage-outside-the-bluesky-container)
     - [NeXus logging setup](#nexus-logging-setup)
-    - [Let the preprocessor append ```nexus metadata``` to the start document](#let-the-preprocessor-append-nexus-metadata-to-the-start-document)
+    - [Let the preprocessor append ```NeXus metadata``` to the start document](#let-the-preprocessor-append-nexus-metadata-to-the-start-document)
     - [Let the preprocessor append ```devices metadata``` to the start document](#let-the-preprocessor-append-devices-metadata-to-the-start-document)
     - [Subscribe the callback: NexusWriter](#subscribe-the-callback-nexuswriter)
   - [Explanations on the optional NeXus logger](#explanations-on-the-optional-nexus-logger)
   - [Optional definition of the metadata dictionary in Your script that is transferred to the plan](#optional-definition-of-the-metadata-dictionary-in-your-script-that-is-transferred-to-the-plan)
   - [Cheat sheet for maintenance purposes in context of HZB bluesky deployment](#cheat-sheet-for-maintenance-purposes-in-context-of-hzb-bluesky-deployment)
+  - [Context](#context)
   - [License](#license)
 
 ## Description
@@ -35,56 +37,182 @@
 
 ---
 
-## Pydantic Schema and Model Capabilities
+## Pydantic schema and model capabilities
 
 This library employs Pydantic schemas to allow for detailed mapping and customization, including:
 
-1. **Component Selection and Mapping**:
+1. **Component selection and mapping**:
    - Specify which components of a device class are mapped into the NeXus base class.
    - Define mappings between device class component names and NeXus field names (e.g., `en` → `energy`).
 
-2. **Structural Mapping**:
+2. **Structural mapping**:
    - Map device class component structures to NeXus base class structures (e.g., `mono.grating` → `mono.grating.diffraction_order`).
 
-3. **Value Transformation**:
-   - Apply conversion formulas to transform component values (e.g., eV to keV). 
-     - The evaluation of the expression is executed in the restricted environment.
+3. **Value transformation**:
+   - Apply conversion formulas to transform component values (e.g., eV to keV)
+   - The evaluation of the expression is executed in the restricted environment
 
-4. **NeXus Metadata**:
+4. **NeXus metadata**:
    - Define NeXus base class names (e.g. `NXmonochromator`, `NX_FLOAT`)
-   - Define data types of component values mapped into nexus fields (e.g. `float64`, `int32`, `str`).
+   - Define data types of component values mapped into NeXus fields (e.g. `float64`, `int32`, `str`).
    - Specify the unit of component values (e.g., `rad`, `keV`).
 
-5. **Data Fetching**:
+5. **Data fetching**:
    - Determine when component values should be fetched:
      - **Pre-run**: Based on static metadata or data read from the instrument available before the run
      - **Post-run**: Based on event documents available after the run.
 
-### Example of Schema YAML file
+### Example of schema yml file
+
+The following example shows how groups, fields, attrs and attributes can be defined in the schema yml file. This example contains elements that are not applicable in the real case, it is only intended to show the possibilities.
 
 ```yaml
-nx_model: NXmonochromatorModel
-nxclass: NXmonochromator
-energy:
+nx_model: NXmonochromatorModel # pydantic model associated with this schema
+nxclass: NXmonochromator # group: NXmonochromator
+
+energy: # field: "energy" belongs to NXmonochromator group
+  nxclass: NX_FLOAT
+  value: $post-run:en # fetch it from the device component 
+  dtype: float64
+  attrs:  # attrs belong to field: "energy"
+    units: "keV"
+    prices: "Euro"
+    days: ["Mo", "We"]
+    factors: [1.34, 2.78]
+    destination: {"departement": "A23"}
+    value: 12.34
+    PI: 3.1415
+  transformation:
+    expression: 3 * x**2 + np.exp(np.log(5)) + 1 # symbolic expression for the transformation
+    target: value # specifies the name of array to which expression is applied
+GRATING:  # group: 'GRATING' belongs to NXmonochromator group
+  nxclass: NXgrating
+  attrs: # attrs belong to group "GRATING"
+    attr_0: "new"
+    value: 167
+  diffraction_order: # field: "diffraction_order" belongs to group "GRATING"
+    nxclass: NX_INT
+    value: $pre-run-cpt:grating
+    dtype: int32
+    attrs: # attrs belong to field "diffraction_order"
+      at_0: 13.14
+      at_1: [2.03, 4.05]
+      value: "some_value"
+TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
+  nxclass: NXtransformations
+  attrs: # attrs belong to group "TRANSFORMATIONS"
+    attr_0: 3.1415
+    value: "3.1"
+    attr_1: {"a":"2"}
+    attr_2: [1.01, 2.02]
+  AXISNAME: # field: 'AXISNAME' belong to group "TRANSFORMATIONS"
+    nxclass: NX_CHAR
+    value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
+    dtype: str
+    attrs: # attrs belong to field "AXISNAME"
+      units: "um"
+      value: 123
+    attributes: # attributes of the AXISNAME
+      vector: # obligatory attribute of the AXISNAME
+        nxclass: "NX_NUMBER"
+        value: $post-run:en # fetch it from the device component
+        dtype: int32
+      offset: # facultative attribute of the AXISNAME
+        nxclass: "NX_NUMBER"
+        value: 34.56
+        dtype: float64
+      offset_units: # facultative attribute of the AXISNAME
+        nxclass: "NX_CHAR"
+        value: "um"
+        dtype: str
+      depends_on: # facultative attribute of the AXISNAME
+        nxclass: "NX_CHAR"
+        value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
+        dtype: str
+      equipment_component: # facultative attribute of "AXISNAME"
+        nxclass: "NX_CHAR"
+        value: "A.71"
+        dtype: str
+  AXISNAME_end: # field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
+    nxclass: NX_FLOAT
+    value: $post-run:en
+    dtype: float64
+  AXISNAME_increment_set: # field: 'AXISNAME_increment_set' of group "TRANSFORMATIONS"
+    nxclass: NX_INT
+    value: $post-run:en
+    dtype: int32
+description: # field: 'description' belongs to NXmonochromator group
+  nxclass: NX_CHAR
+  value: $pre-run-md:description # fetch it from the device metadata (happi)
+  dtype: str
+attrs:  # attrs belong to NXmonochromator group
+  attr_0: 3.1415
+  value: "3.1415"
+  attr_1: {'a':'2'}
+  attr_2: "{'b':'1'}"
+  attr_3: [1.02, 3.04, 5.06]
+  attr_4: True
+
+### NXmonochromator group allows extra groups/fields that are not explicitly defined in the model, see definition of `model_config` in the `nx_monochromator_model`
+someGroup: # additional group: "someGroup"
+  nxclass: NXsomeClass
+  attrs:
+    attr_1: {"a":"2"}
+    attr_2: [5.06, 7.08]
+  energy: # field energy belonging to someGroup
+    nxclass: NX_FLOAT
+    value: $post-run:en
+    dtype: float64
+    attrs:
+      attr_1: "PI"
+      attr_2: 3.1415
+someDataset: # additional dataset: "someDataset"
   nxclass: NX_FLOAT
   value: $post-run:en
   dtype: float64
-  attrs:
-    units: "keV"
-  transformation:
-    expression: 3 * x**2 + np.exp(x+5) + 1.35 # Symbolic expression for the transformation
-    target: value # Specifies the name of array to which expression is applied
-grating:
-  nxclass: NXgrating
-  diffraction_order:
-    nxclass: NX_INT
-    value: $post-run:grating
-    dtype: int32
 ```
 
-## Role of the Schema with the Model
+---
 
-The schema file specifies how data should be structured and which model should be applied. 
+## Rules concerning definition of a groups, datasets and their attributes in the schema yml file
+
+Elements of a group:
+
+- definition of `nxclass`: mandatory. This is a name of the group equivalent to the name of the NeXus base class defining this group. E.g. NXmonochromator, NXgrating, NXtransformations, etc.
+- definition of `attributes`: facultative and applicable only if attributes are defined at the group level by the NeXus base class of the group. Attributes at the group level are associated with the group.
+- definition of datasets: facultative and applicable as defined by the NeXus base class defining the group
+- definition of `attrs`: facultative arbitrary attributes at the group level defined by the user and not by the the NeXus base class of the group. The input is not validated by the pydantic model since not defined by the NeXus base class of the group. Attributes at the group level are associated with the group.
+
+Elements of a dataset:
+
+- definition of `nxclass`: mandatory, defined in the the NeXus base class of the group the dataset belongs to, e.g. NX_FLOAT, NX_INT, NX_CHAR ...
+- definition of `value`: mandatory placeholder for addressing the device component from which the data is to be retrieved from bluesky documents once the bluesky run is done.
+- definition of `dtype`: obligatory in case the device component does not provide data type information. If device provides data type information the user can still force/overwrite the data type for the dataset to be written to the NeXus file by defining explicitelly the `dtype`, e.g. float64, int32, str, bool ...
+- definition of `attributes`: facultative and applicable only if attributes are defined at the dataset level by the NeXus base class of the group the dataset belongs to. Attributes at the dataset level are associated with the dataset.
+- definition of `attrs`: facultative, arbitrary attributes at the dataset level defined by the user and not by the the NeXus base class of the group the dataset belongs to. The input is not validated by the pydantic model since it is not defined by the NeXus base class of the group the dataset belongs to. Attributes at the datset level are associated with the dataset.
+- definition of `transformation`: applicable if transformation of the numerical value/values provided by the device component is required before writting it/them to the NeXus file.
+
+Elements of `attributes` defined at the group or dataset level:
+
+- `value`: mandatory placeholder for addressing the device component from which the data is to be retrieved from bluesky documents once the bluesky run is done. Instead of the placeholder it can also be a scalar value.
+- `dtype`:
+  - if `value` defines a placeholder: obligatory in case the device component does not provide data type information. If device provides data type information the user can still force/overwrite the data type for the attribute to be written to the NeXus file by defining explicitelly the `dtype`, e.g. float64, int32, str, bool ...
+  - if `value` defines a fixed scalar value: obligatory, i.e. str, float64, int32 ...
+
+The “attrs” defined by the user at group or dataset level are saved in the NeXus file according to the following rules:
+
+- dictionary is converted to a JSON string and saved as variable-length UTF-8 string value
+- string is saved as variable-length UTF-8 string value
+- integer is saved as int64 value
+- float is saved as float64 value
+- bool is saved as uint8 value
+- list of floats/integers/bools is saved as numpy array of float64/int64/uint8 values
+
+---
+
+## Role of the schema with the model
+
+The schema file specifies how data should be structured and which model should be applied.
 This connection is established through the nx_model field in the schema file. For example:
 
 ```yaml
@@ -94,46 +222,47 @@ nxclass: NXmonochromator
 
 Here, the nx_model field (e.g., NXmonochromatorModel) explicitly defines the model responsible for handling the schema. This mapping ensures that the rules, transformations, and validations specified in the model are applied to the corresponding NeXus group or field. Moreover, the model allows for the inclusion of verbal descriptions of component roles, improving clarity.
 
-### Example of Model classes
+### Example of model class
 
 ```python
-
-class NXgratingModel(NXgroupModel):
-    diffraction_order: NXfieldModelWithPrePostRunString = Field(
-        None, description="Diffraction order value"
-    )
-    substrate_material: Optional[NXfieldModelWithPrePostRunString] = Field(
-        None, description="Substrate material type"
-    )
-
 class NXmonochromatorModel(NXgroupModel):
-    default: NXattrModelWithString = Field(
-        NXattrModel(value="energy"), description="Default"
-    )
-    energy: NXfieldModelWithPrePostRunString = Field(None, description="Energy selected")
-    grating: NXgratingModel = Field(None, description="Grating")
-
+    
+    default: NXattrModel = Field(NXattrModel(value="energy"), description='Default.')
+    wavelength: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Wavelength selected.")
+    wavelegth_errors: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Wavelength standard deviation.")
+    energy: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Energy selected.")
+    energy_errors: Optional[NXfieldModelWithPrePostRunString] = Field (None, description="Energy standard deviation.")
+    depends_on: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="NeXus positions components by applying a set of translations and rotations.")
+    distribution: Optional[NXdataModel] = Field(None, description="Distribution.")
+    OFF_GEOMETRY: Optional[NXoff_geometryModel] = Field(None, description='This group describes the shape of the beam line component.')
+    CRYSTAL: Optional[NXcrystalModel] = Field(None, description="Use as many crystals as necessary to describe.")
+    GRATING: Optional[NXgratingModel] = Field(None, description="For diffraction grating based monochromators.")
+    TRANSFORMATIONS: Optional[NXtransformationsModel] = Field(None, description="This is the group recommended for holding the chain of translation and rotation operations necessary to position the component within the instrument.")
+    description: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Description of the monochromator.")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 ```
 
 ---
 
-## Unit Definition Strategy
+## Unit definition strategy
 
-The schema supports defining units for device components. The strategy for defining units in the schema YAML file is as follows:
+The schema supports defining units for device components. The strategy for defining units in the schema yml file is as follows:
 
-1. **Device Provides Units**:  
-   If the device natively returns units, set the `units` field in the schema to an empty string (`""`). This ensures that the units provided by the device are used directly.
+1. **Device provides units**:  
+   If the device natively returns units, the units provided by the device are used directly. I such case do not define any `units` under `attrs`, otherwise the `units` defined under `attrs` will be used.
 
-2. **Device Does Not Provide Units**:  
-   If the device does not return units, define the appropriate unit value in the `units` field of the schema. This ensures that the correct unit for that specific device is explicitly set.
+2. **Device does not provide units**:  
+   If the device does not return any units, define the corresponding unit value in the `units` under `attrs`. This ensures that the correct units are explicitly defined for this specific device.
 
-## Placeholder Mechanism
+---
+
+## Placeholder mechanism
 
 The **bluesky_nexus** library uses placeholders to manage and organize data fetched during different phases of the run. These placeholders are incorporated into the `nexus_md` dictionary in the `start` document and are filled during the pre-run or post-run phases.
 
-### Placeholder Syntax
+### Placeholder syntax
 
-1. **Pre-run Metadata**:  
+1. **Pre-run metadata**:  
    - Fetch metadata associated with a device instance.
    - Syntax: `$pre-run-md:<metadata_name>`  
    - Details:  
@@ -143,7 +272,7 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
        - `$pre-run-md:grating_substrate_material`  
        - `$pre-run-md:worldPosition:x`
 
-2. **Pre-run Component Values**:  
+2. **Pre-run component values**:  
    - Fetch values from components before the run.
    - Syntax: `$pre-run-cpt:<component_name>`  
    - Details:
@@ -153,13 +282,13 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
        - `$pre-run-cpt:grat:diffraction_order`
        - `$pre-run-cpt:en:readback`
 
-3. **Post-run Component Values**:  
+3. **Post-run component values**:  
    - Retrieve values of components after the run from event documents or descriptor document.
    - Syntax: `$post-run:<component_name>`
    - Details:  
      - The separation between the prefix `$post-run` and component name is made by applying the colon sign (`:`).
      - The separation between items of the `<component_name>` is made by applying the underscore sign (`_`) (as per the ophyd naming style).
-     -  If in the class definition of the component its name is “reduced” to the name of the instance that contains this component, e.g.: `self.readback.name = self.name`, this must be taken into account when defining the character string that appears after `$post-run`.
+     - If in the class definition of the component its name is “reduced” to the name of the instance that contains this component, e.g.: `self.readback.name = self.name`, this must be taken into account when defining the character string that appears after `$post-run`.
      - **Examples**:
        - `$post-run:grating_diffraction_order`
        - `$post-run:en`
@@ -177,12 +306,12 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
 
 ---
 
-## Requirements for Device Classes
+## Requirements for device classes
 
 All device classes used with this package must inherit from the `NXdevice` base class. The `NXdevice` class enforces the presence of a `nx_schema` attribute, which specifies the name of the pydantic schema yml file associated with the device. This requirement ensures that each device instance is correctly configured for NeXus data handling.
 The definition of `NXdevice` class is located at: `bluesky_nexus/src/bluesky_nexus/bluesky_nexus_device_base.py`.
 
-It was decided to “manage” the pydantic schema of NeXus in a yaml file and not directly in the nx_schema variable as a dictionary. The reason for this is the easy readability and editability of nested elements of the schema file when it is represented as a yml file.
+It was decided to “manage” the pydantic schema of NeXus in a yml file and not directly in the nx_schema variable as a dictionary. The reason for this is the easy readability and editability of nested elements of the schema file when it is represented as a yml file.
 
 ### Example of custom device
 
@@ -198,7 +327,7 @@ class Mono(NXdevice):
 
 ---
 
-## Installation and usage in the context of bluesky container (Bluesky deployment)
+## Installation and usage in the context of bluesky container (bluesky deployment)
 
   Make sure that the “nexus.py” file is located in the “beamline_config” directory. The content of “nexus.py” is:
 
@@ -216,7 +345,7 @@ from bluesky_nexus.bluesky_nexus_paths import (
     get_nx_log_file_dir_path,
 )
 
-# Let the preprocessor append nexus metadata to the start document
+# Let the preprocessor append NeXus metadata to the start document
 nx_schema_dir_path: str = get_nx_schema_dir_path()
 metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
 metadata.devices_dictionary: dict = devices_dictionary
@@ -247,11 +376,14 @@ setup_nx_logger(
     backup_count=5,
 )
 ```
+
 Make sure that the file `__init__.py` in the “beamline_config” directory contains the following import:
 
 ```python
 from .nexus import *
 ```
+
+---
 
 ## Installation and usage outside the bluesky container
 
@@ -288,7 +420,7 @@ Add the following NeXus logging setup, preprocessor, and callback subscriptions 
 This is an optional setting of the NeXus logger. If the setting is not defined, logging to a log file is deactivated.
 
 ```python
-nx_log_file_dir_path: str = "Your path to the nexus log file directory"
+nx_log_file_dir_path: str = "Your path to the NeXus log file directory"
 setup_nx_logger(
     level=logging.DEBUG,
     log_file_dir_path=nx_log_file_dir_path,
@@ -300,7 +432,7 @@ setup_nx_logger(
 
 In your script subscribe to the preprocessor and the callback:
 
-### Let the preprocessor append ```nexus metadata``` to the start document
+### Let the preprocessor append ```NeXus metadata``` to the start document
 
   ```python
   nx_schema_dir_path: str = "Your path to nx_schema directory"
@@ -331,6 +463,8 @@ In your script subscribe to the preprocessor and the callback:
   RE.subscribe(nexus_writer)
   ```
 
+---
+
 ## Explanations on the optional NeXus logger
 
 - Adjust the log level using `level` if necessary, e.g. logging.INFO, logging.WARNING
@@ -341,6 +475,8 @@ In your script subscribe to the preprocessor and the callback:
   - Default value: `max_file_size`=`10 * 1024 * 1024`
 - "Adjust the number of backup log files to keep using `backup_count` if necessary."
   - Default value: `backup_count`=`5`
+
+---
 
 ## Optional definition of the metadata dictionary in Your script that is transferred to the plan
 
@@ -359,6 +495,8 @@ the 'uid' extracted from the start document of the run (start_doc[“uid”]). Y
   def my_plan():
     yield from scan(detectors, motor, 1, 10, 5, md=md)
   ```
+
+---
 
 ## Cheat sheet for maintenance purposes in context of HZB bluesky deployment
 
@@ -389,6 +527,14 @@ _NX_SCHEMA_DIR_PATH=/opt/bluesky/nx_schema_dir
   ```
 
 Replace in the paths `daniel` by a username.
+
+---
+
+## Context
+
+This package was developed as part of the activities of the WP2 group of the Helmholtz-founded project **ROCK-IT** (Remote, Operando Controlled, Knowledge-driven, and IT-based).
+
+---
 
 ## License
 
