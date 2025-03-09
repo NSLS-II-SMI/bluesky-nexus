@@ -45,23 +45,18 @@ TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
       value: 123
     attributes: # attributes of the AXISNAME
       vector: # obligatory attribute of the AXISNAME
-        nxclass: "NX_NUMBER"
         value: $post-run:en # fetch it from the device component
         dtype: int32
       offset: # facultative attribute of the AXISNAME
-        nxclass: "NX_NUMBER"
         value: 34.56
         dtype: float64
       offset_units: # facultative attribute of the AXISNAME
-        nxclass: "NX_CHAR"
         value: "um"
         dtype: str
       depends_on: # facultative attribute of the AXISNAME
-        nxclass: "NX_CHAR"
         value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
         dtype: str
       equipment_component: # facultative attribute of "AXISNAME"
-        nxclass: "NX_CHAR"
         value: "A.71"
         dtype: str
   AXISNAME_end: # field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
