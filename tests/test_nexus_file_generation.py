@@ -518,7 +518,8 @@ def test_1(
                                   "attr_1" : {'a':'2'},
                                   "attr_2" : "{'b':'1'}",
                                   "attr_3" : [1.02, 3.04, 5.06],
-                                  "attr_4" : 1,
+                                  "attr_4" : [5,6,7],
+                                  "attr_5" : True,
                                   "default" : "energy",
                                   "value" : "3.1415",
                                   },
@@ -530,7 +531,7 @@ def test_1(
             "NX_class" : "NX_FLOAT",
             "PI" : 3.1415,
             "days" : ["Mo", "We"],
-            "destination" : "{'departement': 'A23'}",
+            "destination" : '{"departement": "A23"}',
             "factors" : [1.34, 2.78],
             "object_name" : "mono_en",
             "precision" : 3,
@@ -605,7 +606,7 @@ def test_1(
         "entry/instrument/mono/TRANSFORMATIONS": {
             "NX_class": "NXtransformations",
             "attr_0" : 3.1415,
-            "attr_1" : "{'a': '2'}",
+            "attr_1" : '{"a": "2"}',
             "attr_2" : [1.01, 2.02],
             "default" : "vector",
             "value" : "3.1",
@@ -679,7 +680,7 @@ def test_1(
         # ---  
         "entry/instrument/mono/someGroup": {
           "NX_class" : "NXsomeClass",
-          "attr_1" : "{'a': '2'}",
+          "attr_1" : '{"a": "2"}',
           "attr_2" : [5.06, 7.08],
         },
 
@@ -1156,10 +1157,11 @@ def test_2(
         "entry/instrument/mono": {"NX_class": "NXmonochromator", 
                                   "nx_model": "NXmonochromatorModel", 
                                   "attr_0" : 3.1415,
-                                  "attr_1" : {'a':'2'},
+                                  "attr_1" : {"a":"2"},
                                   "attr_2" : "{'b':'1'}",
                                   "attr_3" : [1.02, 3.04, 5.06],
-                                  "attr_4" : 1,
+                                  "attr_4" : [5,6,7],
+                                  "attr_5" : True,
                                   "default" : "energy",
                                   "value" : "3.1415",
                                   },
@@ -1170,7 +1172,7 @@ def test_2(
             "NX_class" : "NX_FLOAT",
             "PI" : 3.1415,
             "days" : ["Mo", "We"],
-            "destination" : "{'departement': 'A23'}",
+            "destination" : '{"departement": "A23"}',
             "factors" : [1.34, 2.78],
             "object_name" : "mono_en",
             "precision" : 3,
@@ -1245,7 +1247,7 @@ def test_2(
         "entry/instrument/mono/TRANSFORMATIONS": {
             "NX_class": "NXtransformations",
             "attr_0" : 3.1415,
-            "attr_1" : "{'a': '2'}",
+            "attr_1" : '{"a": "2"}',
             "attr_2" : [1.01, 2.02],
             "default" : "vector",
             "value" : "3.1",
@@ -1319,7 +1321,7 @@ def test_2(
         # ---  
         "entry/instrument/mono/someGroup": {
           "NX_class" : "NXsomeClass",
-          "attr_1" : "{'a': '2'}",
+          "attr_1" : '{"a": "2"}',
           "attr_2" : [5.06, 7.08],
         },
 
@@ -1949,7 +1951,8 @@ def test_4(
                                   "attr_1" : {'a':'2'},
                                   "attr_2" : "{'b':'1'}",
                                   "attr_3" : [1.02, 3.04, 5.06],
-                                  "attr_4" : 1,
+                                  "attr_4" : [5,6,7],
+                                  "attr_5" : True,
                                   "default" : "energy",
                                   "value" : "3.1415",
                                   },
@@ -1961,7 +1964,7 @@ def test_4(
             "NX_class" : "NX_FLOAT",
             "PI" : 3.1415,
             "days" : ["Mo", "We"],
-            "destination" : "{'departement': 'A23'}",
+            "destination" : '{"departement": "A23"}',
             "factors" : [1.34, 2.78],
             "object_name" : "mono_en",
             "precision" : 3,
@@ -2036,7 +2039,7 @@ def test_4(
         "entry/instrument/mono/TRANSFORMATIONS": {
             "NX_class": "NXtransformations",
             "attr_0" : 3.1415,
-            "attr_1" : "{'a': '2'}",
+            "attr_1" : '{"a": "2"}',
             "attr_2" : [1.01, 2.02],
             "default" : "vector",
             "value" : "3.1",
@@ -2110,7 +2113,7 @@ def test_4(
         # ---  
         "entry/instrument/mono/someGroup": {
           "NX_class" : "NXsomeClass",
-          "attr_1" : "{'a': '2'}",
+          "attr_1" : '{"a": "2"}',
           "attr_2" : [5.06, 7.08],
         },
 
