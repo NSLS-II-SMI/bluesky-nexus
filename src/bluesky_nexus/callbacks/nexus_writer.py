@@ -28,6 +28,7 @@ Notes:
 """
 
 import copy
+import json
 import os
 import re
 from collections import deque
@@ -681,22 +682,27 @@ def add_group_or_field(group, data):
         """
         for key, value in attrs.items():
             # Automatically determine the type and convert accordingly
-            
+
             if isinstance(value, dict):
-                dataset.attrs[key] = str(value)  # Convert dict to str
-            
+                json_value = json.dumps(value)  # Convert dictionary to JSON string
+                dtype = h5py.string_dtype(encoding='utf-8')  # Ensure UTF-8 encoding
+                value = np.array(json_value, dtype=dtype)  # Convert scalar string to numpy array
+                dataset.attrs[key] = value
+
             elif isinstance(value, str):
-                dataset.attrs[key] = value  # Save string directly
-            
-            elif isinstance(value, (int, np.integer)):
-                dataset.attrs[key] = np.int64(value)  # Store as int64 (safe for large numbers)
-            
-            elif isinstance(value, (float, np.floating)):
-                dataset.attrs[key] = np.float64(value)  # Store as float64 for precision
-            
+                dtype = h5py.string_dtype(encoding='utf-8')  # Ensure UTF-8 encoding
+                value = np.array(value, dtype=dtype)  # Convert scalar string to numpy array
+                dataset.attrs[key] = value
+
             elif isinstance(value, bool):
                 dataset.attrs[key] = np.bool_(value)  # Store as a NumPy boolean
-            
+
+            elif isinstance(value, (int, np.integer)):
+                dataset.attrs[key] = np.int64(value)  # Store as int64 (safe for large numbers)
+
+            elif isinstance(value, (float, np.floating)):
+                dataset.attrs[key] = np.float64(value)  # Store as float64 for precision
+
             elif isinstance(value, (list, tuple, np.ndarray)):
                 # Convert to NumPy array to ensure consistent storage
                 value = np.array(value)
@@ -809,15 +815,15 @@ def add_group_or_field(group, data):
                     if "attributes" in value:
                         add_attributes(dataset, value["attributes"])
 
-                    # Add attribute shape (obligatory)
+                    # Add attribute 'shape' (obligatory)
                     if "shape" in value:
                         dataset.attrs["shape"] = value["shape"]
 
-                    # Add optionally "NX_class" attribute that is not expected by nexus convention for datasets
+                    # Add attribute 'NX_class' (obligatory)
                     if "nxclass" in value:
                         dataset.attrs["NX_class"] = value["nxclass"]
 
-                    # Add attribute transformation (optional)
+                    # Add attribute 'transformation' (optional)
                     if "transformation" in value:
                         dataset.attrs["transformation"] = str(value["transformation"]) # convert dict to  string
 
