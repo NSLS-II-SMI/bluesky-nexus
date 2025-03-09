@@ -328,7 +328,6 @@ class NXfieldModelForAttribute(NXfieldModel):
     Attributes:
     - value (Union[PrePostRunString, str]): Value of the attribute field.
     """
-    nxclass: Optional[str] = Field("NXclass", description="The nexus class of the attribute field.")
     value: Union[PrePostRunString, Scalar] = Field(..., description="Value of the attribute field.")
     dtype: Optional[str] = Field(None, description="Data type of the attribute field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
