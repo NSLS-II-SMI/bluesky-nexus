@@ -82,6 +82,7 @@ energy: # field: "energy" belongs to NXmonochromator group
     destination: {"departement": "A23"}
     value: 12.34
     PI: 3.1415
+    active: [True, False]
   transformation:
     expression: 3 * x**2 + np.exp(np.log(5)) + 1 # symbolic expression for the transformation
     target: value # specifies the name of array to which expression is applied
@@ -114,23 +115,18 @@ TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
       value: 123
     attributes: # attributes of the AXISNAME
       vector: # obligatory attribute of the AXISNAME
-        nxclass: "NX_NUMBER"
         value: $post-run:en # fetch it from the device component
         dtype: int32
       offset: # facultative attribute of the AXISNAME
-        nxclass: "NX_NUMBER"
         value: 34.56
         dtype: float64
       offset_units: # facultative attribute of the AXISNAME
-        nxclass: "NX_CHAR"
         value: "um"
         dtype: str
       depends_on: # facultative attribute of the AXISNAME
-        nxclass: "NX_CHAR"
         value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
         dtype: str
       equipment_component: # facultative attribute of "AXISNAME"
-        nxclass: "NX_CHAR"
         value: "A.71"
         dtype: str
   AXISNAME_end: # field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
@@ -151,9 +147,12 @@ attrs:  # attrs belong to NXmonochromator group
   attr_1: {'a':'2'}
   attr_2: "{'b':'1'}"
   attr_3: [1.02, 3.04, 5.06]
-  attr_4: True
+  attr_4: [5, 6, 7]
+  attr_5: True
 
-### NXmonochromator group allows extra groups/fields that are not explicitly defined in the model, see definition of `model_config` in the `nx_monochromator_model`
+###
+### NXmonochromator group allows extra groups/fields that are not explicitly defined in the model
+###
 someGroup: # additional group: "someGroup"
   nxclass: NXsomeClass
   attrs:
