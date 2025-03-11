@@ -25,7 +25,7 @@ This module is designed to facilitate working with NeXus data structures in Pyth
 ensuring consistency and correctness when handling scientific datasets.
 """
 
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union, List
 
 import numpy as np
 import numpy.typing as npt
@@ -328,6 +328,6 @@ class NXfieldModelForAttribute(NXfieldModel):
     Attributes:
     - value (Union[PrePostRunString, str]): Value of the attribute field.
     """
-    value: Union[PrePostRunString, Scalar] = Field(..., description="Value of the attribute field.")
+    value: Union[PrePostRunString, Scalar, List[Scalar]] = Field(..., description="Value of the attribute field.")
     dtype: Optional[str] = Field(None, description="Data type of the attribute field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
