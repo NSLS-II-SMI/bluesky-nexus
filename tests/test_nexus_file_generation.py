@@ -608,14 +608,14 @@ def test_1(
             "attr_0" : 3.1415,
             "attr_1" : '{"a": "2"}',
             "attr_2" : [1.01, 2.02],
-            "default" : "vector",
+            "default" : "alpha",
             "value" : "3.1",
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha": {
             "NX_class": "NX_CHAR",
             "depends_on" : "x",
             "equipment_component" : "A.71",
@@ -623,13 +623,13 @@ def test_1(
             "offset_units" : "um",
             "units" : "um",
             "value" : 123,
-            "vector" : [0] * plan_step_number,
+            "vector" : [0,1,0],
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
             "NX_class": "NX_FLOAT",
             "object_name" : "mono_en",
             "precision" : 3,
@@ -638,18 +638,18 @@ def test_1(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "NX_class": "NX_FLOAT",
-            "description" : "Timestamps of the component: AXISNAME_end extracted from the events",
+            "description" : "Timestamps of the component: alpha_end extracted from the events",
             "shape" : [10],
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
             "NX_class" : "NX_INT",
             "object_name" : "mono_en",
             "precision" : 3,
@@ -658,11 +658,11 @@ def test_1(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "NX_class": "NX_FLOAT",
-            "description" : "Timestamps of the component: AXISNAME_increment_set extracted from the events",
+            "description" : "Timestamps of the component: alpha_increment_set extracted from the events",
             "shape" : [10],
         },
 
@@ -879,43 +879,43 @@ def test_1(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha": {
             "value": b"x",
             "shape": (1,), # Scalar
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
             "value": [0.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
         
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
             "value": [0.0] * plan_step_number,
             "dtype": "int32",
             "shape": (plan_step_number,),
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
@@ -1083,7 +1083,6 @@ def test_1(
     # Remove the callback file after successful creation
     clean_up(callback_file_path)
 
-
 # Test function
 # @unittest.skip("Temporarily disabling this test_2")
 def test_2(
@@ -1249,14 +1248,14 @@ def test_2(
             "attr_0" : 3.1415,
             "attr_1" : '{"a": "2"}',
             "attr_2" : [1.01, 2.02],
-            "default" : "vector",
+            "default" : "alpha",
             "value" : "3.1",
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha": {
             "NX_class": "NX_CHAR",
             "depends_on" : "x",
             "equipment_component" : "A.71",
@@ -1264,13 +1263,13 @@ def test_2(
             "offset_units" : "um",
             "units" : "um",
             "value" : 123,
-            "vector" : [0] * plan_step_number,
+            "vector" : [0,1,0],
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
             "NX_class": "NX_FLOAT",
             "object_name" : "mono_en",
             "precision" : 3,
@@ -1279,18 +1278,18 @@ def test_2(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "NX_class": "NX_FLOAT",
-            "description" : "Timestamps of the component: AXISNAME_end extracted from the events",
+            "description" : "Timestamps of the component: alpha_end extracted from the events",
             "shape" : [10],
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
             "NX_class" : "NX_INT",
             "object_name" : "mono_en",
             "precision" : 3,
@@ -1299,11 +1298,11 @@ def test_2(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "NX_class": "NX_FLOAT",
-            "description" : "Timestamps of the component: AXISNAME_increment_set extracted from the events",
+            "description" : "Timestamps of the component: alpha_increment_set extracted from the events",
             "shape" : [10],
         },
 
@@ -1435,43 +1434,43 @@ def test_2(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha": {
             "value": b"x",
             "shape": (1,), # Scalar
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
             "value": [0.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
         
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
             "value": [0.0] * plan_step_number,
             "dtype": "int32",
             "shape": (plan_step_number,),
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
@@ -2041,14 +2040,14 @@ def test_4(
             "attr_0" : 3.1415,
             "attr_1" : '{"a": "2"}',
             "attr_2" : [1.01, 2.02],
-            "default" : "vector",
+            "default" : "alpha",
             "value" : "3.1",
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha": {
             "NX_class": "NX_CHAR",
             "depends_on" : "x",
             "equipment_component" : "A.71",
@@ -2056,13 +2055,13 @@ def test_4(
             "offset_units" : "um",
             "units" : "um",
             "value" : 123,
-            "vector" : [0] * plan_step_number,
+            "vector" : [0,1,0],
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
             "NX_class": "NX_FLOAT",
             "object_name" : "mono_en",
             "precision" : 3,
@@ -2071,18 +2070,18 @@ def test_4(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "NX_class": "NX_FLOAT",
-            "description" : "Timestamps of the component: AXISNAME_end extracted from the events",
+            "description" : "Timestamps of the component: alpha_end extracted from the events",
             "shape" : [10],
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
             "NX_class" : "NX_INT",
             "object_name" : "mono_en",
             "precision" : 3,
@@ -2091,11 +2090,11 @@ def test_4(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps and its attributes ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps and its attributes ---
         # ---  
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "NX_class": "NX_FLOAT",
-            "description" : "Timestamps of the component: AXISNAME_increment_set extracted from the events",
+            "description" : "Timestamps of the component: alpha_increment_set extracted from the events",
             "shape" : [10],
         },
 
@@ -2228,43 +2227,43 @@ def test_4(
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha": {
             "value": b"x",
             "shape": (1,), # Scalar
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
             "value": [0.0] * plan_step_number,
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
         
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_end_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
             "value": [0.0] * plan_step_number,
             "dtype": "int32",
             "shape": (plan_step_number,),
         },
 
         # ---
-        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps ---
+        # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps ---
         # ---
-        "entry/instrument/mono/TRANSFORMATIONS/AXISNAME_increment_set_timestamps": {
+        "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "dtype": "float64",
             "shape": (plan_step_number,),
         },
