@@ -61,7 +61,7 @@ class NXtransformationsModel(NXgroupModel):
                                    types and forbidding extra fields.
     """
 
-    default: NXattrModel = Field(NXattrModel(value="vector"), description='Default')
+    default: NXattrModel = Field(NXattrModel(value="alpha"), description='Default')
 
     # ----- AXISNAME -----
     class AXISNAMEModel(NXfieldModelWithPrePostRunString):
@@ -101,7 +101,15 @@ class NXtransformationsModel(NXgroupModel):
             model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
         attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'AXISNAME' field.")
 
-    AXISNAME: Optional[AXISNAMEModel]= Field(None, description="Units need to be appropriate for translation or rotation.")
-    AXISNAME_end: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="AXISNAME_end is a placeholder for a name constructed from the actual name of an axis to which _end has been appended.")
-    AXISNAME_increment_set: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="AXISNAME_increment_set is a placeholder for a name constructed from the actual name of an axis to which _increment_set has been appended.")
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    alpha: Optional[AXISNAMEModel]= Field(None, description="Units need to be appropriate for translation or rotation.")
+    alpha_end: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="AXISNAME_end is a placeholder for a name constructed from the actual name of an axis to which _end has been appended.")
+    alpha_increment_set: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="AXISNAME_increment_set is a placeholder for a name constructed from the actual name of an axis to which _increment_set has been appended.")
+    
+    beta: Optional[AXISNAMEModel]= Field(None, description="Units need to be appropriate for translation or rotation.")
+    beta_end: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="AXISNAME_end is a placeholder for a name constructed from the actual name of an axis to which _end has been appended.")
+    beta_increment_set: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="AXISNAME_increment_set is a placeholder for a name constructed from the actual name of an axis to which _increment_set has been appended.")
+    
+    theta: Optional[AXISNAMEModel]= Field(None, description="Units need to be appropriate for translation or rotation.")
+    theta_end: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="AXISNAME_end is a placeholder for a name constructed from the actual name of an axis to which _end has been appended.")
+    theta_increment_set: Optional[NXfieldModelWithPrePostRunString]= Field(None, description="AXISNAME_increment_set is a placeholder for a name constructed from the actual name of an axis to which _increment_set has been appended.")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
