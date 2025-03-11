@@ -53,4 +53,4 @@ class NXgratingModel(NXgroupModel):
     figure_data: Optional[NXdataModel] = Field(None, description="Numerical description of the surface figure of the mirror.")    
     OFF_GEOMETRY: Optional[NXoff_geometryModel] = Field(None,description="This group describes the shape of the beam line component.")
     TRANSFORMATIONS: Optional[NXtransformationsModel] = Field(None, description="“Engineering” position of the grating Transformations used by this component to define its position and orientation.")
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")

@@ -69,4 +69,4 @@ class NXnoteModel(NXgroupModel):
     description: Optional[NXfieldModelWithPrePostRunString] = Field (None, description="Title of an image or other details of the note.")
     sequence_index: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Sequence index of note, for placing a sequence of multiple NXnote groups in an order. Starts with 1.")
     data: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Binary note data - if text, line terminator is [CR][LF].")
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")

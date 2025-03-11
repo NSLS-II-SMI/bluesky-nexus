@@ -72,4 +72,4 @@ class NXlogModel(NXgroupModel):
 
     cue_timestamp_zero: Optional[cue_timestamp_zeroModel] = Field(None, description="Timestamps matching the corresponding cue_index into the time, value pair.")
     cue_index: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Index into the time, value pair matching the corresponding cue_timestamp_zero.")
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")

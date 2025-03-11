@@ -137,4 +137,4 @@ class NXdataModel(NXgroupModel):
     x: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Array of x-axis values for the plot.")
     y: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Array of y-axis values for the plot.")
     z: Optional[NXfieldModelWithPrePostRunString] = Field(None,description="Array of z-axis values for the plot.")
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")

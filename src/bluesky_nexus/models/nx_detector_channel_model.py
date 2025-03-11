@@ -63,4 +63,4 @@ class NXdetector_channelModel(NXgroupModel):
     pixel_mask: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="Custom pixel mask for this channel. May include nP as the first dimension for masks that vary for each scan point.")
     saturation_value: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="The value at which the detector goes into saturation. Especially common to CCD detectors, the data is known to be invalid above this value.")
     underload_value: Optional[NXfieldModelWithPrePostRunString] = Field(None, description="The lowest value at which pixels for this detector would be reasonably measured. The data is known to be invalid below this value.")
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
