@@ -37,7 +37,7 @@ TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
     value: "3.1"
     attr_1: {"a":"2"}
     attr_2: [1.01, 2.02]
-  AXISNAME: # field: 'AXISNAME' belong to group "TRANSFORMATIONS"
+  alpha: # field: 'alpha' belongs to group "TRANSFORMATIONS"
     nxclass: NX_CHAR
     value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
     dtype: str
@@ -46,8 +46,8 @@ TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
       value: 123
     attributes: # attributes of the AXISNAME
       vector: # obligatory attribute of the AXISNAME
-        value: $post-run:en # fetch it from the device component
-        dtype: int32
+        value: [0,1,0]
+        dtype: int64
       offset: # facultative attribute of the AXISNAME
         value: 34.56
         dtype: float64
@@ -60,11 +60,11 @@ TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
       equipment_component: # facultative attribute of "AXISNAME"
         value: "A.71"
         dtype: str
-  AXISNAME_end: # field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
+  alpha_end: # field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
     nxclass: NX_FLOAT
     value: $post-run:en
     dtype: float64
-  AXISNAME_increment_set: # field: 'AXISNAME_increment_set' of group "TRANSFORMATIONS"
+  alpha_increment_set: # field: 'AXISNAME_increment_set' of group "TRANSFORMATIONS"
     nxclass: NX_INT
     value: $post-run:en
     dtype: int32
