@@ -89,8 +89,12 @@ class NXtransformationsModel(NXgroupModel):
                                                                   defines the axis of dependence.
                 equipment_component (Optional[NXfieldModelForAttribute]): Identifier 
                                                                           for the component of equipment.
+                description (Optional[NXfieldModelForAttribute]):
+                    A textual description of the axis and its purpose.
+                units (Optional[NXfieldModelForAttribute]):
+                    The measurement units used for the axis values.
                 model_config (ConfigDict): Configuration for the axis model, allowing 
-                                           arbitrary types and forbidding extra fields.
+                                           arbitrary types and forbidding/permitting extra fields.
             """
             transformation_type: Optional[NXfieldModelForAttribute] = Field(None, description="The transformation_type may be translation, in which case the values are linear displacements along the axis, rotation, in which case the values are angular rotations around the axis.")
             vector: NXfieldModelForAttribute = Field(..., description="Three values that define the axis for this transformation.")
@@ -98,7 +102,11 @@ class NXtransformationsModel(NXgroupModel):
             offset_units: Optional[NXfieldModelForAttribute] = Field(None, description="Units of the offset. Values should be consistent with NX_LENGTH.")
             depends_on: Optional[NXfieldModelForAttribute] = Field(None, description="Points to the path to a field defining the axis on which this depends or the string “.”.")
             equipment_component: Optional[NXfieldModelForAttribute] = Field(None, description="An arbitrary identifier of a component of the equipment to which the transformation belongs, such as ‘detector_arm’ or ‘detector_module’.")
-            model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+            
+            # Custom additions
+            description: Optional[NXfieldModelForAttribute] = Field(None, description="A textual description of the axis and its purpose.")
+            units: Optional[NXfieldModelForAttribute] = Field(None, description="The measurement units used for the axis values.")
+            model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
         attributes: Optional[AttributesModel] = Field(None, description="Attributes specific to the 'AXISNAME' field.")
 
     alpha: Optional[AXISNAMEModel]= Field(None, description="Units need to be appropriate for translation or rotation.")
