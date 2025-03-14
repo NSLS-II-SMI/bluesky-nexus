@@ -99,44 +99,84 @@ GRATING:  # group: 'GRATING' belongs to NXmonochromator group
       at_0: 13.14
       at_1: [2.03, 4.05]
       value: "some_value"
+
 TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
   nxclass: NXtransformations
-  attrs: # attrs belong to group "TRANSFORMATIONS"
-    attr_0: 3.1415
-    value: "3.1"
-    attr_1: {"a":"2"}
-    attr_2: [1.01, 2.02]
-  AXISNAME: # field: 'AXISNAME' belong to group "TRANSFORMATIONS"
-    nxclass: NX_CHAR
-    value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
-    dtype: str
-    attrs: # attrs belong to field "AXISNAME"
-      units: "um"
-      value: 123
-    attributes: # attributes of the AXISNAME
-      vector: # obligatory attribute of the AXISNAME
-        value: $post-run:en # fetch it from the device component
-        dtype: int32
-      offset: # facultative attribute of the AXISNAME
-        value: 34.56
-        dtype: float64
-      offset_units: # facultative attribute of the AXISNAME
-        value: "um"
-        dtype: str
-      depends_on: # facultative attribute of the AXISNAME
-        value: $pre-run-md:transformations_axisname # fetch it from the device metadata (happi)
-        dtype: str
-      equipment_component: # facultative attribute of "AXISNAME"
-        value: "A.71"
-        dtype: str
-  AXISNAME_end: # field: 'AXISNAME_end' belongs to group "TRANSFORMATIONS"
+  alpha:  # field: "alpha" belongs to TRANSFORMATIONS group
     nxclass: NX_FLOAT
-    value: $post-run:en
+    value: $post-run:alpha # fetch it from the device component
     dtype: float64
-  AXISNAME_increment_set: # field: 'AXISNAME_increment_set' of group "TRANSFORMATIONS"
-    nxclass: NX_INT
-    value: $post-run:en
-    dtype: int32
+    attributes:
+      transformation_type:
+        value: $pre-run-md:transformations:alpha:transformation_type # fetch it from the device metadata (happi)
+        dtype: str
+      units:
+        value: $pre-run-md:transformations:alpha:units # fetch it from the device metadata (happi)
+        dtype: str
+      vector:
+        value: $pre-run-md:transformations:alpha:vector # fetch it from the device metadata (happi)
+        dtype: int64
+      depends_on:
+        value: $pre-run-md:transformations:alpha:depends_on # fetch it from the device metadata (happi)
+        dtype: str
+      description:
+        value: $pre-run-md:transformations:alpha:description # fetch it from the device metadata (happi)
+        dtype: str
+  beta: # field: "beta" belongs to TRANSFORMATIONS group
+    nxclass: NX_FLOAT
+    value: $post-run:beta # fetch it from the device component
+    dtype: float64
+    attributes:
+      transformation_type:
+        value: $pre-run-md:transformations:beta:transformation_type # fetch it from the device metadata (happi)
+        dtype: str
+      units:
+        value: $pre-run-md:transformations:beta:units # fetch it from the device metadata (happi)
+        dtype: str
+      vector:
+        value: $pre-run-md:transformations:beta:vector # fetch it from the device metadata (happi)
+        dtype: int64
+      depends_on:
+        value: $pre-run-md:transformations:beta:depends_on # fetch it from the device metadata (happi)
+        dtype: str
+      description:
+        value: $pre-run-md:transformations:beta:description # fetch it from the device metadata (happi)
+        dtype: str
+  theta: # field: "theta" belongs to TRANSFORMATIONS group
+    nxclass: NX_FLOAT
+    value: $post-run:theta # fetch it from the device component
+    dtype: float64
+    attributes:
+      transformation_type:
+        value: $pre-run-md:transformations:theta:transformation_type # fetch it from the device metadata (happi)
+        dtype: str
+      units:
+        value: $pre-run-md:transformations:theta:units # fetch it from the device metadata (happi)
+        dtype: str
+      vector:
+        value: $pre-run-md:transformations:theta:vector # fetch it from the device metadata (happi)
+        dtype: int64
+      depends_on:
+        value: $pre-run-md:transformations:theta:depends_on # fetch it from the device metadata (happi)
+        dtype: str
+      description:
+        value: $pre-run-md:transformations:theta:description # fetch it from the device metadata (happi)
+        dtype: str
+  alpha_setpoint: # field: "alpha_setpoint" belongs to TRANSFORMATIONS group
+    nxclass: NX_FLOAT
+    value: $post-run:alpha_setpoint # fetch it from the device component
+    dtype: float64
+
+  beta_setpoint: # field: "beta_setpoint" belongs to TRANSFORMATIONS group
+    nxclass: NX_FLOAT
+    value: $post-run:beta_setpoint # fetch it from the device component
+    dtype: float64
+
+  theta_setpoint: # field: "theta_setpoint" belongs to TRANSFORMATIONS group
+    nxclass: NX_FLOAT
+    value: $post-run:theta_setpoint # fetch it from the device component
+    dtype: float64
+
 description: # field: 'description' belongs to NXmonochromator group
   nxclass: NX_CHAR
   value: $pre-run-md:description # fetch it from the device metadata (happi)
