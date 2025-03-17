@@ -19,7 +19,7 @@ TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
       value: $pre-run-md:transformations_axisname
       dtype: str
     at_2: # facultative attribute of the group TRANSFORMATIONS
-      value: ["I am" , "string"]
+      value: ["I am", "string"]
       dtype: str
     at_3: # facultative attribute of the group TRANSFORMATIONS
       value: 3.1415
