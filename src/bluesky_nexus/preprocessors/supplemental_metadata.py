@@ -128,7 +128,9 @@ class SupplementalMetadata(SupplementalData):
             raise ValueError(f"Invalid metadata type: {self.md_type}")
 
         # We have to cache the plan, otherwise the PlanDeviceChecker would exhaust the plan
-        plan1, plan2 = cache_plan(plan)  # Create two identical plans plan1 and plan2 from the plan
+        plan1, plan2 = cache_plan(
+            plan
+        )  # Create two identical plans plan1 and plan2 from the plan
 
         # Check if all devices of self.devices_dictionary are participating in the plan.
         checker = PlanDeviceChecker(self.devices_dictionary)
@@ -144,9 +146,7 @@ class SupplementalMetadata(SupplementalData):
 
         # Assign to all the devices contained in 'devices_in_plan' instances of pydantic models
         if self.MetadataType.NEXUS_MD == self.md_type:
-            assign_pydantic_model_instance(
-                self.nx_schema_dir_path, devices_in_plan
-            )
+            assign_pydantic_model_instance(self.nx_schema_dir_path, devices_in_plan)
 
         # Create metadata and inject it into the plan
         metadata: dict = create_metadata(devices_in_plan)
@@ -363,7 +363,9 @@ def resolve_pre_run_placeholder_value(placeholder: str, device_obj: object) -> A
     # Resolve placeholder by asking device instance metadata for its value
     if PRE_RUN_MD_LABEL == prefix:
         if not parts:
-            raise ValueError(f"Invalid placeholder format: {placeholder} detected in a schema yml file associated with the device instance: {device_obj.name}. Valid placeholder structure: '$pre-run-md:key1: ... keyN-1:keyN'")
+            raise ValueError(
+                f"Invalid placeholder format: {placeholder} detected in a schema yml file associated with the device instance: {device_obj.name}. Valid placeholder structure: '$pre-run-md:key1: ... keyN-1:keyN'"
+            )
         data: dict = device_obj.md.get_attributes()
         value = get_nested_dict_value(data, parts)
         if value is None:
@@ -445,7 +447,9 @@ class PlanDeviceChecker:
 
     def __init__(self, devices_dictionary):
         self.devices_dictionary = devices_dictionary
-        self.device_names_set = set(devices_dictionary.keys())  # Set of all device names
+        self.device_names_set = set(
+            devices_dictionary.keys()
+        )  # Set of all device names
 
     @measure_time
     def validate_plan_devices(self, plan) -> dict:
@@ -461,7 +465,7 @@ class PlanDeviceChecker:
             }
         """
 
-        logger.info('Detection of devices in the plan started. Please wait.')
+        logger.info("Detection of devices in the plan started. Please wait.")
 
         used_device_names = set()  # To store the names of used devices
 
@@ -481,11 +485,16 @@ class PlanDeviceChecker:
             pass  # Gracefully handle the StopIteration without causing a RuntimeError
 
         # Step 3: Create used_devices and unused_devices dictionaries
-        used_devices: dict = {name: self.devices_dictionary[name] for name in used_device_names}
-        unused_devices: dict = {name: self.devices_dictionary[name] for name in self.device_names_set - used_device_names}
+        used_devices: dict = {
+            name: self.devices_dictionary[name] for name in used_device_names
+        }
+        unused_devices: dict = {
+            name: self.devices_dictionary[name]
+            for name in self.device_names_set - used_device_names
+        }
 
         # Step 4: Return results
-        logger.info('Detection of devices in the plan finished.')
+        logger.info("Detection of devices in the plan finished.")
 
         return {
             "all_devices_used": not unused_devices,  # True if all devices were used
@@ -498,10 +507,10 @@ class PlanDeviceChecker:
 def cache_plan(plan):
     """
     Efficiently create two independent iterators from a Bluesky plan while preserving generator behavior.
-    
+
     Args:
         plan (generator): The original Bluesky plan.
-    
+
     Returns:
         tuple: Two independent generators over the plan.
     """

@@ -242,83 +242,119 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
 
         def get_data_from_descriptor(descriptor: dict, cpt_name: str) -> Optional[dict]:
             """Retrieve data from descriptor configuration"""
-            config = descriptor.get('configuration', {})
+            config = descriptor.get("configuration", {})
             for device_name, device_data in config.items():
-                data_keys, data, timestamps = map(device_data.get, ['data_keys', 'data', 'timestamps'])
+                data_keys, data, timestamps = map(
+                    device_data.get, ["data_keys", "data", "timestamps"]
+                )
                 if data_keys and cpt_name in data_keys:
-                    logger.debug(f"Data for component: '{cpt_name}' found in configuration of descriptor: '{descriptor['name']}'")
+                    logger.debug(
+                        f"Data for component: '{cpt_name}' found in configuration of descriptor: '{descriptor['name']}'"
+                    )
 
                     value = data.get(cpt_name)
                     timestamp = timestamps.get(cpt_name)
-                    
+
                     # Determine dtype dynamically for value
                     if isinstance(value, str):
-                        value_array = np.array(value, dtype=object)  # Single string, keep object dtype
+                        value_array = np.array(
+                            value, dtype=object
+                        )  # Single string, keep object dtype
                     elif isinstance(value, list):
                         # Use object dtype if list contains any strings; otherwise, let NumPy infer
-                        dtype = object if any(isinstance(v, str) for v in value) else None
+                        dtype = (
+                            object if any(isinstance(v, str) for v in value) else None
+                        )
                         value_array = np.array(value, dtype=dtype)
                     else:
                         value_array = np.array(value)  # Let NumPy infer the best dtype
-                    
+
                     # Determine dtype dynamically for timestamp
                     if isinstance(timestamp, str):
                         timestamp_array = np.array(timestamp, dtype=object)
                     elif isinstance(timestamp, list):
                         # Use object dtype if list contains any strings; otherwise, let NumPy infer
-                        dtype = object if any(isinstance(t, str) for t in timestamp) else None
+                        dtype = (
+                            object
+                            if any(isinstance(t, str) for t in timestamp)
+                            else None
+                        )
                         timestamp_array = np.array(timestamp, dtype=dtype)
                     else:
-                        timestamp_array = np.array(timestamp) # Let NumPy infer the best dtype
-                    
+                        timestamp_array = np.array(
+                            timestamp
+                        )  # Let NumPy infer the best dtype
+
                     return {
-                        'description': data_keys[cpt_name],
-                        'data': value_array,
-                        'descriptor_cpt_timestamp': timestamp_array
+                        "description": data_keys[cpt_name],
+                        "data": value_array,
+                        "descriptor_cpt_timestamp": timestamp_array,
                     }
             return None
 
-
-        def get_data_from_events(descriptor: dict, events, cpt_name: str) -> Optional[dict]:
+        def get_data_from_events(
+            descriptor: dict, events, cpt_name: str
+        ) -> Optional[dict]:
             """Retrieve data from events based on descriptor UID."""
-            if cpt_name not in descriptor['data_keys']:
+            if cpt_name not in descriptor["data_keys"]:
                 return None
 
-            descriptor_uid = descriptor['uid']
-            filtered_events = [evt for evt in events if evt['descriptor'] == descriptor_uid]
+            descriptor_uid = descriptor["uid"]
+            filtered_events = [
+                evt for evt in events if evt["descriptor"] == descriptor_uid
+            ]
 
-            values: list = [evt['data'][cpt_name] for evt in filtered_events if cpt_name in evt['data']]
-            timestamps: list = [evt['timestamps'][cpt_name] for evt in filtered_events if cpt_name in evt['timestamps']]
-            event_times: list = [evt['time'] for evt in filtered_events]
+            values: list = [
+                evt["data"][cpt_name]
+                for evt in filtered_events
+                if cpt_name in evt["data"]
+            ]
+            timestamps: list = [
+                evt["timestamps"][cpt_name]
+                for evt in filtered_events
+                if cpt_name in evt["timestamps"]
+            ]
+            event_times: list = [evt["time"] for evt in filtered_events]
 
             # Determine dtype dynamically for values
             if any(isinstance(v, str) for v in values):
-                values_array = np.array(values, dtype=object)  # Contains strings → use object
+                values_array = np.array(
+                    values, dtype=object
+                )  # Contains strings → use object
             else:
                 values_array = np.array(values)  # Only numbers → NumPy infers dtype
 
             # Determine dtype dynamically for timestamps
             if any(isinstance(t, str) for t in timestamps):
-                timestamps_array = np.array(timestamps, dtype=object)  # Contains strings → use object
+                timestamps_array = np.array(
+                    timestamps, dtype=object
+                )  # Contains strings → use object
             else:
-                timestamps_array = np.array(timestamps)  # Only numbers → NumPy infers dtype
+                timestamps_array = np.array(
+                    timestamps
+                )  # Only numbers → NumPy infers dtype
 
             # Determine dtype dynamically for event_times
             if any(isinstance(t, str) for t in event_times):
-                event_times_array = np.array(event_times, dtype=object)  # Contains strings → use object
+                event_times_array = np.array(
+                    event_times, dtype=object
+                )  # Contains strings → use object
             else:
-                event_times_array = np.array(event_times)  # Only numbers → NumPy infers dtype
+                event_times_array = np.array(
+                    event_times
+                )  # Only numbers → NumPy infers dtype
 
             # Define data to be returned
-            data: dict =  {
-                'description': descriptor['data_keys'][cpt_name],
-                'data': values_array,
-                'events_cpt_timestamps': timestamps_array,
-                'events_timestamps': event_times_array
+            data: dict = {
+                "description": descriptor["data_keys"][cpt_name],
+                "data": values_array,
+                "events_cpt_timestamps": timestamps_array,
+                "events_timestamps": event_times_array,
             }
-            logger.debug(f"Data for component: '{cpt_name}' found in {len(data['data'])} event(s) of the descriptor: '{descriptor['name']}'")
+            logger.debug(
+                f"Data for component: '{cpt_name}' found in {len(data['data'])} event(s) of the descriptor: '{descriptor['name']}'"
+            )
             return data
-
 
         # Define a few helper functions to parse the Nexus tree and replace values with data from the events of the run
         def get_cpt_name_from_placeholder(value: str) -> Optional[str]:
@@ -345,7 +381,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
             match = re.search(PATTERN, value)
             if match:
                 if len(POST_RUN_LABEL) < len(value):
-                    cpt_name: str = value[len(POST_RUN_LABEL):]
+                    cpt_name: str = value[len(POST_RUN_LABEL) :]
                     return cpt_name
                 else:
                     return str("")  # Return empty string
@@ -354,9 +390,11 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
 
         def extract_data(descriptors, events, cpt_name) -> dict:
             """Extract data for cpt_name from descriptors, prioritizing non-baseline first."""
-            
+
             def find_data(descriptor) -> Optional[dict]:
-                return get_data_from_events(descriptor, events, cpt_name) or get_data_from_descriptor(descriptor, cpt_name)
+                return get_data_from_events(
+                    descriptor, events, cpt_name
+                ) or get_data_from_descriptor(descriptor, cpt_name)
 
             # Prioritize non-baseline descriptors
             for descriptor in descriptors:
@@ -371,7 +409,9 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                         return data
 
             # No data found
-            raise ValueError(f"No descriptor contains data for the 'cpt_name': {cpt_name}")
+            raise ValueError(
+                f"No descriptor contains data for the 'cpt_name': {cpt_name}"
+            )
 
         def replace_func(dev_name: str, obj: dict) -> dict:
             """
@@ -402,7 +442,9 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 obj_delimiter: str = "_"
 
                 # Redefine component name as to be read from the blusky documents (with prefixed device name)
-                if str("") == cpt_name:  # The case when there is not cpt_name in the placeholder
+                if (
+                    str("") == cpt_name
+                ):  # The case when there is not cpt_name in the placeholder
                     cpt_name = dev_name
                 else:
                     cpt_name: str = dev_name + obj_delimiter + cpt_name
@@ -411,7 +453,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 cpt_data: dict = extract_data(descriptors, events, cpt_name)
 
                 # Component data from descriptor
-                data: np.ndarray = cpt_data['data']
+                data: np.ndarray = cpt_data["data"]
                 # Component description from descriptor
                 desc: dict = cpt_data["description"]
 
@@ -420,24 +462,24 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     # Execute transformation on events_data
                     if "value" == obj["transformation"]["target"]:
                         expression: str = obj["transformation"]["expression"]
-                        data = apply_symbolic_transformation(
-                            data, expression
-                        )
+                        data = apply_symbolic_transformation(data, expression)
 
                 # Assign 'data'
                 obj["value"] = data
 
                 # Assign 'events_cpt_timestamps'
-                if 'events_cpt_timestamps' in cpt_data:
+                if "events_cpt_timestamps" in cpt_data:
                     obj["events_cpt_timestamps"] = cpt_data["events_cpt_timestamps"]
 
                 # Assign 'events_timestamps'
-                if 'events_timestamps' in cpt_data:
+                if "events_timestamps" in cpt_data:
                     obj["events_timestamps"] = cpt_data["events_timestamps"]
 
                 # Assign 'descriptor_cpt_timestamp'
-                if 'descriptor_cpt_timestamp' in cpt_data:
-                    obj["descriptor_cpt_timestamp"] = cpt_data["descriptor_cpt_timestamp"]
+                if "descriptor_cpt_timestamp" in cpt_data:
+                    obj["descriptor_cpt_timestamp"] = cpt_data[
+                        "descriptor_cpt_timestamp"
+                    ]
 
                 # ----------- Assign all abligatory keys -----------
 
@@ -487,12 +529,16 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     obj["attrs"]["precision"] = precision
 
                 # Extract and set lower_ctrl_limit (optional key)
-                lower_ctrl_limit = obj["attrs"].get("lower_ctrl_limit", desc.get("lower_ctrl_limit", None))
+                lower_ctrl_limit = obj["attrs"].get(
+                    "lower_ctrl_limit", desc.get("lower_ctrl_limit", None)
+                )
                 if lower_ctrl_limit is not None:
                     obj["attrs"]["lower_ctrl_limit"] = lower_ctrl_limit
 
                 # Extract and set upper_ctrl_limit (optional key)
-                upper_ctrl_limit = obj["attrs"].get("upper_ctrl_limit", desc.get("upper_ctrl_limit", None))
+                upper_ctrl_limit = obj["attrs"].get(
+                    "upper_ctrl_limit", desc.get("upper_ctrl_limit", None)
+                )
                 if upper_ctrl_limit is not None:
                     obj["attrs"]["upper_ctrl_limit"] = upper_ctrl_limit
 
@@ -502,7 +548,9 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     obj["attrs"]["enum_strs"] = enum_strs
 
                 # Extract and set object_name (optional key)
-                object_name = obj["attrs"].get("object_name", desc.get("object_name", None))
+                object_name = obj["attrs"].get(
+                    "object_name", desc.get("object_name", None)
+                )
                 if object_name is not None:
                     obj["attrs"]["object_name"] = object_name
 
@@ -526,8 +574,8 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
 
             if isinstance(tree, dict):
                 for key, value in tree.items():
-                    #if (isinstance(value, dict) and "value" in value and "dtype" in value):
-                    if (isinstance(value, dict) and "value" in value):
+                    # if (isinstance(value, dict) and "value" in value and "dtype" in value):
+                    if isinstance(value, dict) and "value" in value:
                         tree[key] = func(dev_name, value)
                     tree[key] = replace_values(dev_name, value, func)
             elif isinstance(tree, list):
@@ -535,7 +583,9 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
             return tree
 
         for dev_name in nexus_md.keys():
-            nexus_md[dev_name] = replace_values(dev_name, nexus_md[dev_name], replace_func)
+            nexus_md[dev_name] = replace_values(
+                dev_name, nexus_md[dev_name], replace_func
+            )
 
     # Process post-run placeholders by filling them with data provided by bluesky events
     process_post_run()
@@ -622,7 +672,9 @@ def create_nexus_file(file_path, data_dict):
                 instrument_group = entry.create_group(key)
                 # Add attribute
                 instrument_group.attrs["NX_class"] = "NXinstrument"
-                instrument_group.attrs["description"] = "Instruments involved in the bluesky plan"
+                instrument_group.attrs["description"] = (
+                    "Instruments involved in the bluesky plan"
+                )
 
                 # Add group or fieled to instrument_group
                 add_group_or_field(instrument_group, value)
@@ -633,7 +685,9 @@ def create_nexus_file(file_path, data_dict):
                 run_info_group = entry.create_group(key)
                 # Add attribute
                 run_info_group.attrs["NX_class"] = "NXcollection"
-                run_info_group.attrs["description"] = "Copy of the start and stop document from the bluesky run"
+                run_info_group.attrs["description"] = (
+                    "Copy of the start and stop document from the bluesky run"
+                )
                 # Write data to the run_info_group
                 write_collection(run_info_group, value)
 
@@ -685,20 +739,26 @@ def add_group_or_field(group, data):
 
             if isinstance(value, dict):
                 json_value = json.dumps(value)  # Convert dictionary to JSON string
-                dtype = h5py.string_dtype(encoding='utf-8')  # Ensure UTF-8 encoding
-                value = np.array(json_value, dtype=dtype)  # Convert scalar string to numpy array
+                dtype = h5py.string_dtype(encoding="utf-8")  # Ensure UTF-8 encoding
+                value = np.array(
+                    json_value, dtype=dtype
+                )  # Convert scalar string to numpy array
                 dataset.attrs[key] = value
 
             elif isinstance(value, str):
-                dtype = h5py.string_dtype(encoding='utf-8')  # Ensure UTF-8 encoding
-                value = np.array(value, dtype=dtype)  # Convert scalar string to numpy array
+                dtype = h5py.string_dtype(encoding="utf-8")  # Ensure UTF-8 encoding
+                value = np.array(
+                    value, dtype=dtype
+                )  # Convert scalar string to numpy array
                 dataset.attrs[key] = value
 
             elif isinstance(value, bool):
                 dataset.attrs[key] = np.bool_(value)  # Store as a NumPy boolean
 
             elif isinstance(value, (int, np.integer)):
-                dataset.attrs[key] = np.int64(value)  # Store as int64 (safe for large numbers)
+                dataset.attrs[key] = np.int64(
+                    value
+                )  # Store as int64 (safe for large numbers)
 
             elif isinstance(value, (float, np.floating)):
                 dataset.attrs[key] = np.float64(value)  # Store as float64 for precision
@@ -706,21 +766,29 @@ def add_group_or_field(group, data):
             elif isinstance(value, (list, tuple, np.ndarray)):
                 # Convert to NumPy array to ensure consistent storage
                 value = np.array(value)
-                if value.dtype.kind in {'i', 'u'}:  # Integer types
+                if value.dtype.kind in {"i", "u"}:  # Integer types
                     dataset.attrs[key] = value.astype(np.int64)
-                elif value.dtype.kind == 'f':  # Floating point types
+                elif value.dtype.kind == "f":  # Floating point types
                     dataset.attrs[key] = value.astype(np.float64)
-                elif value.dtype.kind == 'b':  # Boolean array
+                elif value.dtype.kind == "b":  # Boolean array
                     dataset.attrs[key] = value.astype(np.bool_)
-                elif value.dtype.kind == 'U' or value.dtype.kind == 'O':  # Strings
-                    dataset.attrs[key] = np.array(value, dtype=h5py.special_dtype(vlen=str))
+                elif value.dtype.kind == "U" or value.dtype.kind == "O":  # Strings
+                    dataset.attrs[key] = np.array(
+                        value, dtype=h5py.special_dtype(vlen=str)
+                    )
                 else:
-                    raise ValueError(f"Unsupported array data type for attribute '{key}': {value.dtype}")
+                    raise ValueError(
+                        f"Unsupported array data type for attribute '{key}': {value.dtype}"
+                    )
 
             else:
-                raise ValueError(f"Unsupported attribute type for '{key}': {type(value)}")
+                raise ValueError(
+                    f"Unsupported attribute type for '{key}': {type(value)}"
+                )
 
-    def add_attributes(target: Union[h5py.Dataset, h5py.Group], attributes: dict) -> None:
+    def add_attributes(
+        target: Union[h5py.Dataset, h5py.Group], attributes: dict
+    ) -> None:
         """
         Adds attributes to an HDF5 dataset or group, enforcing dtype if specified.
 
@@ -730,9 +798,13 @@ def add_group_or_field(group, data):
         """
 
         for attr_name, attr_data in attributes.items():
-            value: Any = attr_data["value"]  # Mandatory, guaranteed by NXfieldModelForAttribute
-            dtype_str: str = attr_data["dtype"]  # Expected as a string, facultative for post-run placeholders otherwise mandatory
-            
+            value: Any = attr_data[
+                "value"
+            ]  # Mandatory, guaranteed by NXfieldModelForAttribute
+            dtype_str: str = attr_data[
+                "dtype"
+            ]  # Expected as a string, facultative for post-run placeholders otherwise mandatory
+
             if dtype_str not in NX_DTYPE_MAP:
                 raise ValueError(
                     f"Invalid dtype: {dtype_str} detected while processing {target.name}.{attr_name}."
@@ -744,11 +816,17 @@ def add_group_or_field(group, data):
                 # Handle strings explicitly
                 if dtype in {h5py.string_dtype(encoding="utf-8")}:
                     if isinstance(value, str):
-                        value = np.array(value, dtype=dtype)  # Convert scalar string to numpy array
+                        value = np.array(
+                            value, dtype=dtype
+                        )  # Convert scalar string to numpy array
                     elif isinstance(value, (list, tuple, np.ndarray)):
-                        value = np.array(value, dtype=dtype)  # Convert list of strings to numpy array
+                        value = np.array(
+                            value, dtype=dtype
+                        )  # Convert list of strings to numpy array
                     else:
-                        raise TypeError(f"Unexpected type {type(value)} for string attribute {attr_name}")
+                        raise TypeError(
+                            f"Unexpected type {type(value)} for string attribute {attr_name}"
+                        )
 
                 # Handle booleans explicitly
                 elif dtype == np.uint8 and isinstance(value, (bool, np.bool_)):
@@ -779,12 +857,20 @@ def add_group_or_field(group, data):
 
                 if dtype in VALID_NXFIELD_DTYPES:
                     # Handle strings and object dtype explicitly
-                    if isinstance(value["value"], np.ndarray) and value["value"].dtype == object:
+                    if (
+                        isinstance(value["value"], np.ndarray)
+                        and value["value"].dtype == object
+                    ):
                         # Check if the array is not 0-dimensional (i.e., scalar)
                         if value["value"].ndim > 0:
                             # Convert np.str_ elements to native Python strings (if any)
-                            value["value"] = np.array([str(item) if isinstance(item, np.str_) else item 
-                                                       for item in value["value"]], dtype='str')
+                            value["value"] = np.array(
+                                [
+                                    str(item) if isinstance(item, np.str_) else item
+                                    for item in value["value"]
+                                ],
+                                dtype="str",
+                            )
                         else:
                             # For 0-dimensional arrays, convert np.str_ to a native Python string
                             if isinstance(value["value"], np.str_):
@@ -792,15 +878,20 @@ def add_group_or_field(group, data):
 
                     # Handle strings explicitly: encoding="utf-8"
                     if dtype in {"str", "char"} or (
-                        isinstance(value["value"], np.ndarray) and
-                        value["value"].dtype == object and
-                        all(isinstance(item, str) for item in value["value"])
+                        isinstance(value["value"], np.ndarray)
+                        and value["value"].dtype == object
+                        and all(isinstance(item, str) for item in value["value"])
                     ):
                         dtype = h5py.string_dtype(encoding="utf-8")
 
                         # Extract single string from an ndarray with shape (1,)
-                        if isinstance(value["value"], np.ndarray) and value["value"].size == 1:
-                            value["value"] = value["value"].item()  # Extracts the scalar string
+                        if (
+                            isinstance(value["value"], np.ndarray)
+                            and value["value"].size == 1
+                        ):
+                            value["value"] = value[
+                                "value"
+                            ].item()  # Extracts the scalar string
 
                     ### Create dataset for 'value'
                     dataset = group.create_dataset(
@@ -825,11 +916,13 @@ def add_group_or_field(group, data):
 
                     # Add attribute 'transformation' (optional)
                     if "transformation" in value:
-                        dataset.attrs["transformation"] = str(value["transformation"]) # convert dict to  string
+                        dataset.attrs["transformation"] = str(
+                            value["transformation"]
+                        )  # convert dict to  string
 
                     # Add all attributes defined in 'attrs'
                     if "attrs" in value:
-                        add_attrs(dataset, value['attrs'])
+                        add_attrs(dataset, value["attrs"])
 
                     ### Create dataset for 'events_cpt_timestamps'
                     if "events_cpt_timestamps" in value:
@@ -839,7 +932,9 @@ def add_group_or_field(group, data):
                             dtype=value["events_cpt_timestamps"].dtype,
                         )
                         dataset.attrs["NX_class"] = "NX_FLOAT"
-                        dataset.attrs["shape"] = list(value["events_cpt_timestamps"].shape)
+                        dataset.attrs["shape"] = list(
+                            value["events_cpt_timestamps"].shape
+                        )
                         dataset.attrs["description"] = (
                             f"Timestamps of the component: {key} extracted from the events"
                         )
@@ -852,7 +947,9 @@ def add_group_or_field(group, data):
                             dtype=value["descriptor_cpt_timestamp"].dtype,
                         )
                         dataset.attrs["NX_class"] = "NX_FLOAT"
-                        dataset.attrs["shape"] = list(value["descriptor_cpt_timestamp"].shape)
+                        dataset.attrs["shape"] = list(
+                            value["descriptor_cpt_timestamp"].shape
+                        )
                         dataset.attrs["description"] = (
                             f"Timestamp of the component: {key} extracted from the descriptor"
                         )
@@ -871,7 +968,9 @@ def add_group_or_field(group, data):
                             )
                             # Add attributes to the dataset
                             dataset.attrs["NX_class"] = "NX_FLOAT"
-                            dataset.attrs["shape"] = list(value["events_timestamps"].shape)
+                            dataset.attrs["shape"] = list(
+                                value["events_timestamps"].shape
+                            )
                             dataset.attrs["description"] = "Timestamps of the events"
 
                 else:
@@ -892,7 +991,9 @@ def add_group_or_field(group, data):
 
                 # Add "default" attribute expected by nexus convention for groups if defined for the group
                 if "default" in value:
-                    subgroup.attrs["default"] = value["default"]["value"] # Presence of “value” in the “default” guaranteed by NXattrModel.
+                    subgroup.attrs["default"] = value["default"][
+                        "value"
+                    ]  # Presence of “value” in the “default” guaranteed by NXattrModel.
 
                 # Add attributes to the group defined in the schema
                 # In the schema file, attributes of a group are introduced by the word "attributes"
@@ -904,7 +1005,7 @@ def add_group_or_field(group, data):
 
                 # Add all attributes defined in 'attrs'
                 if "attrs" in value:
-                    add_attrs(subgroup, value['attrs'])
+                    add_attrs(subgroup, value["attrs"])
 
                 # Recursively add fields or subgroups
                 add_group_or_field(
@@ -912,14 +1013,18 @@ def add_group_or_field(group, data):
                     {
                         k: v
                         for k, v in value.items()
-                        if k != "nxclass" and k != "default" and k != "attributes" and k != "attrs"
+                        if k != "nxclass"
+                        and k != "default"
+                        and k != "attributes"
+                        and k != "attrs"
                     },
                 )
 
         else:
             # Handle as attribute of the group
             group.attrs[key] = value
-            #print(f"Assign to group attr named {key} the value: {value}") # Debug only
+            # print(f"Assign to group attr named {key} the value: {value}") # Debug only
+
 
 def write_collection(group, data: dict):
     """

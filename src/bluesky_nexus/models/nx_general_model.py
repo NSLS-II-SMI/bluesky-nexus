@@ -1,8 +1,8 @@
 """
 nx_general_model: General model for grouping metadata and configuration.
 
-This module defines a general-purpose model for organizing and managing metadata 
-and configuration settings. It offers flexibility by allowing arbitrary types and extra fields, 
+This module defines a general-purpose model for organizing and managing metadata
+and configuration settings. It offers flexibility by allowing arbitrary types and extra fields,
 making it adaptable for a variety of use cases.
 
 Class:
@@ -14,6 +14,7 @@ from bluesky_nexus.models.nx_core_models import (
     NXgroupModel,
 )
 
+
 class NXgeneralModel(NXgroupModel):
     """
     General model for grouping metadata and configuration.
@@ -23,4 +24,5 @@ class NXgeneralModel(NXgroupModel):
     arbitrary types and extra fields to be included, offering flexibility for various types of metadata
     or attributes.
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")

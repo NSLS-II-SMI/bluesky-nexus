@@ -2,14 +2,15 @@ import json
 from bluesky.callbacks import CallbackBase
 from pprint import pprint
 
+
 class WriteToFileCallback:
     def __init__(self, file_path):
         self.file_path = file_path
-        self.file = open(file_path, 'w')
+        self.file = open(file_path, "w")
 
     def __call__(self, name, doc):
         # Write each document as a JSON string, one per line
-        self.file.write(json.dumps({name: doc}) + '\n')
+        self.file.write(json.dumps({name: doc}) + "\n")
         self.file.flush()  # Ensure data is written to disk
 
     def close(self):
@@ -19,7 +20,7 @@ class WriteToFileCallback:
 class WriteToFileFormattedCallback:
     def __init__(self, file_path):
         self.file_path = file_path
-        self.file = open(file_path, 'w')
+        self.file = open(file_path, "w")
         self.documents = []  # Store all documents in a list
 
     def __call__(self, name, doc):

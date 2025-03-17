@@ -1,8 +1,8 @@
 """
 nx_models: A module defining and mapping various models used in the NeXus data format.
 
-This module provides a collection of models representing different components in a scientific 
-experiment setup, including detectors, general configurations, and monochromators. These models 
+This module provides a collection of models representing different components in a scientific
+experiment setup, including detectors, general configurations, and monochromators. These models
 are part of the Bluesky Nexus framework for organizing metadata and experimental data.
 
 Classes:

@@ -15,9 +15,9 @@ class MetadataMono:
         "z": "7.8000000000000009",
     }
     description: str = "I am the best mono at the bessyii facility"
-    calibration_on:bool = True
+    calibration_on: bool = True
     baseline: str = "True"
-    transformations_axisname:str = "x"
+    transformations_axisname: str = "x"
 
     def get_attributes(self):
         attributes = {
@@ -35,7 +35,7 @@ class MetadataMono:
 class Mono(NXdevice):
     en: SynAxis = Cpt(SynAxis, name="en")
     grating: Signal = Cpt(Signal, name="grating")
-    slit: Signal = Cpt(Signal, name="slit", kind = 'config')
+    slit: Signal = Cpt(Signal, name="slit", kind="config")
     md = MetadataMono()
     nx_schema = "nx_schema_mono"
 

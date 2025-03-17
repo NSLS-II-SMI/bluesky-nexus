@@ -1,9 +1,9 @@
 """
 Module: nx_core_models.py
 
-This module defines Pydantic models for representing NeXus data structures, 
-which are commonly used in scientific data formats to organize hierarchical datasets. 
-These models provide structure, validation, and utilities for handling NeXus objects, 
+This module defines Pydantic models for representing NeXus data structures,
+which are commonly used in scientific data formats to organize hierarchical datasets.
+These models provide structure, validation, and utilities for handling NeXus objects,
 fields, groups, links, and attributes.
 
 ### Features:
@@ -21,7 +21,7 @@ fields, groups, links, and attributes.
 - `NXfieldModelForAttribute`: A specialized field model for attributes.
 - `PrePostRunString`: Custom string type for handling pre- and post-run metadata.
 
-This module is designed to facilitate working with NeXus data structures in Python applications, 
+This module is designed to facilitate working with NeXus data structures in Python applications,
 ensuring consistency and correctness when handling scientific datasets.
 """
 
@@ -30,6 +30,7 @@ from typing import Any, Dict, Optional, Tuple, Union, List
 import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 # from pydantic.core import PydanticSchema  # To be activated for pydantic V3
 
 __all__ = [
@@ -52,6 +53,7 @@ Number = Union[float, int]
 
 # array-like i.e. list, tuple, numpy.ndarray
 ArrayLike = npt.ArrayLike
+
 
 class PrePostRunString(str):
     """
@@ -90,6 +92,7 @@ class PrePostRunString(str):
             )
         return cls(value)
 
+
 class NXattrModel(BaseModel):
     """
     Pydantic model representing an NXattr (NeXus attribute).
@@ -102,10 +105,15 @@ class NXattrModel(BaseModel):
     """
 
     nxclass: Optional[str] = Field("NXattr", description="The class of the NXattr.")
-    value: Union[PrePostRunString, Scalar, ArrayLike] = Field(..., description="Value of the attribute.")
+    value: Union[PrePostRunString, Scalar, ArrayLike] = Field(
+        ..., description="Value of the attribute."
+    )
     dtype: Optional[str] = Field(None, description="Data type of the attribute.")
-    shape: Optional[Union[list, Tuple[int]]] = Field(None, description="Shape of the attribute.")
+    shape: Optional[Union[list, Tuple[int]]] = Field(
+        None, description="Shape of the attribute."
+    )
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
 
 class NXFileModel(BaseModel):
     """
@@ -122,9 +130,15 @@ class NXFileModel(BaseModel):
     nxclass: str = Field("NXFile", description="The class of the NXFile.")
     name: str = Field(..., description="Name of the HDF5 file.")
     mode: str = Field("r", description="Read/write mode of the HDF5 file.")
-    recursive: Optional[bool] = Field(None, description="If True, the file tree is loaded recursively.")
-    kwargs: Dict[str, Any] = Field(default_factory=dict, description="Keyword arguments for opening the h5py file object.")
+    recursive: Optional[bool] = Field(
+        None, description="If True, the file tree is loaded recursively."
+    )
+    kwargs: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Keyword arguments for opening the h5py file object.",
+    )
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
 
 class NXobjectModel(BaseModel):
     """
@@ -142,13 +156,31 @@ class NXobjectModel(BaseModel):
     nxclass: Optional[str] = Field("NXobject", description="The class of the NXobject.")
     nx_model: Optional[str] = Field(None, description="The name of the model.")
     nxname: Optional[str] = Field(None, description="The name of the NXobject.")
-    nxgroup: Optional["NXgroupModel"] = Field(None, description="The parent group containing this object within a NeXus tree.")
-    nxpath: Optional[str] = Field(None, description="The path to this object with respect to the root of the NeXus tree.")
-    nxroot: Optional["NXgroupModel"] = Field(None, description="The root object of the NeXus" " tree containing this " "object.")
-    nxfile: Optional["NXFileModel"] = Field(None, description="The file handle of the root object of the NeXus tree containing this object.")
-    nxfilename: Optional[str] = Field(None, description="The file name of NeXus object's " "tree file handle.")
-    attrs: Optional[Dict[str, Any]] = Field(default={}, description="Arbitrary attributes belonging to a dataset assigned by a user.")
-    description: Optional[Any] = Field(None, description="Optional description of the object")
+    nxgroup: Optional["NXgroupModel"] = Field(
+        None, description="The parent group containing this object within a NeXus tree."
+    )
+    nxpath: Optional[str] = Field(
+        None,
+        description="The path to this object with respect to the root of the NeXus tree.",
+    )
+    nxroot: Optional["NXgroupModel"] = Field(
+        None,
+        description="The root object of the NeXus" " tree containing this " "object.",
+    )
+    nxfile: Optional["NXFileModel"] = Field(
+        None,
+        description="The file handle of the root object of the NeXus tree containing this object.",
+    )
+    nxfilename: Optional[str] = Field(
+        None, description="The file name of NeXus object's " "tree file handle."
+    )
+    attrs: Optional[Dict[str, Any]] = Field(
+        default={},
+        description="Arbitrary attributes belonging to a dataset assigned by a user.",
+    )
+    description: Optional[Any] = Field(
+        None, description="Optional description of the object"
+    )
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     # The new version of model_dump to debug
@@ -190,7 +222,6 @@ class NXobjectModel(BaseModel):
     #     base_dump["_meta"] = metadata
 
     #     return base_dump
-
 
     # TODO: Modify to support args that are from BaseModel
 
@@ -272,6 +303,7 @@ class NXobjectModel(BaseModel):
 
     #     return base_dump
 
+
 class NXgroupModel(NXobjectModel):
     """
     Pydantic model representing an NXgroup (NeXus group).
@@ -279,9 +311,10 @@ class NXgroupModel(NXobjectModel):
     Inherits from NXobjectModel.
     """
 
-    #nxclass: Optional[str] = Field("NXgroup", description="The class of the group.")
+    # nxclass: Optional[str] = Field("NXgroup", description="The class of the group.")
     nxclass: str = Field(..., description="The class of the group.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+
 
 class TransformationModel(BaseModel):
     """
@@ -292,11 +325,17 @@ class TransformationModel(BaseModel):
     - target (str): Target field for transformation.
     """
 
-    expression: str = Field(..., description="Symbolic expression that defines the transformation, using 'x' as the array variable. "
+    expression: str = Field(
+        ...,
+        description="Symbolic expression that defines the transformation, using 'x' as the array variable. "
         "Examples: '3 * x**2 + 5', 'np.sqrt(x) + 2', np.log(x) + 3, np.exp(x) + 3",
     )
-    target: str = Field(..., description="Specifies the target array (e.g., 'value') on which the transformation is applied.")
+    target: str = Field(
+        ...,
+        description="Specifies the target array (e.g., 'value') on which the transformation is applied.",
+    )
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
 
 class NXfieldModel(NXobjectModel):
     """
@@ -311,15 +350,21 @@ class NXfieldModel(NXobjectModel):
     dtype: Optional[str] = Field(None, description="Data type of the field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
+
 class NXfieldModelWithPrePostRunString(NXfieldModel):
     """
     Extended NXfieldModel where the value must be a PrePostRunString.
     """
+
     nxclass: str = Field(..., description="The nexus class of the field.")
     value: PrePostRunString = Field(..., description="Value of the field.")
     dtype: Optional[str] = Field(None, description="Data type of the field.")
-    transformation: Optional[TransformationModel] = Field(None, description="Transformation configuration that applies a symbolic operation to the target field.")
+    transformation: Optional[TransformationModel] = Field(
+        None,
+        description="Transformation configuration that applies a symbolic operation to the target field.",
+    )
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
 
 class NXfieldModelForAttribute(NXfieldModel):
     """
@@ -328,6 +373,9 @@ class NXfieldModelForAttribute(NXfieldModel):
     Attributes:
     - value (Union[PrePostRunString, str]): Value of the attribute field.
     """
-    value: Union[PrePostRunString, Scalar, List[Scalar]] = Field(..., description="Value of the attribute field.")
+
+    value: Union[PrePostRunString, Scalar, List[Scalar]] = Field(
+        ..., description="Value of the attribute field."
+    )
     dtype: Optional[str] = Field(None, description="Data type of the attribute field.")
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")

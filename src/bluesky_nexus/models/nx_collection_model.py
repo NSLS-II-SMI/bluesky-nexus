@@ -1,8 +1,8 @@
 """
 Module: nx_collection_model.py
 
-This module defines the `NXcollectionModel`, a specialized extension of `NXgroupModel` 
-for representing collections of NeXus groups within a scientific dataset. It provides 
+This module defines the `NXcollectionModel`, a specialized extension of `NXgroupModel`
+for representing collections of NeXus groups within a scientific dataset. It provides
 flexibility for handling arbitrary types while ensuring compatibility with NeXus standards.
 
 ### Features:
@@ -13,7 +13,7 @@ flexibility for handling arbitrary types while ensuring compatibility with NeXus
 ### Main Model:
 - `NXcollectionModel`: A subclass of `NXgroupModel` with extended configurability.
 
-This module is intended to provide a structured approach to handling NeXus collections 
+This module is intended to provide a structured approach to handling NeXus collections
 within data processing workflows.
 """
 
@@ -22,11 +22,12 @@ from bluesky_nexus.models.nx_core_models import (
     NXgroupModel,
 )
 
+
 class NXcollectionModel(NXgroupModel):
     """
     A specialized NeXus group model representing a collection of NeXus groups.
 
-    This model extends `NXgroupModel` to allow more flexible configurations 
+    This model extends `NXgroupModel` to allow more flexible configurations
     and arbitrary types while maintaining NeXus compatibility.
 
     Attributes:
