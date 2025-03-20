@@ -99,3 +99,10 @@ def test_read_yaml():
         },
     }
     assert actual == expected
+
+
+if __name__ == "__main__":
+    # Execute all test cases in the script when run directly.
+    import pytest
+
+    pytest.main([__file__])
