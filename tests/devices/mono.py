@@ -1,7 +1,7 @@
 from ophyd import Component as Cpt
 from ophyd import Device, Signal
 from ophyd.sim import SynAxis
-from bluesky_nexus.bluesky_nexus_device_decorators import NxSchemaLoader
+from bluesky_nexus.common.decorator_utils import NxSchemaLoader
 from .nx_schema.mono import Mono_nxschema
 
 
