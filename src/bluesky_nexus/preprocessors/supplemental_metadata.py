@@ -72,27 +72,18 @@ class SupplementalMetadata(SupplementalData):
         DEVICE_MD = auto()
         NEXUS_MD = auto()
 
-    def __init__(self, *args, nx_schema_dir_path=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initializes the SupplementalMetadata instance.
 
         This constructor accepts both positional and keyword arguments, passing them
-        to the parent class constructor. Additionally, it allows for an optional
-        `nx_schema_dir_path` parameter to specify the directory path for the NeXus schema.
+        to the parent class constructor.
 
         Args:
             *args: Positional arguments passed to the parent constructor.
             **kwargs: Keyword arguments passed to the parent constructor.
-            nx_schema_dir_path (str, optional): The directory path to the NeXus schema.
-                If not provided, the default value is `None`.
-
-        Notes:
-            - `nx_schema_dir_path` is an optional argument that can be used to specify
-            the path to the directory where the NeXus schema is located.
         """
-
         super().__init__(*args, **kwargs)
-        self.nx_schema_dir_path = nx_schema_dir_path
 
     def __call__(self, plan):
         """
@@ -146,7 +137,7 @@ class SupplementalMetadata(SupplementalData):
 
         # Assign to all the devices contained in 'devices_in_plan' instances of pydantic models
         if self.MetadataType.NEXUS_MD == self.md_type:
-            assign_pydantic_model_instance(self.nx_schema_dir_path, devices_in_plan)
+            assign_pydantic_model_instance(devices_in_plan)
 
         # Create metadata and inject it into the plan
         metadata: dict = create_metadata(devices_in_plan)
