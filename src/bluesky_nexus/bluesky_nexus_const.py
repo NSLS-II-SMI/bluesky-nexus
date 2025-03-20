@@ -50,7 +50,6 @@ NX_MD_KEY: str = "nexus_md"
 DEVICE_MD_KEY: str = "device_md"
 NX_FILE_EXTENSION: str = ".nxs"
 CALLBACK_FILE_EXTENSION: str = ".json"
-NX_SCHEMA_EXTENSIONS = [".yml", ".yaml"]
 NX_SCHEMA_MODEL_NAME_KEY: str = "nx_model"
 DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME: str = "nx_schema"
 DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME: str = "nx_model"
