@@ -1,0 +1,27 @@
+# Define a global default image for all jobs
+image: python:3.10
+
+# Define stages
+stages:
+  - test
+
+# Define the pytest job
+pytest:
+  stage: test
+  before_script:
+    - python -m venv venv # Create virtual environment
+    - source venv/bin/activate # Activate virtual environment
+    - pip install --upgrade pip # Upgrade pip before installing dependencies
+    - pip install . # Install the package as a local package
+    - pip install -r requirements.txt # Install dependencies from requirements.txt
+    - pip install pytest-html
+  script:
+    - pytest --html=report.html --junitxml=report.xml -v --capture=fd # Run pytest and generate reports
+  artifacts:
+    when: always # Collect artifacts regardless of job status
+    paths:
+      - report.html # Include HTML report as an artifact
+      - report.xml # Include JUnit XML report as an artifact
+  only:
+    - main # Run this job only when changes are pushed to the main branch
+    - develop # Also run this job when changes are pushed to the develop branch
