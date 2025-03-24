@@ -7,7 +7,8 @@ import types
 import unittest
 from bluesky import RunEngine
 from bluesky.plans import scan
-from tests.devices.monochromators import Mono, MonoWithGratingCpt
+from tests.devices.mono import Mono
+from tests.devices.monoWithGratingCpt import MonoWithGratingCpt
 from ophyd.sim import motor
 from tests.preprocessors.baseline import SupplementalDataBaseline
 from typing import Any
@@ -24,7 +25,7 @@ CALLBACK_FILE_DIR_PATH = os.path.abspath(
 )
 
 NX_SCHEMA_DIR_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "nx_schema")
+    os.path.join(os.path.join(os.path.dirname(__file__), "devices"), "nx_schema")
 )
 
 
@@ -95,7 +96,7 @@ def nx_schema_dir_path():
 
 
 # Constants for the expected files
-EXPECTED_FILES = ["nx_schema_mono.yml", "nx_schema_mono_with_grating_cpt.yml"]
+EXPECTED_FILES = ["mono.py", "monoWithGratingCpt.py"]
 
 
 # Test: Ensure specific files exist in the `nx_schema` directory
@@ -104,8 +105,8 @@ def test_expected_files_exist_in_nx_schema(nx_schema_dir_path):
     Test to ensure that specific files exist in the `nx_schema` directory.
 
     Expected files:
-    - nx_schema_mono.yml
-    - nx_schema_mono_with_grating_cpt.yml
+    - mono.py
+    - monoWithGratingCpt.py
     """
     missing_files = []
     for file_name in EXPECTED_FILES:
@@ -235,12 +236,7 @@ def execute_plan(
 
 
 # Helper: Add preprocessors to the RunEngine for baseline and metadata
-def add_preprocessors(
-    RE: RunEngine,
-    devices_dictionary: dict,
-    baseline: list[object],
-    nx_schema_dir_path: str,
-):
+def add_preprocessors(RE: RunEngine, devices_dictionary: dict, baseline: list[object]):
     """
     Adds preprocessors to the RunEngine to handle:
     - Baseline devices.
@@ -251,7 +247,7 @@ def add_preprocessors(
     RE.preprocessors.append(sdd)
 
     # Add Nexus metadata
-    metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
+    metadata = SupplementalMetadata()
     metadata.devices_dictionary = devices_dictionary
     metadata.baseline = baseline
     metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
@@ -502,7 +498,6 @@ def test_1(
     my_motor,
     callback_file_dir_path,
     nx_file_dir_path,
-    nx_schema_dir_path,
     plan_step_number,
     request,
 ):
@@ -513,7 +508,7 @@ def test_1(
     """
 
     # Add preprocessors to the RunEngine
-    add_preprocessors(RE, devices_dictionary, baseline_1, nx_schema_dir_path)
+    add_preprocessors(RE, devices_dictionary, baseline_1)
 
     # Generate metadata
     nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
@@ -1099,7 +1094,6 @@ def test_2(
     my_motor,
     callback_file_dir_path,
     nx_file_dir_path,
-    nx_schema_dir_path,
     plan_step_number,
     request,
 ):
@@ -1110,7 +1104,7 @@ def test_2(
     """
 
     # Add preprocessors to the RunEngine
-    add_preprocessors(RE, devices_dictionary, baseline_2, nx_schema_dir_path)
+    add_preprocessors(RE, devices_dictionary, baseline_2)
 
     # Generate metadata
     nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
@@ -1558,7 +1552,6 @@ def test_3(
     my_motor,
     callback_file_dir_path,
     nx_file_dir_path,
-    nx_schema_dir_path,
     plan_step_number,
     request,
 ):
@@ -1569,7 +1562,7 @@ def test_3(
     """
 
     # Add preprocessors to the RunEngine
-    add_preprocessors(RE, devices_dictionary, baseline_3, nx_schema_dir_path)
+    add_preprocessors(RE, devices_dictionary, baseline_3)
 
     # Generate metadata
     nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
@@ -1848,7 +1841,6 @@ def test_4(
     my_motor,
     callback_file_dir_path,
     nx_file_dir_path,
-    nx_schema_dir_path,
     plan_step_number,
     request,
 ):
@@ -1859,7 +1851,7 @@ def test_4(
     """
 
     # Add preprocessors to the RunEngine
-    add_preprocessors(RE, devices_dictionary, baseline_4, nx_schema_dir_path)
+    add_preprocessors(RE, devices_dictionary, baseline_4)
 
     # Generate metadata
     nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
@@ -2313,3 +2305,9 @@ def print_arrays_comparison_info(
 
 
 # ---------- END OF DEBUG ONLY
+
+if __name__ == "__main__":
+    # Execute all test cases in the script when run directly.
+    import pytest
+
+    pytest.main([__file__])
