@@ -67,7 +67,6 @@ VALID_NXFIELD_DTYPES = [
     "uint16",
     "uint32",
     "uint64",
-    "char",
     "str",
     "bool",
 ]
