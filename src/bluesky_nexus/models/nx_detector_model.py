@@ -188,7 +188,7 @@ class NXdetectorModel(NXgroupModel):
             """
 
             long_name: Optional[NXfieldModelForAttribute] = Field(
-                None, gt=0, description="Title of measurement."
+                None, description="Title of measurement."
             )
             check_sum: Optional[NXfieldModelForAttribute] = Field(
                 None, description="Integral of data as check of data integrity."
