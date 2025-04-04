@@ -6,9 +6,10 @@ import pytest
 import types
 import unittest
 from bluesky import RunEngine
-from bluesky.plans import scan
+from bluesky.plans import scan, count
 from tests.devices.mono import Mono
 from tests.devices.monoWithGratingCpt import MonoWithGratingCpt
+from tests.devices.sim_motor import SimMotor
 from ophyd.sim import motor
 from tests.preprocessors.baseline import SupplementalDataBaseline
 from typing import Any
@@ -128,14 +129,28 @@ def devices_dictionary():
     """
     mono = Mono(name="mono")
     mono_with_grating_cpt = MonoWithGratingCpt(name="mono_with_grating_cpt")
-    return {"mono": mono, "mono_with_grating_cpt": mono_with_grating_cpt}
+    sim_motor = SimMotor(name="sim_motor")
+    return {
+        "mono": mono,
+        "mono_with_grating_cpt": mono_with_grating_cpt,
+        "sim_motor": sim_motor,
+    }
 
 
-# Fixture: number of plan's steps
+# Fixture: number of scan steps
 @pytest.fixture
-def plan_step_number():
+def scan_step_number():
     """
     Number of plan's steps
+    """
+    return 10
+
+
+# Fixture: number of counts
+@pytest.fixture
+def counts_number():
+    """
+    Number of counts
     """
     return 10
 
@@ -210,13 +225,13 @@ def my_motor():
     return motor  # Return the motor object for use in tests
 
 
-# Helper: Execute a plan on the RunEngine
-def execute_plan(
+# Helper: Execute a scan plan on the RunEngine
+def execute_scan_plan(
     RE: RunEngine,
     md: dict,
     detectors: list[object],
     motor: object,
-    plan_step_number: int,
+    scan_step_number: int,
 ):
     """
     Helper function to define and execute a plan on the RunEngine.
@@ -225,7 +240,7 @@ def execute_plan(
 
     def scan_plan():
         plan = scan(
-            detectors, motor, 1, 10, plan_step_number, md=md
+            detectors, motor, 1, 10, scan_step_number, md=md
         )  # Start, stop, steps
         assert isinstance(
             plan, types.GeneratorType
@@ -233,6 +248,28 @@ def execute_plan(
         yield from plan
 
     RE(scan_plan())
+
+
+# Helper: Execute a count plan on the RunEngine
+def execute_count_plan(
+    RE: RunEngine,
+    md: dict,
+    detectors: list[object],
+    counts_number: int,
+):
+    """
+    Helper function to define and execute a count plan on the RunEngine.
+    - Repeats reading the detectors `num_counts` times with provided metadata.
+    """
+
+    def count_plan():
+        plan = count(detectors, num=counts_number, md=md)
+        assert isinstance(
+            plan, types.GeneratorType
+        ), "count() is not returning a generator!"
+        yield from plan
+
+    RE(count_plan())
 
 
 # Helper: Add preprocessors to the RunEngine for baseline and metadata
@@ -498,7 +535,7 @@ def test_1(
     my_motor,
     callback_file_dir_path,
     nx_file_dir_path,
-    plan_step_number,
+    scan_step_number,
     request,
 ):
     """
@@ -526,8 +563,10 @@ def test_1(
     callback_writer = WriteToFileFormattedCallback(callback_file_path)
     RE.subscribe(callback_writer)
 
-    # Execute the plan
-    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
+    # Execute the scan plan
+    execute_scan_plan(
+        RE, md, [devices_dictionary["mono"].en], my_motor, scan_step_number
+    )
 
     # Close the callback_writer
     callback_writer.close()
@@ -855,38 +894,38 @@ def test_1(
         # --- dataset: entry/instrument/mono/energy ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6.0] * plan_step_number,
+            "value": [6.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/energy_timestamps ---
         # ---
         "entry/instrument/mono/energy_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/events_timestamps ---
         # ---
         "entry/instrument/mono/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someDataset ---
         # ---
         "entry/instrument/mono/someDataset": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someDataset_timestamps ---
         # ---
         "entry/instrument/mono/someDataset_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/GRATING/diffraction_order ---
@@ -907,60 +946,60 @@ def test_1(
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "int32",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/energy ---
         # ---
         "entry/instrument/mono/someGroup/energy": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/energy_timestamps ---
         # ---
         "entry/instrument/mono/someGroup/energy_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/events_timestamps ---
         # ---
         "entry/instrument/mono/someGroup/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono_with_grating_cpt/description ---
@@ -1037,8 +1076,8 @@ def test_1(
         "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/z": b"17.180000019",
         "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
         "entry/run_info/start/motors": [b"motor"],
-        "entry/run_info/start/num_intervals": plan_step_number - 1,
-        "entry/run_info/start/num_points": plan_step_number,
+        "entry/run_info/start/num_intervals": scan_step_number - 1,
+        "entry/run_info/start/num_points": scan_step_number,
         "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
@@ -1048,7 +1087,7 @@ def test_1(
         "entry/run_info/start/plan_args/detectors": [
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
-        "entry/run_info/start/plan_args/num": plan_step_number,
+        "entry/run_info/start/plan_args/num": scan_step_number,
         "entry/run_info/start/plan_args/per_step": b"None",
         "entry/run_info/start/plan_name": b"scan",
         "entry/run_info/start/plan_pattern": b"inner_product",
@@ -1057,7 +1096,7 @@ def test_1(
             b"1",
             b"10",
         ],
-        "entry/run_info/start/plan_pattern_args/num": plan_step_number,
+        "entry/run_info/start/plan_pattern_args/num": scan_step_number,
         "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
         "entry/run_info/start/plan_type": b"generator",
         "entry/run_info/start/scan_id": 1,
@@ -1073,7 +1112,7 @@ def test_1(
         # ---
         "entry/run_info/stop/exit_status": b"success",
         "entry/run_info/stop/num_events/baseline": 2,
-        "entry/run_info/stop/num_events/primary": plan_step_number,
+        "entry/run_info/stop/num_events/primary": scan_step_number,
         "entry/run_info/stop/reason": b"",
     }
 
@@ -1094,7 +1133,7 @@ def test_2(
     my_motor,
     callback_file_dir_path,
     nx_file_dir_path,
-    plan_step_number,
+    scan_step_number,
     request,
 ):
     """
@@ -1122,8 +1161,10 @@ def test_2(
     callback_writer = WriteToFileFormattedCallback(callback_file_path)
     RE.subscribe(callback_writer)
 
-    # Execute the plan
-    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
+    # Execute the scan plan
+    execute_scan_plan(
+        RE, md, [devices_dictionary["mono"].en], my_motor, scan_step_number
+    )
 
     # Close the callback file
     callback_writer.close()
@@ -1376,38 +1417,38 @@ def test_2(
         # --- dataset: entry/instrument/mono/energy ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6.0] * plan_step_number,
+            "value": [6.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/energy_timestamps ---
         # ---
         "entry/instrument/mono/energy_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/events_timestamps ---
         # ---
         "entry/instrument/mono/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someDataset ---
         # ---
         "entry/instrument/mono/someDataset": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someDataset_timestamps ---
         # ---
         "entry/instrument/mono/someDataset_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/GRATING/diffraction_order ---
@@ -1428,60 +1469,60 @@ def test_2(
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "int32",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/energy ---
         # ---
         "entry/instrument/mono/someGroup/energy": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/energy_timestamps ---
         # ---
         "entry/instrument/mono/someGroup/energy_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/events_timestamps ---
         # ---
         "entry/instrument/mono/someGroup/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- entry/run_info/start ---
@@ -1495,8 +1536,8 @@ def test_2(
         "entry/run_info/start/device_md/mono/worldPosition/z": b"7.8000000000000009",
         "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
         "entry/run_info/start/motors": [b"motor"],
-        "entry/run_info/start/num_intervals": plan_step_number - 1,
-        "entry/run_info/start/num_points": plan_step_number,
+        "entry/run_info/start/num_intervals": scan_step_number - 1,
+        "entry/run_info/start/num_points": scan_step_number,
         "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
@@ -1506,7 +1547,7 @@ def test_2(
         "entry/run_info/start/plan_args/detectors": [
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
-        "entry/run_info/start/plan_args/num": plan_step_number,
+        "entry/run_info/start/plan_args/num": scan_step_number,
         "entry/run_info/start/plan_args/per_step": b"None",
         "entry/run_info/start/plan_name": b"scan",
         "entry/run_info/start/plan_pattern": b"inner_product",
@@ -1515,7 +1556,7 @@ def test_2(
             b"1",
             b"10",
         ],
-        "entry/run_info/start/plan_pattern_args/num": plan_step_number,
+        "entry/run_info/start/plan_pattern_args/num": scan_step_number,
         "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
         "entry/run_info/start/plan_type": b"generator",
         "entry/run_info/start/scan_id": 1,
@@ -1531,7 +1572,7 @@ def test_2(
         # ---
         "entry/run_info/stop/exit_status": b"success",
         "entry/run_info/stop/num_events/baseline": 2,
-        "entry/run_info/stop/num_events/primary": plan_step_number,
+        "entry/run_info/stop/num_events/primary": scan_step_number,
         "entry/run_info/stop/reason": b"",
     }
 
@@ -1552,7 +1593,7 @@ def test_3(
     my_motor,
     callback_file_dir_path,
     nx_file_dir_path,
-    plan_step_number,
+    scan_step_number,
     request,
 ):
     """
@@ -1580,8 +1621,10 @@ def test_3(
     callback_writer = WriteToFileFormattedCallback(callback_file_path)
     RE.subscribe(callback_writer)
 
-    # Execute the plan
-    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
+    # Execute the scan plan
+    execute_scan_plan(
+        RE, md, [devices_dictionary["mono"].en], my_motor, scan_step_number
+    )
 
     # Close the callback file
     callback_writer.close()
@@ -1784,8 +1827,8 @@ def test_3(
         "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/z": b"17.180000019",
         "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
         "entry/run_info/start/motors": [b"motor"],
-        "entry/run_info/start/num_intervals": plan_step_number - 1,
-        "entry/run_info/start/num_points": plan_step_number,
+        "entry/run_info/start/num_intervals": scan_step_number - 1,
+        "entry/run_info/start/num_points": scan_step_number,
         "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
@@ -1795,7 +1838,7 @@ def test_3(
         "entry/run_info/start/plan_args/detectors": [
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
-        "entry/run_info/start/plan_args/num": plan_step_number,
+        "entry/run_info/start/plan_args/num": scan_step_number,
         "entry/run_info/start/plan_args/per_step": b"None",
         "entry/run_info/start/plan_name": b"scan",
         "entry/run_info/start/plan_pattern": b"inner_product",
@@ -1804,7 +1847,7 @@ def test_3(
             b"1",
             b"10",
         ],
-        "entry/run_info/start/plan_pattern_args/num": plan_step_number,
+        "entry/run_info/start/plan_pattern_args/num": scan_step_number,
         "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
         "entry/run_info/start/plan_type": b"generator",
         "entry/run_info/start/scan_id": 1,
@@ -1820,7 +1863,7 @@ def test_3(
         # ---
         "entry/run_info/stop/exit_status": b"success",
         "entry/run_info/stop/num_events/baseline": 2,
-        "entry/run_info/stop/num_events/primary": plan_step_number,
+        "entry/run_info/stop/num_events/primary": scan_step_number,
         "entry/run_info/stop/reason": b"",
     }
 
@@ -1841,7 +1884,7 @@ def test_4(
     my_motor,
     callback_file_dir_path,
     nx_file_dir_path,
-    plan_step_number,
+    scan_step_number,
     request,
 ):
     """
@@ -1869,8 +1912,10 @@ def test_4(
     callback_writer = WriteToFileFormattedCallback(callback_file_path)
     RE.subscribe(callback_writer)
 
-    # Execute the plan
-    execute_plan(RE, md, [devices_dictionary["mono"].en], my_motor, plan_step_number)
+    # Execute the scan plan
+    execute_scan_plan(
+        RE, md, [devices_dictionary["mono"].en], my_motor, scan_step_number
+    )
 
     # Close the callback file
     callback_writer.close()
@@ -2123,38 +2168,38 @@ def test_4(
         # --- dataset: entry/instrument/mono/energy ---
         # ---
         "entry/instrument/mono/energy": {
-            "value": [6.0] * plan_step_number,
+            "value": [6.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/energy_timestamps ---
         # ---
         "entry/instrument/mono/energy_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/events_timestamps ---
         # ---
         "entry/instrument/mono/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someDataset ---
         # ---
         "entry/instrument/mono/someDataset": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someDataset_timestamps ---
         # ---
         "entry/instrument/mono/someDataset_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/GRATING/diffraction_order ---
@@ -2175,60 +2220,60 @@ def test_4(
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_end": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_end_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "int32",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha_increment_set_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/events_timestamps ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/energy ---
         # ---
         "entry/instrument/mono/someGroup/energy": {
-            "value": [0.0] * plan_step_number,
+            "value": [0.0] * scan_step_number,
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/energy_timestamps ---
         # ---
         "entry/instrument/mono/someGroup/energy_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- dataset: entry/instrument/mono/someGroup/events_timestamps ---
         # ---
         "entry/instrument/mono/someGroup/events_timestamps": {
             "dtype": "float64",
-            "shape": (plan_step_number,),
+            "shape": (scan_step_number,),
         },
         # ---
         # --- entry/run_info/start ---
@@ -2242,8 +2287,8 @@ def test_4(
         "entry/run_info/start/device_md/mono/worldPosition/z": b"7.8000000000000009",
         "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
         "entry/run_info/start/motors": [b"motor"],
-        "entry/run_info/start/num_intervals": plan_step_number - 1,
-        "entry/run_info/start/num_points": plan_step_number,
+        "entry/run_info/start/num_intervals": scan_step_number - 1,
+        "entry/run_info/start/num_points": scan_step_number,
         "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
@@ -2253,7 +2298,7 @@ def test_4(
         "entry/run_info/start/plan_args/detectors": [
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
-        "entry/run_info/start/plan_args/num": plan_step_number,
+        "entry/run_info/start/plan_args/num": scan_step_number,
         "entry/run_info/start/plan_args/per_step": b"None",
         "entry/run_info/start/plan_name": b"scan",
         "entry/run_info/start/plan_pattern": b"inner_product",
@@ -2262,7 +2307,7 @@ def test_4(
             b"1",
             b"10",
         ],
-        "entry/run_info/start/plan_pattern_args/num": plan_step_number,
+        "entry/run_info/start/plan_pattern_args/num": scan_step_number,
         "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
         "entry/run_info/start/plan_type": b"generator",
         "entry/run_info/start/scan_id": 1,
@@ -2277,7 +2322,153 @@ def test_4(
         # --- entry/run_info/stop ---
         # ---
         "entry/run_info/stop/exit_status": b"success",
-        "entry/run_info/stop/num_events/primary": plan_step_number,
+        "entry/run_info/stop/num_events/primary": scan_step_number,
+        "entry/run_info/stop/reason": b"",
+    }
+
+    # Verify file contents
+    verify_nexus_file(nx_file_path, expected_structure, expected_data)
+    # Remove the nexus file after successful validation
+    clean_up(nx_file_path)
+    # Remove the callback file after successful creation
+    clean_up(callback_file_path)
+
+
+# Test function
+# @unittest.skip("Temporarily disabling this test_5")
+def test_5(
+    RE,
+    devices_dictionary,
+    baseline_4,
+    callback_file_dir_path,
+    nx_file_dir_path,
+    counts_number,
+    request,
+):
+    """
+    Integration test for generating and validating a Nexus file.
+    - Configures metadata and baseline devices.
+    - Executes a count plan for a simulated ophyd motor.readback and verfifies the resulting Nexus file's structure and data.
+    - sim_motor has deliberately no nx_schema assigned by means of decorator to its class definition
+    """
+
+    # Add preprocessors to the RunEngine
+    add_preprocessors(RE, devices_dictionary, baseline_4)
+
+    # Generate metadata
+    nx_file_name: str = f"hzb_nexus_file_{request.node.name}"
+    md: dict = generate_md(
+        nx_file_name,
+        "bluesky run test 5",
+        "NX_mno",
+        {"a": 35, "b": 36, "c": {"d": 37, "e": 38}},
+    )
+
+    # Define: callback_writer
+    callback_file_path = get_callback_file_path(
+        callback_file_dir_path, f"callback_file_{request.node.name}.json"
+    )
+    callback_writer = WriteToFileFormattedCallback(callback_file_path)
+    RE.subscribe(callback_writer)
+
+    # Execute the plan
+    execute_count_plan(
+        RE, md, [devices_dictionary["sim_motor"].readback], counts_number
+    )
+
+    # Close the callback file
+    callback_writer.close()
+
+    # Define Nexus file path
+    nx_file_path: str = get_nx_file_path(nx_file_dir_path, nx_file_name)
+
+    # Assert file creation
+    assert os.path.exists(
+        nx_file_path
+    ), f"Nexus file: {nx_file_path} was not created while executing test: {request.node.name}."
+
+    ###
+    ### Verify existence of the groups/fields and their attributes
+    ###
+    expected_structure: dict = {
+        # ---
+        # --- group: entry and its attributes ---
+        # ---
+        "entry": {
+            "NX_class": "NXentry",
+            "Application name": "bluesky_nexus",
+            "Content": "'NXinstrument' group and 'NXcollection' group",
+        },
+        # ---
+        # --- group: entry/instrument and its attributes---
+        # ---
+        "entry/instrument": {
+            "NX_class": "NXinstrument",
+            "description": "Instruments involved in the bluesky plan",
+        },
+        # ---
+        # --- group: entry/instrument/mono and its attributes ---
+        # ---
+        "entry/instrument/sim_motor": {
+            "NX_class": "NXsimmotor",
+            "nx_model": "NXgeneralModel",
+        },
+        # ---
+        # --- group: entry/run_info ---
+        # ---
+        "entry/run_info": {
+            "NX_class": "NXcollection",
+            "description": "Copy of the start and stop document from the bluesky run",
+        },
+        # ---
+        # --- groups of: entry/run_info/start ---
+        # ---
+        "entry/run_info/start": {},
+        "entry/run_info/start/device_md/sim_motor": {},
+        "entry/run_info/start/hints": {},
+        "entry/run_info/start/plan_args": {},
+        "entry/run_info/start/test_dict": {},
+        "entry/run_info/start/versions": {},
+        # ---
+        # --- groups of: entry/run_info/stop ---
+        # ---
+        "entry/run_info/stop": {},
+        "entry/run_info/stop/num_events": {},
+    }
+
+    ###
+    ### Verify expected data in datasets. I.e. verify: value, dtype, shape
+    ###
+    expected_data: dict = {
+        # ---
+        # --- entry/run_info/start ---
+        # ---
+        "entry/run_info/start/detectors": [b"sim_motor"],
+        "entry/run_info/start/device_md/sim_motor/baseline": True,
+        "entry/run_info/start/device_md/sim_motor/worldPosition/x": b"1.2000000000000003",
+        "entry/run_info/start/device_md/sim_motor/worldPosition/y": b"4.5000000000000006",
+        "entry/run_info/start/device_md/sim_motor/worldPosition/z": b"7.8000000000000009",
+        "entry/run_info/start/hints/dimensions": b"[(('time',), 'primary')]",
+        "entry/run_info/start/detectors": [b"sim_motor"],
+        "entry/run_info/start/num_intervals": counts_number - 1,
+        "entry/run_info/start/num_points": counts_number,
+        "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
+        "entry/run_info/start/plan_args/num": counts_number,
+        "entry/run_info/start/plan_name": b"count",
+        "entry/run_info/start/plan_type": b"generator",
+        "entry/run_info/start/scan_id": 1,
+        "entry/run_info/start/test_dict/a": 35,
+        "entry/run_info/start/test_dict/b": 36,
+        "entry/run_info/start/test_dict/c/d": 37,
+        "entry/run_info/start/test_dict/c/e": 38,
+        "entry/run_info/start/title": b"bluesky run test 5",
+        "entry/run_info/start/versions/bluesky": b"1.13",
+        "entry/run_info/start/versions/ophyd": b"1.9.0",
+        # ---
+        # --- entry/run_info/stop ---
+        # ---
+        "entry/run_info/stop/exit_status": b"success",
+        "entry/run_info/stop/num_events/primary": counts_number,
         "entry/run_info/stop/reason": b"",
     }
 
