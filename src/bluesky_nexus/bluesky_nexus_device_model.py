@@ -16,6 +16,7 @@ Error Handling:
     Raises ValueError for missing or invalid schema files, missing keys in the schema, or unrecognized model names in the schema content.
 """
 
+import json
 import os
 
 from bluesky_nexus.bluesky_nexus_const import (
@@ -39,13 +40,19 @@ def assign_pydantic_model_instance(devices_dictionary: dict):
             dev_instance, DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME
         )
 
-        if schema_content is None:
-            raise ValueError(
-                f"Pydantic nexus schema content associated with the device: {dev_instance.name} is None. Check the device class definition for correct nexus schema assignment."
-            )
-        if not schema_content:
-            raise ValueError(
-                f"Pydantic nexus  schema content associated with the device: {dev_instance.name} is empty. Check the device class definition for correct nexus schema assignment."
+        # When pydantic schema is not assigned to the class of the dev_instance (by means of the decorator)
+        if (
+            not schema_content
+        ):  # Triggers for schema_content = None or "" (empty string) or [] (empty list) or {} (empty dict) or 0, 0.0 or False
+            schema_content = {
+                "nx_model": "NXgeneralModel",
+                "nxclass": f"NX{dev_instance.__class__.__name__.lower()}",
+            }
+            schema_content_str: str = json.dumps(
+                schema_content
+            )  # Convert dictionary to JSON string
+            logger.warning(
+                f"Pydantic Nexus schema content for device '{dev_instance.name}' was None or empty. Defaulting to: {schema_content_str}"
             )
 
         # Read model name from the schema content
