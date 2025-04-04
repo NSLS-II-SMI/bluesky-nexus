@@ -479,10 +479,15 @@ class PlanDeviceChecker:
         used_devices: dict = {
             name: self.devices_dictionary[name] for name in used_device_names
         }
+        logger.debug(f"Names of devices used in the plan: {list(used_devices.keys())}")
+
         unused_devices: dict = {
             name: self.devices_dictionary[name]
             for name in self.device_names_set - used_device_names
         }
+        logger.debug(
+            f"Names of devices unused in the plan: {list(unused_devices.keys())}"
+        )
 
         # Step 4: Return results
         logger.info("Detection of devices in the plan finished.")
