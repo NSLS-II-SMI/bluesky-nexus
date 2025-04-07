@@ -1006,7 +1006,7 @@ def test_1(
         # ---
         "entry/instrument/mono_with_grating_cpt/description": {
             "value": b"I am the best mono with grating cpt at the bessyii facility",
-            "shape": (59,),
+            "shape": (1,),
         },
         # ---
         # --- dataset: entry/instrument/mono_with_grating_cpt/energy ---
@@ -1057,7 +1057,7 @@ def test_1(
         # ---
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
             "value": b"leadless",
-            "shape": (8,),
+            "shape": (1,),
         },
         # ---
         # --- entry/run_info/start ---
@@ -1763,7 +1763,7 @@ def test_3(
         # ---
         "entry/instrument/mono_with_grating_cpt/description": {
             "value": b"I am the best mono with grating cpt at the bessyii facility",
-            "shape": (59,),
+            "shape": (1,),
         },
         # ---
         # --- dataset: entry/instrument/mono_with_grating_cpt/energy ---
@@ -1814,7 +1814,7 @@ def test_3(
         # ---
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
             "value": b"leadless",
-            "shape": (8,),
+            "shape": (1,),
         },
         # ---
         # --- entry/run_info/start ---
