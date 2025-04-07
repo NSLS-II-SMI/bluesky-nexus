@@ -194,7 +194,10 @@ class NexusWriter(CollectThenCompute):
         nx_file_path: str = self.create_nx_file_path(nx_dir_path, nx_file_name)
 
         # Create 'run_info' dict by extraction of data from the start and stop document
-        run_info_data: dict = extract_run_info(self._start_doc, self._stop_doc)
+        run_info: dict = extract_run_info(self._start_doc, self._stop_doc)
+
+        # Define a dict "data" that is to be passed to 'create_nexus_file()'
+        data: dict = {"run_info": run_info}
 
         # Copy the start document to be able to modify it. Reason: Documents are immutable.
         try:
@@ -203,14 +206,14 @@ class NexusWriter(CollectThenCompute):
             logger.exception(f"Error during deepcopy of the start document: {e}")
             return
 
-        # Process the placeholders of the nexus_md applying events and descriptors
-        process_nexus_md(start_doc_cpy[NX_MD_KEY], self._descriptors, self._events)
+        # If there is NX_MD_KEY in the start_doc_cpy
+        if start_doc_cpy[NX_MD_KEY]:
+            # Process the placeholders of the nexus_md applying events and descriptors
+            process_nexus_md(start_doc_cpy[NX_MD_KEY], self._descriptors, self._events)
 
-        # Define dictionary: 'instrument_data'
-        instrument_data: dict = start_doc_cpy[NX_MD_KEY]
-
-        # Define 'data' dictionary consisting of: 'instrument_data' and 'run_info_data'
-        data: dict = {"instrument": instrument_data, "run_info": run_info_data}
+            # Update the dict data with instrument_data
+            instrument_data: dict = start_doc_cpy[NX_MD_KEY]
+            data.update({"instrument": instrument_data})
 
         # Create nexus file from the data
         create_nexus_file(nx_file_path, data)
@@ -390,7 +393,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
             else:
                 return None  # Pattern does not match
 
-        def extract_data(descriptors, events, cpt_name) -> dict:
+        def extract_data(descriptors, events, cpt_name) -> Optional[dict]:
             """Extract data for cpt_name from descriptors, prioritizing non-baseline first."""
 
             def find_data(descriptor) -> Optional[dict]:
@@ -411,9 +414,10 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                         return data
 
             # No data found
-            raise ValueError(
+            logger.warning(
                 f"No descriptor contains data for the 'cpt_name': {cpt_name}"
             )
+            return None
 
         def replace_func(dev_name: str, obj: dict) -> dict:
             """
@@ -452,7 +456,11 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     cpt_name: str = dev_name + obj_delimiter + cpt_name
 
                 # Extract data from descriptor for the component
-                cpt_data: dict = extract_data(descriptors, events, cpt_name)
+                cpt_data: Optional[dict] = extract_data(descriptors, events, cpt_name)
+
+                # Return obj if no data for the component with cpt_name could be extracted from descriptors
+                if not cpt_data:
+                    return obj
 
                 # Component data from descriptor
                 data: np.ndarray = cpt_data["data"]
@@ -1076,6 +1084,9 @@ def add_group_or_field(group, data):
 
                 # Create group
                 subgroup = group.create_group(key)
+                logger.debug(
+                    f"New subgroup: {subgroup.name} added to the group: {group.name}"
+                )
 
                 # Add "NX_class" attribute expected by nexus convention for groups
                 subgroup.attrs["NX_class"] = value["nxclass"]
@@ -1114,7 +1125,9 @@ def add_group_or_field(group, data):
         else:
             # Handle as attribute of the group
             group.attrs[key] = value
-            # print(f"Assign to group attr named {key} the value: {value}") # Debug only
+            logger.debug(
+                f"Assign to attrs of group: {group.name} the key: {key} with value: {value}"
+            )
 
 
 def write_collection(group, data: dict):
