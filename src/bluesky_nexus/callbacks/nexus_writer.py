@@ -902,46 +902,60 @@ def add_group_or_field(group, data):
                                 key, data=value["value"], dtype=dtype
                             )
                             logger.debug(
-                                f"New dataset: encoding: utf8, dtype: {dtype}: value: {value['value']}, key: {key}, group: {group.name}"
+                                f"New dataset: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
                             )
 
                         # If the numpy array is NOT of dtype 'object':
                         # - This is a case when the data coming from events or descriptor is a list of floats, integers, booleans
                         # - This is a case when the data coming from events or descriptor is a float, integer, boolean
                         else:
+                            # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                            if value["value"].ndim == 0:
+                                # If it's a scalar, convert it to a 1D array with a single element
+                                value["value"] = np.array(
+                                    [value["value"].item()], dtype=dtype
+                                )
+
                             dataset = group.create_dataset(
                                 key, data=value["value"], dtype=dtype
                             )
                             logger.debug(
-                                f"New dataset: dtype: {dtype}: value: {value['value']}, key: {key}, group: {group.name}"
+                                f"New dataset: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
                             )
 
                     # If value["value"] is not a numpy array
                     else:
                         # If value["value"] is an instance of str
                         if isinstance(value["value"], str):
+
+                            # Convert it to a 1D array with a single element
+                            value["value"] = np.array([value["value"]], dtype=object)
+
                             # Apply variable-length UTF-8 encoding for the string
                             dtype = h5py.string_dtype(encoding="utf-8")
+
                             # Create dataset for 'value'
                             dataset = group.create_dataset(
                                 key, data=value["value"], dtype=dtype
                             )
                             logger.debug(
-                                f"New dataset: encoding: utf8, dtype: {dtype}: value: {value['value']}, key: {key}, group: {group.name}"
+                                f"New dataset: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
                             )
+
                         # If value["value"] is an instance of int, double, bool
-                        elif (
-                            isinstance(value["value"], int)
-                            or isinstance(value["value"], float)
-                            or isinstance(value["value"], bool)
-                        ):
+                        elif isinstance(value["value"], (int, float, bool)):
+
+                            # Convert it to a 1D array with a single element
+                            value["value"] = np.array([value["value"]])
+
                             # Create dataset for 'value'
                             dataset = group.create_dataset(
                                 key, data=value["value"], dtype=dtype
                             )
                             logger.debug(
-                                f"New dataset: dtype: {dtype}: value: {value['value']}, key: {key}, group: {group.name}"
+                                f"New dataset: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
                             )
+
                         elif isinstance(value["value"], list):
 
                             # There is a string in the list
@@ -963,8 +977,9 @@ def add_group_or_field(group, data):
                                     key, data=value["value"], dtype=dtype
                                 )
                                 logger.debug(
-                                    f"New dataset: encoding: utf8, dtype: {dtype}: value: {value['value']}, key: {key}, group: {group.name}"
+                                    f"New dataset: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
                                 )
+
                             # There is no string in the list
                             else:
                                 value["value"] = np.array(value["value"])
@@ -972,13 +987,17 @@ def add_group_or_field(group, data):
                                     key, data=value["value"], dtype=dtype
                                 )
                                 logger.debug(
-                                    f"New dataset: dtype: {dtype}: value: {value['value']}, key: {key}, group: {group.name}"
+                                    f"New dataset: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
                                 )
 
                         elif isinstance(value["value"], dict):
                             value["value"] = json.dumps(
                                 value["value"]
                             )  # Convert dictionary to JSON string
+
+                            # Convert it to a 1D array with a single element
+                            value["value"] = np.array([value["value"]], dtype=object)
+
                             dtype = h5py.string_dtype(
                                 encoding="utf-8"
                             )  # Ensure UTF-8 encoding
@@ -987,13 +1006,13 @@ def add_group_or_field(group, data):
                                 key, data=value["value"], dtype=dtype
                             )
                             logger.debug(
-                                f"New dataset: encoding: utf8, dtype: {dtype}: value: {value['value']}, key: {key}, group: {group.name}"
+                                f"New dataset: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
                             )
 
                         # Unsupported instance of value["value"]
                         else:
                             logger.error(
-                                f"Unsupported case detected. Please contact developer, dtype: {dtype}: value: {value['value']}, key: {key}, group: {group.name}"
+                                f"Unsupported case detected. Please contact developer, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
                             )
                             return
 
