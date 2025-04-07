@@ -105,9 +105,9 @@ def read_attribute(device, attribute_name):
         # Attempt to retrieve the attribute's value
         value = getattr(device, attribute_name)
         return value
-    except AttributeError as e:
+    except AttributeError:
         # Handle case where the attribute does not exist
         logger.exception(
-            f"Error: Attribute '{attribute_name}' does not exist on the device {device.name}. Details: {e}"
+            f"Attribute '{attribute_name}' does not exist on the device {device.name}."
         )
         return None
