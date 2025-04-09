@@ -1342,28 +1342,19 @@ def add_group_or_field(group, data):
             )
 
 
-def write_collection(group, data: dict):
+def write_collection(group, data: dict) -> None:
     """
     Recursively writes a collection of data (nested dictionaries, lists, and primitive values)
-    to a given group in a hierarchical storage structure.
-
-    The function processes the input data dictionary and handles different types of data as follows:
-    - Nested dictionaries are stored as subgroups.
-    - Primitive values (int, float, str, bool) are directly stored as datasets.
-    - Lists or tuples are stored as datasets, with special handling for nested structures or strings within the list.
+    to a given group in a hierarchical storage structure. Scalars are stored as 1D arrays.
 
     Args:
-        group (h5py.Group): The group where the data will be stored. It could represent a group in an HDF5 file or any similar hierarchical storage.
-        data (dict): The data dictionary to be written. It can contain nested dictionaries, lists, tuples, or primitive values.
+        group (h5py.Group): The group where the data will be stored.
+        data (dict): The data dictionary to be written.
 
     Raises:
-        TypeError: If the function encounters an unsupported data type during processing.
-
-    Notes:
-        - Nested dictionaries are recursively written as subgroups.
-        - Non-nested lists or tuples containing primitive values are converted into datasets with appropriate types.
-        - Lists or tuples containing other lists or tuples are serialized into strings.
+        TypeError: If an unsupported data type is encountered.
     """
+    string_dtype = h5py.string_dtype(encoding="utf-8")
 
     for key, value in data.items():
         if isinstance(value, dict):
@@ -1371,27 +1362,36 @@ def write_collection(group, data: dict):
             subgroup = group.create_group(key)
             write_collection(subgroup, value)
 
-        elif isinstance(value, (float, int, str, bool)):
-            group.create_dataset(key, data=value)
+        elif isinstance(value, (int, float, bool)):
+            # Store scalar as 1D array
+            group.create_dataset(key, data=np.array([value]))
+
+        elif isinstance(value, str):
+            # Store string as 1D array with UTF-8 dtype
+            group.create_dataset(key, data=np.array([value], dtype=string_dtype))
 
         elif isinstance(value, (list, tuple)):
-            # Check for nested lists/tuples
+            # List or tuple with nested list or tuple elements
             if any(isinstance(item, (list, tuple)) for item in value):
                 # Serialize nested structure into a single string
-                serialized_value = str(value)  # Convert entire list/tuple to string
-                group.create_dataset(key, data=serialized_value)
+                serialized_value = str(value)
+                group.create_dataset(
+                    key, data=np.array([serialized_value], dtype=string_dtype)
+                )
+            # List or tuple without nested list or tuple elements
             else:
-                # Non-nested lists
-                if any(
-                    isinstance(item, str) for item in value
-                ):  # Check if there is a str inside of the list or tuple
-                    normalized_value = [str(item) for item in value]
-                    group.create_dataset(
-                        key, data=np.array(normalized_value, dtype="S")
-                    )
+                if len(value) == 0:
+                    # Empty list or tuple
+                    group.create_dataset(key, data=np.array([], dtype=string_dtype))
+                elif all(isinstance(item, (int, float, bool)) for item in value):
+                    group.create_dataset(key, data=np.array(value))
                 else:
-                    normalized_value = list(value)
-                    group.create_dataset(key, data=np.array(normalized_value))
+                    # Convert mixed-type or string-containing list to strings
+                    str_value = [str(item) for item in value]
+                    group.create_dataset(
+                        key, data=np.array(str_value, dtype=string_dtype)
+                    )
+
         else:
             logger.error(f"Unsupported type {type(value)} for key '{key}'")
             raise TypeError(f"ERROR: Unsupported type {type(value)} for key '{key}'")
