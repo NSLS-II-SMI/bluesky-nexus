@@ -60,7 +60,7 @@ def assign_pydantic_model_instance(devices_dictionary: dict):
                 f"Pydantic NeXus schema content for device: '{dev_instance.name}' was None or empty. Defaulting to: {schema_content_str}"
             )
         else:
-            logger.info(
+            logger.debug(
                 f"Pydantic NeXus schema content for device: '{dev_instance.name}' found as expected (it is not None or not empty)."
             )
 
