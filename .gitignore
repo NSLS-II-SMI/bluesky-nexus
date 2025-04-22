@@ -116,6 +116,7 @@ docs/_build/
 *.tif
 *.dat
 *.DAT
+*.nxs
 
 #generated documntation files
 doc/resource/api/generated/

@@ -22,8 +22,6 @@ Dependencies:
 
 from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
-    Field,
-    ConfigDict,
     NXattrModel,
     NXgroupModel,
     NXfieldModelWithPrePostRunString,
@@ -33,6 +31,7 @@ from bluesky_nexus.models.nx_log_model import NXlogModel
 from bluesky_nexus.models.nx_data_model import NXdataModel
 from bluesky_nexus.models.nx_off_geometry_model import NXoff_geometryModel
 from bluesky_nexus.models.nx_transformations_model import NXtransformationsModel
+from pydantic import ConfigDict, Field
 
 
 class NXcrystalModel(NXgroupModel):
