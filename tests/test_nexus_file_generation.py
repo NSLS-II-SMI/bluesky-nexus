@@ -1105,8 +1105,6 @@ def test_1(
         "entry/run_info/start/test_dict/c/d": 3,
         "entry/run_info/start/test_dict/c/e": 4,
         "entry/run_info/start/title": b"bluesky run test 1",
-        "entry/run_info/start/versions/bluesky": b"1.13",
-        "entry/run_info/start/versions/ophyd": b"1.9.0",
         # ---
         # --- entry/run_info/stop ---
         # ---
@@ -1565,8 +1563,6 @@ def test_2(
         "entry/run_info/start/test_dict/c/d": 13,
         "entry/run_info/start/test_dict/c/e": 14,
         "entry/run_info/start/title": b"bluesky run test 2",
-        "entry/run_info/start/versions/bluesky": b"1.13",
-        "entry/run_info/start/versions/ophyd": b"1.9.0",
         # ---
         # --- entry/run_info/stop ---
         # ---
@@ -1856,8 +1852,6 @@ def test_3(
         "entry/run_info/start/test_dict/c/d": 23,
         "entry/run_info/start/test_dict/c/e": 24,
         "entry/run_info/start/title": b"bluesky run test 3",
-        "entry/run_info/start/versions/bluesky": b"1.13",
-        "entry/run_info/start/versions/ophyd": b"1.9.0",
         # ---
         # --- entry/run_info/stop ---
         # ---
@@ -2316,8 +2310,6 @@ def test_4(
         "entry/run_info/start/test_dict/c/d": 33,
         "entry/run_info/start/test_dict/c/e": 34,
         "entry/run_info/start/title": b"bluesky run test 4",
-        "entry/run_info/start/versions/bluesky": b"1.13",
-        "entry/run_info/start/versions/ophyd": b"1.9.0",
         # ---
         # --- entry/run_info/stop ---
         # ---
@@ -2462,8 +2454,6 @@ def test_5(
         "entry/run_info/start/test_dict/c/d": 37,
         "entry/run_info/start/test_dict/c/e": 38,
         "entry/run_info/start/title": b"bluesky run test 5",
-        "entry/run_info/start/versions/bluesky": b"1.13",
-        "entry/run_info/start/versions/ophyd": b"1.9.0",
         # ---
         # --- entry/run_info/stop ---
         # ---
