@@ -288,7 +288,7 @@ class NXmonochromatorModel(NXgroupModel):
 The schema supports defining units for device components. The strategy for defining units in the schema yml file is as follows:
 
 1. **Device provides units**:  
-   If the device natively returns units, the units provided by the device are used directly. I such case do not define any `units` under `attrs`, otherwise the `units` defined under `attrs` will be used.
+   If the device natively returns units, the units provided by the device are used directly. In such a case do not define any `units` under `attrs`, otherwise the `units` defined under `attrs` will be used.
 
 2. **Device does not provide units**:  
    If the device does not return any units, define the corresponding unit value in the `units` under `attrs`. This ensures that the correct units are explicitly defined for this specific device.
