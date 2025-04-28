@@ -288,7 +288,7 @@ class NXmonochromatorModel(NXgroupModel):
 The schema supports defining units for device components. The strategy for defining units in the schema yml file is as follows:
 
 1. **Device provides units**:  
-   If the device natively returns units, the units provided by the device are used directly. I such case do not define any `units` under `attrs`, otherwise the `units` defined under `attrs` will be used.
+   If the device natively returns units, the units provided by the device are used directly. In such a case do not define any `units` under `attrs`, otherwise the `units` defined under `attrs` will be used.
 
 2. **Device does not provide units**:  
    If the device does not return any units, define the corresponding unit value in the `units` under `attrs`. This ensures that the correct units are explicitly defined for this specific device.
@@ -372,28 +372,24 @@ class Mono(Device):
 ```python
 from .base import *
 from .beamline import *
-from .baseline import *
 
 from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
 from bluesky_nexus.callbacks.nexus_writer import NexusWriter
 from bluesky_nexus.common.logging_utils import setup_nx_logger, logging
 from bluesky_nexus.bluesky_nexus_paths import (
     get_nx_file_dir_path,
-    get_nx_schema_dir_path,
     get_nx_log_file_dir_path,
 )
 
 # Let the preprocessor append NeXus metadata to the start document
 metadata = SupplementalMetadata()
 metadata.devices_dictionary: dict = devices_dictionary
-metadata.baseline = baseline
 metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
 RE.preprocessors.append(metadata)
 
 # Let the preprocessor append devices metadata to the start document
 metadata = SupplementalMetadata()
 metadata.devices_dictionary: dict = devices_dictionary
-metadata.baseline = baseline
 metadata.md_type = SupplementalMetadata.MetadataType.DEVICE_MD
 RE.preprocessors.append(metadata)
 
@@ -470,10 +466,8 @@ In your script subscribe to the preprocessor and the callback:
 ### Let the preprocessor append ```NeXus metadata``` to the start document
 
   ```python
-  nx_schema_dir_path: str = "Your path to nx_schema directory"
-  metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
+  metadata = SupplementalMetadata()
   metadata.devices_dictionary: dict = devices_dictionary
-  metadata.baseline = baseline
   metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
   RE.preprocessors.append(metadata)
   ```
@@ -485,7 +479,6 @@ In your script subscribe to the preprocessor and the callback:
       SupplementalMetadata()
   )  # No need to pass "nx_schema_dir_path" in case of DEVICE_MD
   metadata.devices_dictionary: dict = devices_dictionary
-  metadata.baseline = baseline
   metadata.md_type = SupplementalMetadata.MetadataType.DEVICE_MD
   RE.preprocessors.append(metadata)
   ```

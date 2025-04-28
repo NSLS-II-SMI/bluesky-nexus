@@ -1,6 +1,7 @@
 import ast
 import os
 import h5py
+from h5py.h5t import TypeStringID, CSET_UTF8
 import numpy as np
 import pytest
 import types
@@ -454,76 +455,101 @@ def verify_nexus_file(file_path: str, expected_structure: dict, expected_data: d
                 ), f"Missing dataset key: {key} in dataset path: {dataset_path}"
                 current = current[key]
 
-            if isinstance(current, h5py.Dataset):
-                actual_value = current[()]
+            # Assert current is as dataset
+            assert isinstance(current, h5py.Dataset), f"{dataset_path} is not a dataset"
 
-                # If the dataset contains byte strings, handle them differently
-                if isinstance(actual_value, bytes):
-                    if expected_shape:
-                        assert len(actual_value) == expected_shape[0], (
-                            f"Mismatch in byte string shape for dataset: {dataset_path}: "
-                            f"Expected {expected_shape}, Found {len(actual_value)}"
-                        )
+            # Get actual value
+            actual_value = current[()]
+
+            # Assert actual_value is a numpy array
+            assert isinstance(
+                actual_value, np.ndarray
+            ), f"{dataset_path} is not a numpy array. Got type: {type(actual_value).__name__}"
+
+            print(f"actual_value.dtype: ", {actual_value.dtype})
+
+            # Verify dtype
+            if expected_dtype:
+                assert actual_value.dtype == np.dtype(
+                    expected_dtype
+                ), f"Mismatch in dtype for dataset: {dataset_path}: Expected {expected_dtype}, Found {actual_value.dtype}"
+
+                # Additional check for objects/strings to check if they are encoded as UTF-8
+                if "O" == actual_value.dtype.kind:
+                    h5_type = current.id.get_type()
+
+                    # Assert that the dataset is a string type
                     assert (
-                        actual_value == expected_data_value
-                    ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value!r}, Found {actual_value!r}"
+                        h5_type.get_class() == h5py.h5t.STRING
+                    ), f"Dataset {dataset_path} is not a string type"
+
+                    # Assert that the character set is UTF-8
+                    is_utf8 = h5_type.get_cset() == CSET_UTF8
+                    assert is_utf8, f"Dataset {dataset_path} is not UTF-8 encoded"
+
+                    # Assert that the string is variable-length
+                    is_variable_length = h5_type.is_variable_str()
+                    assert (
+                        is_variable_length
+                    ), f"Dataset {dataset_path} does not use variable-length UTF-8 strings"
+
+            # Verify shape
+            if expected_shape:
+                assert (
+                    actual_value.shape == expected_shape
+                ), f"Mismatch in shape for dataset: {dataset_path}: Expected {expected_shape}, Found {actual_value.shape}"
+
+            # Verify value
+            if expected_data_value:
+
+                # Convert expected_data_value in np array
+
+                ### ---------- DEBUG ONLY
+                # Print array info
+                # print_array_info(actual_value, "actual_value")
+                # print_array_info(expected_data_value, "expected_data_value")
+
+                # Print array comparison info
+                # print_arrays_comparison_info(
+                #     actual_value,
+                #     "actual_value",
+                #     expected_data_value,
+                #     "expected_data_value",
+                # )
+                ### ---------- END OF DEBUG ONLY
+
+                # Check if the array contains objects/string values
+                if "O" == actual_value.dtype.kind:
+                    expected_data_value = np.array(expected_data_value, dtype=object)
+                    assert np.array_equal(
+                        actual_value,
+                        expected_data_value,
+                    ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
+
+                # Check if the array contains numeric values
+                elif (
+                    actual_value.dtype.kind == "f" or actual_value.dtype.kind == "i"
+                ):  # 'f' for float, 'i' for integer
+
+                    expected_data_value = np.array(expected_data_value)
+                    assert np.allclose(
+                        actual_value,
+                        expected_data_value,
+                        atol=1e-8,  # Use tolerance of 1e-8 (adjust as needed)
+                    ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
+
+                # Check if the array contains boolean values
+                elif "b" == actual_value.dtype.kind:
+                    expected_data_value = np.array(expected_data_value)
+                    assert np.array_equal(
+                        actual_value,
+                        expected_data_value,
+                    ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
 
                 else:
-                    # Verify dtype
-                    if expected_dtype:
-                        assert actual_value.dtype == np.dtype(
-                            expected_dtype
-                        ), f"Mismatch in dtype for dataset: {dataset_path}: Expected {expected_dtype}, Found {actual_value.dtype}"
-                    # Verify shape
-                    if expected_shape:
-                        assert (
-                            actual_value.shape == expected_shape
-                        ), f"Mismatch in shape for dataset: {dataset_path}: Expected {expected_shape}, Found {actual_value.shape}"
-                    # Verify value
-                    if expected_data_value:
-                        if isinstance(actual_value, np.ndarray):
-                            # Convert expected_data_value in np array
-                            expected_data_value = np.array(expected_data_value)
-
-                            ### ---------- DEBUG ONLY
-                            # Print array info
-                            # print_array_info(actual_value, "actual_value")
-                            # print_array_info(expected_data_value, "expected_data_value")
-
-                            # Print array comparison info
-                            # print_arrays_comparison_info(
-                            #     actual_value,
-                            #     "actual_value",
-                            #     expected_data_value,
-                            #     "expected_data_value",
-                            # )
-                            ### ---------- END OF DEBUG ONLY
-
-                            # Check if the array contains string values
-                            if actual_value.dtype.kind == "U":
-                                assert np.array_equal(
-                                    actual_value,
-                                    expected_data_value,
-                                ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
-
-                            # Check if the array contains numeric values
-                            elif (
-                                actual_value.dtype.kind == "f"
-                                or actual_value.dtype.kind == "i"
-                            ):  # 'f' for float, 'i' for integer
-                                assert np.allclose(
-                                    actual_value,
-                                    expected_data_value,
-                                    atol=1e-8,  # Use tolerance of 1e-8 (adjust as needed)
-                                ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
-
-                        else:
-                            assert (
-                                actual_value == expected_data_value
-                            ), f"Mismatch in dataset: {dataset_path}: Expected {expected_data_value}, Found {actual_value}"
-
-            else:
-                raise TypeError(f"{dataset_path} is not a dataset")
+                    raise ValueError(
+                        f"Dataset {dataset_path} has a unsupported datatype: {actual_value.dtype.kind}"
+                    )
 
 
 # Test function
@@ -890,9 +916,6 @@ def test_1(
     ### Verify expected data in datasets. I.e. verify: value, dtype, shape
     ###
     expected_data: dict = {
-        # ---
-        # --- dataset: entry/instrument/mono/energy ---
-        # ---
         "entry/instrument/mono/energy": {
             "value": [6.0] * scan_step_number,
             "dtype": "float64",
@@ -939,8 +962,9 @@ def test_1(
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha": {
-            "value": b"x",
+            "value": [b"x"],
             "shape": (1,),  # Scalar
+            "dtype": "O",  # Object
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
@@ -1005,8 +1029,9 @@ def test_1(
         # --- dataset: entry/instrument/mono_with_grating_cpt/description ---
         # ---
         "entry/instrument/mono_with_grating_cpt/description": {
-            "value": b"I am the best mono with grating cpt at the bessyii facility",
-            "shape": (59,),
+            "value": [b"I am the best mono with grating cpt at the bessyii facility"],
+            "shape": (1,),
+            "dtype": "O",
         },
         # ---
         # --- dataset: entry/instrument/mono_with_grating_cpt/energy ---
@@ -1056,29 +1081,40 @@ def test_1(
         # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps ---
         # ---
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
-            "value": b"leadless",
-            "shape": (8,),
+            "value": [b"leadless"],
+            "shape": (1,),
+            "dtype": "O",
         },
         # ---
         # --- entry/run_info/start ---
         # ---
-        "entry/run_info/start/definition": b"NX_abc",
+        "entry/run_info/start/definition": [b"NX_abc"],
         "entry/run_info/start/detectors": [b"mono_en"],
-        "entry/run_info/start/device_md/mono/baseline": b"True",
-        "entry/run_info/start/device_md/mono/grating_substrate_material": b"lead",
-        "entry/run_info/start/device_md/mono/worldPosition/x": b"1.2000000000000003",
-        "entry/run_info/start/device_md/mono/worldPosition/y": b"4.5000000000000006",
-        "entry/run_info/start/device_md/mono/worldPosition/z": b"7.8000000000000009",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/baseline": b"True",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/grating_substrate_material": b"leadless",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/x": b"11.120000013",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/y": b"14.150000016",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/z": b"17.180000019",
-        "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
+        "entry/run_info/start/device_md/mono/baseline": [b"True"],
+        "entry/run_info/start/device_md/mono/grating_substrate_material": [b"lead"],
+        "entry/run_info/start/device_md/mono/worldPosition/x": [b"1.2000000000000003"],
+        "entry/run_info/start/device_md/mono/worldPosition/y": [b"4.5000000000000006"],
+        "entry/run_info/start/device_md/mono/worldPosition/z": [b"7.8000000000000009"],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/baseline": [b"True"],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/grating_substrate_material": [
+            b"leadless"
+        ],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/x": [
+            b"11.120000013"
+        ],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/y": [
+            b"14.150000016"
+        ],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/z": [
+            b"17.180000019"
+        ],
+        "entry/run_info/start/hints/dimensions": [b"[(['motor'], 'primary')]"],
         "entry/run_info/start/motors": [b"motor"],
         "entry/run_info/start/num_intervals": scan_step_number - 1,
         "entry/run_info/start/num_points": scan_step_number,
-        "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
+        "entry/run_info/start/nx_file_name": [
+            nx_file_name.encode()
+        ],  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
             b"1",
@@ -1088,30 +1124,30 @@ def test_1(
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
         "entry/run_info/start/plan_args/num": scan_step_number,
-        "entry/run_info/start/plan_args/per_step": b"None",
-        "entry/run_info/start/plan_name": b"scan",
-        "entry/run_info/start/plan_pattern": b"inner_product",
+        "entry/run_info/start/plan_args/per_step": [b"None"],
+        "entry/run_info/start/plan_name": [b"scan"],
+        "entry/run_info/start/plan_pattern": [b"inner_product"],
         "entry/run_info/start/plan_pattern_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
             b"1",
             b"10",
         ],
         "entry/run_info/start/plan_pattern_args/num": scan_step_number,
-        "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
-        "entry/run_info/start/plan_type": b"generator",
+        "entry/run_info/start/plan_pattern_module": [b"bluesky.plan_patterns"],
+        "entry/run_info/start/plan_type": [b"generator"],
         "entry/run_info/start/scan_id": 1,
         "entry/run_info/start/test_dict/a": 1,
         "entry/run_info/start/test_dict/b": 2,
         "entry/run_info/start/test_dict/c/d": 3,
         "entry/run_info/start/test_dict/c/e": 4,
-        "entry/run_info/start/title": b"bluesky run test 1",
+        "entry/run_info/start/title": [b"bluesky run test 1"],
         # ---
         # --- entry/run_info/stop ---
         # ---
-        "entry/run_info/stop/exit_status": b"success",
-        "entry/run_info/stop/num_events/baseline": 2,
+        "entry/run_info/stop/exit_status": [b"success"],
+        "entry/run_info/stop/num_events/baseline": [2],
         "entry/run_info/stop/num_events/primary": scan_step_number,
-        "entry/run_info/stop/reason": b"",
+        "entry/run_info/stop/reason": [b""],
     }
 
     # Verify file contents
@@ -1460,8 +1496,9 @@ def test_2(
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha": {
-            "value": b"x",
+            "value": [b"x"],
             "shape": (1,),  # Scalar
+            "dtype": "O",
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
@@ -1525,18 +1562,20 @@ def test_2(
         # ---
         # --- entry/run_info/start ---
         # ---
-        "entry/run_info/start/definition": b"NX_def",
+        "entry/run_info/start/definition": [b"NX_def"],
         "entry/run_info/start/detectors": [b"mono_en"],
-        "entry/run_info/start/device_md/mono/baseline": b"True",
-        "entry/run_info/start/device_md/mono/grating_substrate_material": b"lead",
-        "entry/run_info/start/device_md/mono/worldPosition/x": b"1.2000000000000003",
-        "entry/run_info/start/device_md/mono/worldPosition/y": b"4.5000000000000006",
-        "entry/run_info/start/device_md/mono/worldPosition/z": b"7.8000000000000009",
-        "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
+        "entry/run_info/start/device_md/mono/baseline": [b"True"],
+        "entry/run_info/start/device_md/mono/grating_substrate_material": [b"lead"],
+        "entry/run_info/start/device_md/mono/worldPosition/x": [b"1.2000000000000003"],
+        "entry/run_info/start/device_md/mono/worldPosition/y": [b"4.5000000000000006"],
+        "entry/run_info/start/device_md/mono/worldPosition/z": [b"7.8000000000000009"],
+        "entry/run_info/start/hints/dimensions": [b"[(['motor'], 'primary')]"],
         "entry/run_info/start/motors": [b"motor"],
         "entry/run_info/start/num_intervals": scan_step_number - 1,
         "entry/run_info/start/num_points": scan_step_number,
-        "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
+        "entry/run_info/start/nx_file_name": [
+            nx_file_name.encode()
+        ],  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
             b"1",
@@ -1546,30 +1585,30 @@ def test_2(
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
         "entry/run_info/start/plan_args/num": scan_step_number,
-        "entry/run_info/start/plan_args/per_step": b"None",
-        "entry/run_info/start/plan_name": b"scan",
-        "entry/run_info/start/plan_pattern": b"inner_product",
+        "entry/run_info/start/plan_args/per_step": [b"None"],
+        "entry/run_info/start/plan_name": [b"scan"],
+        "entry/run_info/start/plan_pattern": [b"inner_product"],
         "entry/run_info/start/plan_pattern_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
             b"1",
             b"10",
         ],
         "entry/run_info/start/plan_pattern_args/num": scan_step_number,
-        "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
-        "entry/run_info/start/plan_type": b"generator",
+        "entry/run_info/start/plan_pattern_module": [b"bluesky.plan_patterns"],
+        "entry/run_info/start/plan_type": [b"generator"],
         "entry/run_info/start/scan_id": 1,
         "entry/run_info/start/test_dict/a": 11,
         "entry/run_info/start/test_dict/b": 12,
         "entry/run_info/start/test_dict/c/d": 13,
         "entry/run_info/start/test_dict/c/e": 14,
-        "entry/run_info/start/title": b"bluesky run test 2",
+        "entry/run_info/start/title": [b"bluesky run test 2"],
         # ---
         # --- entry/run_info/stop ---
         # ---
-        "entry/run_info/stop/exit_status": b"success",
+        "entry/run_info/stop/exit_status": [b"success"],
         "entry/run_info/stop/num_events/baseline": 2,
         "entry/run_info/stop/num_events/primary": scan_step_number,
-        "entry/run_info/stop/reason": b"",
+        "entry/run_info/stop/reason": [b""],
     }
 
     # Verify file contents
@@ -1758,8 +1797,9 @@ def test_3(
         # --- dataset: entry/instrument/mono_with_grating_cpt/description ---
         # ---
         "entry/instrument/mono_with_grating_cpt/description": {
-            "value": b"I am the best mono with grating cpt at the bessyii facility",
-            "shape": (59,),
+            "value": [b"I am the best mono with grating cpt at the bessyii facility"],
+            "shape": (1,),
+            "dtype": "O",
         },
         # ---
         # --- dataset: entry/instrument/mono_with_grating_cpt/energy ---
@@ -1809,23 +1849,34 @@ def test_3(
         # --- dataset: entry/instrument/mono_with_grating_cpt/GRATING/events_timestamps ---
         # ---
         "entry/instrument/mono_with_grating_cpt/GRATING/substrate_material": {
-            "value": b"leadless",
-            "shape": (8,),
+            "value": [b"leadless"],
+            "shape": (1,),
+            "dtype": "O",
         },
         # ---
         # --- entry/run_info/start ---
         # ---
-        "entry/run_info/start/definition": b"NX_ghi",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/baseline": b"True",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/grating_substrate_material": b"leadless",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/x": b"11.120000013",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/y": b"14.150000016",
-        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/z": b"17.180000019",
-        "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
+        "entry/run_info/start/definition": [b"NX_ghi"],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/baseline": [b"True"],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/grating_substrate_material": [
+            b"leadless"
+        ],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/x": [
+            b"11.120000013"
+        ],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/y": [
+            b"14.150000016"
+        ],
+        "entry/run_info/start/device_md/mono_with_grating_cpt/worldPosition/z": [
+            b"17.180000019"
+        ],
+        "entry/run_info/start/hints/dimensions": [b"[(['motor'], 'primary')]"],
         "entry/run_info/start/motors": [b"motor"],
         "entry/run_info/start/num_intervals": scan_step_number - 1,
         "entry/run_info/start/num_points": scan_step_number,
-        "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
+        "entry/run_info/start/nx_file_name": [
+            nx_file_name.encode()
+        ],  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
             b"1",
@@ -1835,30 +1886,30 @@ def test_3(
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
         "entry/run_info/start/plan_args/num": scan_step_number,
-        "entry/run_info/start/plan_args/per_step": b"None",
-        "entry/run_info/start/plan_name": b"scan",
-        "entry/run_info/start/plan_pattern": b"inner_product",
+        "entry/run_info/start/plan_args/per_step": [b"None"],
+        "entry/run_info/start/plan_name": [b"scan"],
+        "entry/run_info/start/plan_pattern": [b"inner_product"],
         "entry/run_info/start/plan_pattern_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
             b"1",
             b"10",
         ],
         "entry/run_info/start/plan_pattern_args/num": scan_step_number,
-        "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
-        "entry/run_info/start/plan_type": b"generator",
+        "entry/run_info/start/plan_pattern_module": [b"bluesky.plan_patterns"],
+        "entry/run_info/start/plan_type": [b"generator"],
         "entry/run_info/start/scan_id": 1,
         "entry/run_info/start/test_dict/a": 21,
         "entry/run_info/start/test_dict/b": 22,
         "entry/run_info/start/test_dict/c/d": 23,
         "entry/run_info/start/test_dict/c/e": 24,
-        "entry/run_info/start/title": b"bluesky run test 3",
+        "entry/run_info/start/title": [b"bluesky run test 3"],
         # ---
         # --- entry/run_info/stop ---
         # ---
-        "entry/run_info/stop/exit_status": b"success",
+        "entry/run_info/stop/exit_status": [b"success"],
         "entry/run_info/stop/num_events/baseline": 2,
         "entry/run_info/stop/num_events/primary": scan_step_number,
-        "entry/run_info/stop/reason": b"",
+        "entry/run_info/stop/reason": [b""],
     }
 
     # Verify file contents
@@ -2207,8 +2258,9 @@ def test_4(
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha ---
         # ---
         "entry/instrument/mono/TRANSFORMATIONS/alpha": {
-            "value": b"x",
+            "value": [b"x"],
             "shape": (1,),  # Scalar
+            "dtype": "O",
         },
         # ---
         # --- dataset: entry/instrument/mono/TRANSFORMATIONS/alpha_end ---
@@ -2272,18 +2324,20 @@ def test_4(
         # ---
         # --- entry/run_info/start ---
         # ---
-        "entry/run_info/start/definition": b"NX_jkl",
+        "entry/run_info/start/definition": [b"NX_jkl"],
         "entry/run_info/start/detectors": [b"mono_en"],
-        "entry/run_info/start/device_md/mono/baseline": b"True",
-        "entry/run_info/start/device_md/mono/grating_substrate_material": b"lead",
-        "entry/run_info/start/device_md/mono/worldPosition/x": b"1.2000000000000003",
-        "entry/run_info/start/device_md/mono/worldPosition/y": b"4.5000000000000006",
-        "entry/run_info/start/device_md/mono/worldPosition/z": b"7.8000000000000009",
-        "entry/run_info/start/hints/dimensions": b"[(['motor'], 'primary')]",
+        "entry/run_info/start/device_md/mono/baseline": [b"True"],
+        "entry/run_info/start/device_md/mono/grating_substrate_material": [b"lead"],
+        "entry/run_info/start/device_md/mono/worldPosition/x": [b"1.2000000000000003"],
+        "entry/run_info/start/device_md/mono/worldPosition/y": [b"4.5000000000000006"],
+        "entry/run_info/start/device_md/mono/worldPosition/z": [b"7.8000000000000009"],
+        "entry/run_info/start/hints/dimensions": [b"[(['motor'], 'primary')]"],
         "entry/run_info/start/motors": [b"motor"],
         "entry/run_info/start/num_intervals": scan_step_number - 1,
         "entry/run_info/start/num_points": scan_step_number,
-        "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
+        "entry/run_info/start/nx_file_name": [
+            nx_file_name.encode()
+        ],  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
             b"1",
@@ -2293,29 +2347,29 @@ def test_4(
             b"SynAxis(prefix='', name='mono_en', parent='mono', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])"
         ],
         "entry/run_info/start/plan_args/num": scan_step_number,
-        "entry/run_info/start/plan_args/per_step": b"None",
-        "entry/run_info/start/plan_name": b"scan",
-        "entry/run_info/start/plan_pattern": b"inner_product",
+        "entry/run_info/start/plan_args/per_step": [b"None"],
+        "entry/run_info/start/plan_name": [b"scan"],
+        "entry/run_info/start/plan_pattern": [b"inner_product"],
         "entry/run_info/start/plan_pattern_args/args": [
             b"SynAxis(prefix='', name='motor', read_attrs=['readback', 'setpoint'], configuration_attrs=['velocity', 'acceleration'])",
             b"1",
             b"10",
         ],
         "entry/run_info/start/plan_pattern_args/num": scan_step_number,
-        "entry/run_info/start/plan_pattern_module": b"bluesky.plan_patterns",
-        "entry/run_info/start/plan_type": b"generator",
+        "entry/run_info/start/plan_pattern_module": [b"bluesky.plan_patterns"],
+        "entry/run_info/start/plan_type": [b"generator"],
         "entry/run_info/start/scan_id": 1,
         "entry/run_info/start/test_dict/a": 31,
         "entry/run_info/start/test_dict/b": 32,
         "entry/run_info/start/test_dict/c/d": 33,
         "entry/run_info/start/test_dict/c/e": 34,
-        "entry/run_info/start/title": b"bluesky run test 4",
+        "entry/run_info/start/title": [b"bluesky run test 4"],
         # ---
         # --- entry/run_info/stop ---
         # ---
-        "entry/run_info/stop/exit_status": b"success",
+        "entry/run_info/stop/exit_status": [b"success"],
         "entry/run_info/stop/num_events/primary": scan_step_number,
-        "entry/run_info/stop/reason": b"",
+        "entry/run_info/stop/reason": [b""],
     }
 
     # Verify file contents
@@ -2436,30 +2490,38 @@ def test_5(
         # --- entry/run_info/start ---
         # ---
         "entry/run_info/start/detectors": [b"sim_motor"],
-        "entry/run_info/start/device_md/sim_motor/baseline": True,
-        "entry/run_info/start/device_md/sim_motor/worldPosition/x": b"1.2000000000000003",
-        "entry/run_info/start/device_md/sim_motor/worldPosition/y": b"4.5000000000000006",
-        "entry/run_info/start/device_md/sim_motor/worldPosition/z": b"7.8000000000000009",
-        "entry/run_info/start/hints/dimensions": b"[(('time',), 'primary')]",
+        "entry/run_info/start/device_md/sim_motor/baseline": [True],
+        "entry/run_info/start/device_md/sim_motor/worldPosition/x": [
+            b"1.2000000000000003"
+        ],
+        "entry/run_info/start/device_md/sim_motor/worldPosition/y": [
+            b"4.5000000000000006"
+        ],
+        "entry/run_info/start/device_md/sim_motor/worldPosition/z": [
+            b"7.8000000000000009"
+        ],
+        "entry/run_info/start/hints/dimensions": [b"[(('time',), 'primary')]"],
         "entry/run_info/start/detectors": [b"sim_motor"],
         "entry/run_info/start/num_intervals": counts_number - 1,
         "entry/run_info/start/num_points": counts_number,
-        "entry/run_info/start/nx_file_name": nx_file_name.encode(),  # Encode to obtain byte string since byte string is a value returned from nexus file
+        "entry/run_info/start/nx_file_name": [
+            nx_file_name.encode()
+        ],  # Encode to obtain byte string since byte string is a value returned from nexus file
         "entry/run_info/start/plan_args/num": counts_number,
-        "entry/run_info/start/plan_name": b"count",
-        "entry/run_info/start/plan_type": b"generator",
+        "entry/run_info/start/plan_name": [b"count"],
+        "entry/run_info/start/plan_type": [b"generator"],
         "entry/run_info/start/scan_id": 1,
         "entry/run_info/start/test_dict/a": 35,
         "entry/run_info/start/test_dict/b": 36,
         "entry/run_info/start/test_dict/c/d": 37,
         "entry/run_info/start/test_dict/c/e": 38,
-        "entry/run_info/start/title": b"bluesky run test 5",
+        "entry/run_info/start/title": [b"bluesky run test 5"],
         # ---
         # --- entry/run_info/stop ---
         # ---
-        "entry/run_info/stop/exit_status": b"success",
+        "entry/run_info/stop/exit_status": [b"success"],
         "entry/run_info/stop/num_events/primary": counts_number,
-        "entry/run_info/stop/reason": b"",
+        "entry/run_info/stop/reason": [b""],
     }
 
     # Verify file contents
