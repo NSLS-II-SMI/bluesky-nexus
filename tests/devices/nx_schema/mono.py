@@ -1,3 +1,17 @@
+"""
+Module: mono.py
+===============
+
+This module contains the YAML schema definition in form of a yml string for the monochromator,
+which is used for storing and processing data in the Nexus format.
+"""
+
+"""
+Mono_nxschema: YAML Schema for Mono
+===================================
+"""
+
+Mono_nxschema: str = """
 nx_model: NXmonochromatorModel # pydantic model associated with this schema
 nxclass: NXmonochromator # group: NXmonochromator
 
@@ -100,3 +114,43 @@ someDataset: # additional dataset: "someDataset"
   nxclass: NX_FLOAT
   value: $post-run:en
   dtype: float64
+"""
+
+
+# The following is a nxschema that does not participate in any of the tests.
+# This schema can be used to start debugging the creation of the group attributes.
+# This is a test of the creation:
+# - A group with 6 attributes
+# If you want to run it:
+# - Rename in devices/monochromators/mono.py the parameter passed to decorator from "Mono_nxschema" to "Mono1_nxschema"
+# - Execute test_2 only (in debug mode) with the deactivated function verify_nexus_file()
+"""
+Mono1_nxschema: YAML Schema for Mono1
+====================================================
+"""
+Mono1_nxschema: str = """
+nx_model: NXgeneralModel # pydantic model associated with this schema
+nxclass: NXmonochromator # group: NXmonochromator
+
+TRANSFORMATIONS: # group: 'TRANSFORMATIONS' belongs to NXmonochromator group
+  nxclass: NXtransformations
+  attributes: # attributes of the AXISNAME
+    at_0: # facultative attribute of the group TRANSFORMATIONS
+      value: $post-run:en # fetch it from the device component
+      #dtype: int8
+    at_1: # facultative attribute of the group TRANSFORMATIONS
+      value: $pre-run-md:transformations_axisname
+      dtype: str
+    at_2: # facultative attribute of the group TRANSFORMATIONS
+      value: ["I am", "string"]
+      dtype: str
+    at_3: # facultative attribute of the group TRANSFORMATIONS
+      value: 3.1415
+      dtype: float32
+    at_4: # facultative attribute of the group TRANSFORMATIONS
+      value: 14
+      dtype: int32
+    at_5: # facultative attribute of the group TRANSFORMATIONS
+      value: True
+      dtype: bool
+"""

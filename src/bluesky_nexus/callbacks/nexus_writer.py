@@ -194,7 +194,10 @@ class NexusWriter(CollectThenCompute):
         nx_file_path: str = self.create_nx_file_path(nx_dir_path, nx_file_name)
 
         # Create 'run_info' dict by extraction of data from the start and stop document
-        run_info_data: dict = extract_run_info(self._start_doc, self._stop_doc)
+        run_info: dict = extract_run_info(self._start_doc, self._stop_doc)
+
+        # Define a dict "data" that is to be passed to 'create_nexus_file()'
+        data: dict = {"run_info": run_info}
 
         # Copy the start document to be able to modify it. Reason: Documents are immutable.
         try:
@@ -203,14 +206,14 @@ class NexusWriter(CollectThenCompute):
             logger.exception(f"Error during deepcopy of the start document: {e}")
             return
 
-        # Process the placeholders of the nexus_md applying events and descriptors
-        process_nexus_md(start_doc_cpy[NX_MD_KEY], self._descriptors, self._events)
+        # If there is NX_MD_KEY in the start_doc_cpy
+        if start_doc_cpy[NX_MD_KEY]:
+            # Process the placeholders of the nexus_md applying events and descriptors
+            process_nexus_md(start_doc_cpy[NX_MD_KEY], self._descriptors, self._events)
 
-        # Define dictionary: 'instrument_data'
-        instrument_data: dict = start_doc_cpy[NX_MD_KEY]
-
-        # Define 'data' dictionary consisting of: 'instrument_data' and 'run_info_data'
-        data: dict = {"instrument": instrument_data, "run_info": run_info_data}
+            # Update the dict data with instrument_data
+            instrument_data: dict = start_doc_cpy[NX_MD_KEY]
+            data.update({"instrument": instrument_data})
 
         # Create nexus file from the data
         create_nexus_file(nx_file_path, data)
@@ -256,27 +259,29 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     timestamp = timestamps.get(cpt_name)
 
                     # Determine dtype dynamically for value
-                    if isinstance(value, str):
+                    if isinstance(value, (str, np.str_)):
                         value_array = np.array(
                             value, dtype=object
                         )  # Single string, keep object dtype
                     elif isinstance(value, list):
                         # Use object dtype if list contains any strings; otherwise, let NumPy infer
                         dtype = (
-                            object if any(isinstance(v, str) for v in value) else None
+                            object
+                            if any(isinstance(v, (str, np.str_)) for v in value)
+                            else None
                         )
                         value_array = np.array(value, dtype=dtype)
                     else:
                         value_array = np.array(value)  # Let NumPy infer the best dtype
 
                     # Determine dtype dynamically for timestamp
-                    if isinstance(timestamp, str):
+                    if isinstance(timestamp, (str, np.str_)):
                         timestamp_array = np.array(timestamp, dtype=object)
                     elif isinstance(timestamp, list):
                         # Use object dtype if list contains any strings; otherwise, let NumPy infer
                         dtype = (
                             object
-                            if any(isinstance(t, str) for t in timestamp)
+                            if any(isinstance(t, (str, np.str_)) for t in timestamp)
                             else None
                         )
                         timestamp_array = np.array(timestamp, dtype=dtype)
@@ -317,7 +322,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
             event_times: list = [evt["time"] for evt in filtered_events]
 
             # Determine dtype dynamically for values
-            if any(isinstance(v, str) for v in values):
+            if any(isinstance(v, (str, np.str_)) for v in values):
                 values_array = np.array(
                     values, dtype=object
                 )  # Contains strings → use object
@@ -325,7 +330,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 values_array = np.array(values)  # Only numbers → NumPy infers dtype
 
             # Determine dtype dynamically for timestamps
-            if any(isinstance(t, str) for t in timestamps):
+            if any(isinstance(t, (str, np.str_)) for t in timestamps):
                 timestamps_array = np.array(
                     timestamps, dtype=object
                 )  # Contains strings → use object
@@ -335,7 +340,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                 )  # Only numbers → NumPy infers dtype
 
             # Determine dtype dynamically for event_times
-            if any(isinstance(t, str) for t in event_times):
+            if any(isinstance(t, (str, np.str_)) for t in event_times):
                 event_times_array = np.array(
                     event_times, dtype=object
                 )  # Contains strings → use object
@@ -388,7 +393,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
             else:
                 return None  # Pattern does not match
 
-        def extract_data(descriptors, events, cpt_name) -> dict:
+        def extract_data(descriptors, events, cpt_name) -> Optional[dict]:
             """Extract data for cpt_name from descriptors, prioritizing non-baseline first."""
 
             def find_data(descriptor) -> Optional[dict]:
@@ -409,9 +414,10 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                         return data
 
             # No data found
-            raise ValueError(
+            logger.warning(
                 f"No descriptor contains data for the 'cpt_name': {cpt_name}"
             )
+            return None
 
         def replace_func(dev_name: str, obj: dict) -> dict:
             """
@@ -450,7 +456,11 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     cpt_name: str = dev_name + obj_delimiter + cpt_name
 
                 # Extract data from descriptor for the component
-                cpt_data: dict = extract_data(descriptors, events, cpt_name)
+                cpt_data: Optional[dict] = extract_data(descriptors, events, cpt_name)
+
+                # Return obj if no data for the component with cpt_name could be extracted from descriptors
+                if not cpt_data:
+                    return obj
 
                 # Component data from descriptor
                 data: np.ndarray = cpt_data["data"]
@@ -481,10 +491,12 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                         "descriptor_cpt_timestamp"
                     ]
 
-                # ----------- Assign all abligatory keys -----------
+                # ----------- Assign all obligatory keys -----------
 
                 # Extract dtype (obligatory key), with fallback to defaults
-                dtype = obj.get("dtype", desc.get("dtype", "unknown"))
+                dtype = obj.get(
+                    "dtype", desc.get("dtype", "unknown")
+                )  # Assign as default the value found in desc
                 if dtype == "number":
                     dtype = "float64"
                 elif dtype == "integer":
@@ -853,50 +865,156 @@ def add_group_or_field(group, data):
             ### Handle NeXus fields
             ### value["value"] is in "post-run" case always numpy array
             if "value" in value:
-                dtype = value.get("dtype", None)
+                dtype = value.get(
+                    "dtype", None
+                )  # dtype assigned in the pydantic schema or extracted from the descriptor doc
 
                 if dtype in VALID_NXFIELD_DTYPES:
-                    # Handle strings and object dtype explicitly
-                    if (
-                        isinstance(value["value"], np.ndarray)
-                        and value["value"].dtype == object
-                    ):
-                        # Check if the array is not 0-dimensional (i.e., scalar)
-                        if value["value"].ndim > 0:
-                            # Convert np.str_ elements to native Python strings (if any)
+
+                    # If value["value"] is a numpy array
+                    if isinstance(value["value"], np.ndarray):
+
+                        # If the numpy array is of dtype 'object':
+                        # - This is a case when the data coming from events or descriptor is a list of elements having different data types
+                        # - This is a case when the data coming from events or descriptor is a list of strings
+                        # - This is a case when the data coming from events or descriptor is just a string, in this case we deal with numpy array of ndim=0 (scalar)
+                        if value["value"].dtype == object:
+
+                            # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                            if value["value"].ndim == 0:
+                                # If it's a scalar, convert it to a 1D array with a single element
+                                value["value"] = np.array(
+                                    [value["value"].item()], dtype=object
+                                )
+
+                            # Convert all elements to string (including numbers, None, etc.)
                             value["value"] = np.array(
                                 [
-                                    str(item) if isinstance(item, np.str_) else item
+                                    str(item) if item is not None else "None"
                                     for item in value["value"]
                                 ],
-                                dtype="str",
+                                dtype=object,
                             )
+
+                            # Apply variable-length UTF-8 encoding for the string
+                            dtype = h5py.string_dtype(encoding="utf-8")
+                            dataset = group.create_dataset(
+                                key, data=value["value"], dtype=dtype
+                            )
+                            logger.debug(
+                                f"New dataset: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
+                            )
+
+                        # If the numpy array is NOT of dtype 'object':
+                        # - This is a case when the data coming from events or descriptor is a list of floats, integers, booleans
+                        # - This is a case when the data coming from events or descriptor is a float, integer, boolean
                         else:
-                            # For 0-dimensional arrays, convert np.str_ to a native Python string
-                            if isinstance(value["value"], np.str_):
-                                value["value"] = str(value["value"])
+                            # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                            if value["value"].ndim == 0:
+                                # If it's a scalar, convert it to a 1D array with a single element
+                                value["value"] = np.array(
+                                    [value["value"].item()], dtype=dtype
+                                )
 
-                    # Handle strings explicitly: encoding="utf-8"
-                    if dtype in {"str", "char"} or (
-                        isinstance(value["value"], np.ndarray)
-                        and value["value"].dtype == object
-                        and all(isinstance(item, str) for item in value["value"])
-                    ):
-                        dtype = h5py.string_dtype(encoding="utf-8")
+                            dataset = group.create_dataset(
+                                key, data=value["value"], dtype=dtype
+                            )
+                            logger.debug(
+                                f"New dataset: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
+                            )
 
-                        # Extract single string from an ndarray with shape (1,)
-                        if (
-                            isinstance(value["value"], np.ndarray)
-                            and value["value"].size == 1
-                        ):
-                            value["value"] = value[
-                                "value"
-                            ].item()  # Extracts the scalar string
+                    # If value["value"] is not a numpy array
+                    else:
+                        # If value["value"] is an instance of str
+                        if isinstance(value["value"], str):
 
-                    ### Create dataset for 'value'
-                    dataset = group.create_dataset(
-                        key, data=value["value"], dtype=dtype
-                    )
+                            # Convert it to a 1D array with a single element
+                            value["value"] = np.array([value["value"]], dtype=object)
+
+                            # Apply variable-length UTF-8 encoding for the string
+                            dtype = h5py.string_dtype(encoding="utf-8")
+
+                            # Create dataset for 'value'
+                            dataset = group.create_dataset(
+                                key, data=value["value"], dtype=dtype
+                            )
+                            logger.debug(
+                                f"New dataset: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
+                            )
+
+                        # If value["value"] is an instance of int, double, bool
+                        elif isinstance(value["value"], (int, float, bool)):
+
+                            # Convert it to a 1D array with a single element
+                            value["value"] = np.array([value["value"]])
+
+                            # Create dataset for 'value'
+                            dataset = group.create_dataset(
+                                key, data=value["value"], dtype=dtype
+                            )
+                            logger.debug(
+                                f"New dataset: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
+                            )
+
+                        elif isinstance(value["value"], list):
+
+                            # There is a string in the list
+                            if any(
+                                isinstance(v, (str, np.str_)) for v in value["value"]
+                            ):
+                                # Convert all elements to string (including numbers, None, etc.)
+                                value["value"] = np.array(
+                                    [
+                                        str(item) if item is not None else "None"
+                                        for item in value["value"]
+                                    ],
+                                    dtype=object,
+                                )
+
+                                # Apply variable-length UTF-8 encoding for the string
+                                dtype = h5py.string_dtype(encoding="utf-8")
+                                dataset = group.create_dataset(
+                                    key, data=value["value"], dtype=dtype
+                                )
+                                logger.debug(
+                                    f"New dataset: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
+                                )
+
+                            # There is no string in the list
+                            else:
+                                value["value"] = np.array(value["value"])
+                                dataset = group.create_dataset(
+                                    key, data=value["value"], dtype=dtype
+                                )
+                                logger.debug(
+                                    f"New dataset: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
+                                )
+
+                        elif isinstance(value["value"], dict):
+                            value["value"] = json.dumps(
+                                value["value"]
+                            )  # Convert dictionary to JSON string
+
+                            # Convert it to a 1D array with a single element
+                            value["value"] = np.array([value["value"]], dtype=object)
+
+                            dtype = h5py.string_dtype(
+                                encoding="utf-8"
+                            )  # Ensure UTF-8 encoding
+
+                            dataset = group.create_dataset(
+                                key, data=value["value"], dtype=dtype
+                            )
+                            logger.debug(
+                                f"New dataset: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
+                            )
+
+                        # Unsupported instance of value["value"]
+                        else:
+                            logger.error(
+                                f"Unsupported case detected. Please contact developer, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['value']}"
+                            )
+                            return
 
                     # Add attributes to the dataset
                     # In the schema file, attributes of a field are introduced by the word "attributes"
@@ -926,52 +1044,245 @@ def add_group_or_field(group, data):
 
                     ### Create dataset for 'events_cpt_timestamps'
                     if "events_cpt_timestamps" in value:
-                        dataset = group.create_dataset(
-                            key + "_timestamps",
-                            data=value["events_cpt_timestamps"],
-                            dtype=value["events_cpt_timestamps"].dtype,
-                        )
-                        dataset.attrs["NX_class"] = "NX_FLOAT"
-                        dataset.attrs["shape"] = list(
-                            value["events_cpt_timestamps"].shape
-                        )
-                        dataset.attrs["description"] = (
-                            f"Timestamps of the component: {key} extracted from the events"
-                        )
+
+                        # If the numpy array is of dtype 'object':
+                        # - This is a case when the data coming from events is a list of elements having different data types
+                        # - This is a case when the data coming from events is a list of strings
+                        # - This is a case when the data coming from events is just a string, in this case we deal with numpy array of ndim=0 (scalar)
+
+                        if value["events_cpt_timestamps"].dtype == object:
+
+                            # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                            if value["events_cpt_timestamps"].ndim == 0:
+                                # If it's a scalar, convert it to a 1D array with a single element
+                                value["events_cpt_timestamps"] = np.array(
+                                    [value["events_cpt_timestamps"].item()],
+                                    dtype=object,
+                                )
+
+                            # Convert all elements to string (including numbers, None, etc.)
+                            value["events_cpt_timestamps"] = np.array(
+                                [
+                                    str(item) if item is not None else "None"
+                                    for item in value["events_cpt_timestamps"]
+                                ],
+                                dtype=object,
+                            )
+
+                            # Apply variable-length UTF-8 encoding for the string
+                            dtype = h5py.string_dtype(encoding="utf-8")
+                            dataset = group.create_dataset(
+                                key + "_timestamps",
+                                data=value["events_cpt_timestamps"],
+                                dtype=dtype,
+                            )
+                            # Assign attributes
+                            dataset.attrs["NX_class"] = "NX_CHAR"
+                            dataset.attrs["shape"] = list(
+                                value["events_cpt_timestamps"].shape
+                            )
+                            dataset.attrs["description"] = (
+                                f"Timestamps of the component: {key} extracted from the events"
+                            )
+                            logger.debug(
+                                f"New dataset for events_cpt_timestamps: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['events_cpt_timestamps']}"
+                            )
+
+                        # If the numpy array is NOT of dtype 'object':
+                        # - This is a case when the data coming from events is a list of floats, integers
+                        # - This is a case when the data coming from events is a float, integer
+                        else:
+                            # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                            if value["events_cpt_timestamps"].ndim == 0:
+                                # If it's a scalar, convert it to a 1D array with a single element
+                                value["events_cpt_timestamps"] = np.array(
+                                    [value["events_cpt_timestamps"].item()],
+                                    dtype=value["events_cpt_timestamps"].dtype,
+                                )
+
+                            dataset = group.create_dataset(
+                                key + "_timestamps",
+                                data=value["events_cpt_timestamps"],
+                                dtype=value["events_cpt_timestamps"].dtype,
+                            )
+                            # Assign attributes
+                            if "float64" == value["events_cpt_timestamps"].dtype:
+                                dataset.attrs["NX_class"] = "NX_FLOAT"
+                            elif "int64" == value["events_cpt_timestamps"].dtype:
+                                dataset.attrs["NX_class"] = "NX_INT"
+
+                            dataset.attrs["shape"] = list(
+                                value["events_cpt_timestamps"].shape
+                            )
+                            dataset.attrs["description"] = (
+                                f"Timestamps of the component: {key} extracted from the events"
+                            )
+                            logger.debug(
+                                f"New dataset for events_cpt_timestamps: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['events_cpt_timestamps']}"
+                            )
 
                     ### Create dataset for 'descriptor_cpt_timestamp'
                     if "descriptor_cpt_timestamp" in value:
-                        dataset = group.create_dataset(
-                            key + "_timestamp",
-                            data=value["descriptor_cpt_timestamp"],
-                            dtype=value["descriptor_cpt_timestamp"].dtype,
-                        )
-                        dataset.attrs["NX_class"] = "NX_FLOAT"
-                        dataset.attrs["shape"] = list(
-                            value["descriptor_cpt_timestamp"].shape
-                        )
-                        dataset.attrs["description"] = (
-                            f"Timestamp of the component: {key} extracted from the descriptor"
-                        )
 
-                    ### Create dataset for 'events_timestamp'
+                        # If the numpy array is of dtype 'object':
+                        # - This is a case when the data coming from descriptor is a list of elements having different data types
+                        # - This is a case when the data coming from descriptor is a list of strings
+                        # - This is a case when the data coming from descriptor is just a string, in this case we deal with numpy array of ndim=0 (scalar)
+
+                        if value["descriptor_cpt_timestamp"].dtype == object:
+
+                            # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                            if value["descriptor_cpt_timestamp"].ndim == 0:
+                                # If it's a scalar, convert it to a 1D array with a single element
+                                value["descriptor_cpt_timestamp"] = np.array(
+                                    [value["descriptor_cpt_timestamp"].item()],
+                                    dtype=object,
+                                )
+
+                            # Convert all elements to string (including numbers, None, etc.)
+                            value["descriptor_cpt_timestamp"] = np.array(
+                                [
+                                    str(item) if item is not None else "None"
+                                    for item in value["descriptor_cpt_timestamp"]
+                                ],
+                                dtype=object,
+                            )
+
+                            # Apply variable-length UTF-8 encoding for the string
+                            dtype = h5py.string_dtype(encoding="utf-8")
+                            dataset = group.create_dataset(
+                                key + "_timestamps",
+                                data=value["descriptor_cpt_timestamp"],
+                                dtype=dtype,
+                            )
+                            # Assign attributes
+                            dataset.attrs["NX_class"] = "NX_CHAR"
+                            dataset.attrs["shape"] = list(
+                                value["descriptor_cpt_timestamp"].shape
+                            )
+                            dataset.attrs["description"] = (
+                                f"Timestamps of the component: {key} extracted from the descriptor"
+                            )
+                            logger.debug(
+                                f"New dataset for descriptor_cpt_timestamp: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['descriptor_cpt_timestamp']}"
+                            )
+
+                        # If the numpy array is NOT of dtype 'object':
+                        # - This is a case when the data coming from descriptor is a list of floats, integers
+                        # - This is a case when the data coming from descriptor is a float, integer
+                        else:
+                            # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                            if value["descriptor_cpt_timestamp"].ndim == 0:
+                                # If it's a scalar, convert it to a 1D array with a single element
+                                value["descriptor_cpt_timestamp"] = np.array(
+                                    [value["descriptor_cpt_timestamp"].item()],
+                                    dtype=value["descriptor_cpt_timestamp"].dtype,
+                                )
+
+                            dataset = group.create_dataset(
+                                key + "_timestamps",
+                                data=value["descriptor_cpt_timestamp"],
+                                dtype=value["descriptor_cpt_timestamp"].dtype,
+                            )
+                            # Assign attributes
+                            if "float64" == value["descriptor_cpt_timestamp"].dtype:
+                                dataset.attrs["NX_class"] = "NX_FLOAT"
+                            elif "int64" == value["descriptor_cpt_timestamp"].dtype:
+                                dataset.attrs["NX_class"] = "NX_INT"
+
+                            dataset.attrs["shape"] = list(
+                                value["descriptor_cpt_timestamp"].shape
+                            )
+                            dataset.attrs["description"] = (
+                                f"Timestamps of the component: {key} extracted from the descriptor"
+                            )
+                            logger.debug(
+                                f"New dataset for descriptor_cpt_timestamp: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['descriptor_cpt_timestamp']}"
+                            )
+
+                    ### Create dataset for 'events_timestamps'
                     if "events_timestamps" in value:
                         # Check if the dataset already exists
                         if "events_timestamps" in group:
                             pass
                         else:
-                            # Create the dataset if it does not exist
-                            dataset = group.create_dataset(
-                                "events_timestamps",
-                                data=value["events_timestamps"],
-                                dtype=value["events_timestamps"].dtype,
-                            )
-                            # Add attributes to the dataset
-                            dataset.attrs["NX_class"] = "NX_FLOAT"
-                            dataset.attrs["shape"] = list(
-                                value["events_timestamps"].shape
-                            )
-                            dataset.attrs["description"] = "Timestamps of the events"
+
+                            # If the numpy array is of dtype 'object':
+                            # - This is a case when the data coming from events is a list of elements having different data types
+                            # - This is a case when the data coming from events is a list of strings
+                            # - This is a case when the data coming from events is just a string, in this case we deal with numpy array of ndim=0 (scalar)
+
+                            if value["events_timestamps"].dtype == object:
+
+                                # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                                if value["events_timestamps"].ndim == 0:
+                                    # If it's a scalar, convert it to a 1D array with a single element
+                                    value["events_timestamps"] = np.array(
+                                        [value["events_timestamps"].item()],
+                                        dtype=object,
+                                    )
+
+                                # Convert all elements to string (including numbers, None, etc.)
+                                value["events_timestamps"] = np.array(
+                                    [
+                                        str(item) if item is not None else "None"
+                                        for item in value["events_timestamps"]
+                                    ],
+                                    dtype=object,
+                                )
+
+                                # Apply variable-length UTF-8 encoding for the string
+                                dtype = h5py.string_dtype(encoding="utf-8")
+                                dataset = group.create_dataset(
+                                    "events_timestamps",
+                                    data=value["events_timestamps"],
+                                    dtype=dtype,
+                                )
+                                # Assign attributes
+                                dataset.attrs["NX_class"] = "NX_CHAR"
+                                dataset.attrs["shape"] = list(
+                                    value["events_timestamps"].shape
+                                )
+                                dataset.attrs["description"] = (
+                                    "Timestamps of the events"
+                                )
+                                logger.debug(
+                                    f"New dataset for events_timestamps: encoding: utf8, dtype: {dtype}, key: {key}, group: {group.name}, value: {value['events_timestamps']}"
+                                )
+
+                            # If the numpy array is NOT of dtype 'object':
+                            # - This is a case when the data coming from events is a list of floats, integers
+                            # - This is a case when the data coming from events is a float, integer
+                            else:
+                                # Check if the numpy array is a scalar (ndim=0) or has more dimensions
+                                if value["events_timestamps"].ndim == 0:
+                                    # If it's a scalar, convert it to a 1D array with a single element
+                                    value["events_timestamps"] = np.array(
+                                        [value["events_timestamps"].item()],
+                                        dtype=value["events_timestamps"].dtype,
+                                    )
+
+                                dataset = group.create_dataset(
+                                    "events_timestamps",
+                                    data=value["events_timestamps"],
+                                    dtype=value["events_timestamps"].dtype,
+                                )
+                                # Assign attributes
+                                if "float64" == value["events_timestamps"].dtype:
+                                    dataset.attrs["NX_class"] = "NX_FLOAT"
+                                elif "int64" == value["events_timestamps"].dtype:
+                                    dataset.attrs["NX_class"] = "NX_INT"
+
+                                dataset.attrs["shape"] = list(
+                                    value["events_timestamps"].shape
+                                )
+                                dataset.attrs["description"] = (
+                                    "Timestamps of the events"
+                                )
+
+                                logger.debug(
+                                    f"New dataset for events_timestamps: dtype: {dtype}, key: {key}, group: {group.name}, value: {value['events_timestamps']}"
+                                )
 
                 else:
                     raise ValueError(
@@ -985,6 +1296,9 @@ def add_group_or_field(group, data):
 
                 # Create group
                 subgroup = group.create_group(key)
+                logger.debug(
+                    f"New subgroup: {subgroup.name} added to the group: {group.name}"
+                )
 
                 # Add "NX_class" attribute expected by nexus convention for groups
                 subgroup.attrs["NX_class"] = value["nxclass"]
@@ -1023,31 +1337,24 @@ def add_group_or_field(group, data):
         else:
             # Handle as attribute of the group
             group.attrs[key] = value
-            # print(f"Assign to group attr named {key} the value: {value}") # Debug only
+            logger.debug(
+                f"Assign to attrs of group: {group.name} the key: {key} with value: {value}"
+            )
 
 
-def write_collection(group, data: dict):
+def write_collection(group, data: dict) -> None:
     """
     Recursively writes a collection of data (nested dictionaries, lists, and primitive values)
-    to a given group in a hierarchical storage structure.
-
-    The function processes the input data dictionary and handles different types of data as follows:
-    - Nested dictionaries are stored as subgroups.
-    - Primitive values (int, float, str, bool) are directly stored as datasets.
-    - Lists or tuples are stored as datasets, with special handling for nested structures or strings within the list.
+    to a given group in a hierarchical storage structure. Scalars are stored as 1D arrays.
 
     Args:
-        group (h5py.Group): The group where the data will be stored. It could represent a group in an HDF5 file or any similar hierarchical storage.
-        data (dict): The data dictionary to be written. It can contain nested dictionaries, lists, tuples, or primitive values.
+        group (h5py.Group): The group where the data will be stored.
+        data (dict): The data dictionary to be written.
 
     Raises:
-        TypeError: If the function encounters an unsupported data type during processing.
-
-    Notes:
-        - Nested dictionaries are recursively written as subgroups.
-        - Non-nested lists or tuples containing primitive values are converted into datasets with appropriate types.
-        - Lists or tuples containing other lists or tuples are serialized into strings.
+        TypeError: If an unsupported data type is encountered.
     """
+    string_dtype = h5py.string_dtype(encoding="utf-8")
 
     for key, value in data.items():
         if isinstance(value, dict):
@@ -1055,27 +1362,36 @@ def write_collection(group, data: dict):
             subgroup = group.create_group(key)
             write_collection(subgroup, value)
 
-        elif isinstance(value, (float, int, str, bool)):
-            group.create_dataset(key, data=value)
+        elif isinstance(value, (int, float, bool)):
+            # Store scalar as 1D array
+            group.create_dataset(key, data=np.array([value]))
+
+        elif isinstance(value, str):
+            # Store string as 1D array with UTF-8 dtype
+            group.create_dataset(key, data=np.array([value], dtype=string_dtype))
 
         elif isinstance(value, (list, tuple)):
-            # Check for nested lists/tuples
+            # List or tuple with nested list or tuple elements
             if any(isinstance(item, (list, tuple)) for item in value):
                 # Serialize nested structure into a single string
-                serialized_value = str(value)  # Convert entire list/tuple to string
-                group.create_dataset(key, data=serialized_value)
+                serialized_value = str(value)
+                group.create_dataset(
+                    key, data=np.array([serialized_value], dtype=string_dtype)
+                )
+            # List or tuple without nested list or tuple elements
             else:
-                # Non-nested lists
-                if any(
-                    isinstance(item, str) for item in value
-                ):  # Check if there is a str inside of the list or tuple
-                    normalized_value = [str(item) for item in value]
-                    group.create_dataset(
-                        key, data=np.array(normalized_value, dtype="S")
-                    )
+                if len(value) == 0:
+                    # Empty list or tuple
+                    group.create_dataset(key, data=np.array([], dtype=string_dtype))
+                elif all(isinstance(item, (int, float, bool)) for item in value):
+                    group.create_dataset(key, data=np.array(value))
                 else:
-                    normalized_value = list(value)
-                    group.create_dataset(key, data=np.array(normalized_value))
+                    # Convert mixed-type or string-containing list to strings
+                    str_value = [str(item) for item in value]
+                    group.create_dataset(
+                        key, data=np.array(str_value, dtype=string_dtype)
+                    )
+
         else:
             logger.error(f"Unsupported type {type(value)} for key '{key}'")
             raise TypeError(f"ERROR: Unsupported type {type(value)} for key '{key}'")

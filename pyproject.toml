@@ -15,7 +15,7 @@ requires-python = ">=3.10"
 dependencies = [
     "babel~=2.10",
     "beautifulsoup4>=4.11.0,<5.0.0",
-    "bluesky==1.13",
+    "bluesky>=1.13",
     "click>=7.0",
     "colorama~=0.4",
     "fonttools>=4.22.0",

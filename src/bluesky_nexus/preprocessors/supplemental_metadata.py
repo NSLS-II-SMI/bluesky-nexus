@@ -7,7 +7,7 @@ This module provides utilities to manage, validate, and inject supplemental meta
 Key Features:
 
     Dynamically generate metadata for devices participating in a plan.
-    Validate and filter devices based on their usage in the plan or baseline subscription.
+    Validate and filter devices based on their usage in the plan.
     Support for placeholder resolution in NeXus metadata, handling missing data gracefully.
     Caching of plans to ensure non-exhaustible replayable plans.
     Utilities for metadata extraction, processing, and validation.
@@ -62,37 +62,28 @@ class SupplementalMetadata(SupplementalData):
     """
     A class to manage and inject supplemental metadata into a Bluesky plan.
 
-    This class checks the devices participating in the plan and generates
-    metadata for the specified type (DEVICE_MD or NEXUS_MD). It ensures
-    that devices in the 'devices_dictionary' are either used in the plan
-    or are part of the baseline, and injects metadata accordingly.
+    This class checks the devices participating in the plan (run + baseline + silent)
+    and generates metadata for the specified type (DEVICE_MD or NEXUS_MD). It ensures
+    that devices in the 'devices_dictionary' are either used in the run
+    or are part of the baseline or silent devices, and injects metadata accordingly.
     """
 
     class MetadataType(Enum):
         DEVICE_MD = auto()
         NEXUS_MD = auto()
 
-    def __init__(self, *args, nx_schema_dir_path=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initializes the SupplementalMetadata instance.
 
         This constructor accepts both positional and keyword arguments, passing them
-        to the parent class constructor. Additionally, it allows for an optional
-        `nx_schema_dir_path` parameter to specify the directory path for the NeXus schema.
+        to the parent class constructor.
 
         Args:
             *args: Positional arguments passed to the parent constructor.
             **kwargs: Keyword arguments passed to the parent constructor.
-            nx_schema_dir_path (str, optional): The directory path to the NeXus schema.
-                If not provided, the default value is `None`.
-
-        Notes:
-            - `nx_schema_dir_path` is an optional argument that can be used to specify
-            the path to the directory where the NeXus schema is located.
         """
-
         super().__init__(*args, **kwargs)
-        self.nx_schema_dir_path = nx_schema_dir_path
 
     def __call__(self, plan):
         """
@@ -104,11 +95,6 @@ class SupplementalMetadata(SupplementalData):
         if not hasattr(self, "devices_dictionary"):
             raise AttributeError(
                 "The 'devices_dictionary' attribute must be set before calling the instance."
-            )
-
-        if not hasattr(self, "baseline"):
-            raise AttributeError(
-                "The 'baseline' attribute must be set before calling the instance."
             )
 
         if not hasattr(self, "md_type"):
@@ -136,17 +122,16 @@ class SupplementalMetadata(SupplementalData):
         checker = PlanDeviceChecker(self.devices_dictionary)
         checker_result = checker.validate_plan_devices(plan1)
 
-        # Define a dictionary of devices taking part in the plan. (It includes devices not taking part in a run but subscribed to the baseline.)
+        # Define a dictionary of devices taking part in the plan. (It includes devices not taking part in a RUN but subscribed to the baseline or silent devices)
         devices_in_plan: dict = {
             name: dev
             for name, dev in self.devices_dictionary.items()
-            if dev not in checker_result["unused_devices"].values()
-            or dev in self.baseline
+            if dev in checker_result["used_devices"].values()
         }
 
         # Assign to all the devices contained in 'devices_in_plan' instances of pydantic models
         if self.MetadataType.NEXUS_MD == self.md_type:
-            assign_pydantic_model_instance(self.nx_schema_dir_path, devices_in_plan)
+            assign_pydantic_model_instance(devices_in_plan)
 
         # Create metadata and inject it into the plan
         metadata: dict = create_metadata(devices_in_plan)
@@ -488,10 +473,15 @@ class PlanDeviceChecker:
         used_devices: dict = {
             name: self.devices_dictionary[name] for name in used_device_names
         }
+        logger.debug(f"Names of devices used in the plan: {list(used_devices.keys())}")
+
         unused_devices: dict = {
             name: self.devices_dictionary[name]
             for name in self.device_names_set - used_device_names
         }
+        logger.debug(
+            f"Names of devices unused in the plan: {list(unused_devices.keys())}"
+        )
 
         # Step 4: Return results
         logger.info("Detection of devices in the plan finished.")

@@ -14,7 +14,6 @@ Constants:
     DEVICE_MD_KEY (str): The key used for device metadata ("device_md").
     NX_FILE_EXTENSION (str): The file extension for Nexus files (".nxs").
     CALLBACK_FILE_EXTENSION (str): The file extension for callback files (".json").
-    NX_SCHEMA_EXTENSIONS (list): List of valid file extensions for Nexus schema files ([".yml", ".yaml"]).
     NX_SCHEMA_MODEL_NAME_KEY (str): Key for the Nexus schema model name ("nx_model").
     DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME (str): Attribute name for the Nexus schema in the device class ("nx_schema").
     DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME (str): Attribute name for the Nexus model in the device instance ("nx_model").
@@ -50,7 +49,6 @@ NX_MD_KEY: str = "nexus_md"
 DEVICE_MD_KEY: str = "device_md"
 NX_FILE_EXTENSION: str = ".nxs"
 CALLBACK_FILE_EXTENSION: str = ".json"
-NX_SCHEMA_EXTENSIONS = [".yml", ".yaml"]
 NX_SCHEMA_MODEL_NAME_KEY: str = "nx_model"
 DEVICE_CLASS_NX_SCHEMA_ATTRIBUTE_NAME: str = "nx_schema"
 DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME: str = "nx_model"
@@ -69,7 +67,6 @@ VALID_NXFIELD_DTYPES = [
     "uint16",
     "uint32",
     "uint64",
-    "char",
     "str",
     "bool",
 ]

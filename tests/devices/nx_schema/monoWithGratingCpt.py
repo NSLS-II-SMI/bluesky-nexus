@@ -1,3 +1,16 @@
+"""
+Module: monoWithGratingCpt.py
+=============================
+
+This module contains the YAML schema definition in form of a yml string for the monochromator with grating component,
+which is used for storing and processing data in the Nexus format.
+"""
+
+"""
+MonoWithGratingCpt_nxschema: YAML Schema for MonoWithGratingCpt
+===============================================================
+"""
+MonoWithGratingCpt_nxschema: str = """
 nx_model: NXmonochromatorModel # pydantic model associated with this schema
 nxclass: NXmonochromator # group: NXmonochromator
 
@@ -22,3 +35,4 @@ description: # field: 'description' belongs to NXmonochromator group
   nxclass: NX_CHAR
   value: $pre-run-md:description # fetch it from the device metadata (happi)
   dtype: str
+"""

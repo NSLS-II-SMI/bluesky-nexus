@@ -288,7 +288,7 @@ class NXmonochromatorModel(NXgroupModel):
 The schema supports defining units for device components. The strategy for defining units in the schema yml file is as follows:
 
 1. **Device provides units**:  
-   If the device natively returns units, the units provided by the device are used directly. I such case do not define any `units` under `attrs`, otherwise the `units` defined under `attrs` will be used.
+   If the device natively returns units, the units provided by the device are used directly. In such a case do not define any `units` under `attrs`, otherwise the `units` defined under `attrs` will be used.
 
 2. **Device does not provide units**:  
    If the device does not return any units, define the corresponding unit value in the `units` under `attrs`. This ensures that the correct units are explicitly defined for this specific device.
@@ -347,21 +347,20 @@ The **bluesky_nexus** library uses placeholders to manage and organize data fetc
 
 ## Requirements for device classes
 
-All device classes used with this package must inherit from the `NXdevice` base class. The `NXdevice` class enforces the presence of a `nx_schema` attribute, which specifies the name of the pydantic schema yml file associated with the device. This requirement ensures that each device instance is correctly configured for NeXus data handling.
-The definition of `NXdevice` class is located at: `bluesky_nexus/src/bluesky_nexus/bluesky_nexus_device_base.py`.
+All device classes must be decorated by the `NxSchemaLoader`. The role of the decorator is to associate the pydantic nexus schema with the device class. The decorator expects a string variable as a parameter, which stores the pydantic schema in the form of a yml string. This requirement ensures that each device instance is correctly configured for NeXus data handling. The definition of the `NxSchemaLoader` decorator is located at: `bluesky_nexus/src/bluesky_nexus/common/decorator_utils.py`.
 
-It was decided to “manage” the pydantic schema of NeXus in a yml file and not directly in the nx_schema variable as a dictionary. The reason for this is the easy readability and editability of nested elements of the schema file when it is represented as a yml file.
+The pydantic schemas in the form of a yml strings are stored in the python files. The name of the variable that stores the yml string should be defined in such a way that the device class for which this variable is defined can be easily identified. For a device class with the name “Mono”, the name of the variable that saves the schema yml string could be “Mono_nxschema”, for example. See the example below:
 
 ### Example of custom device
 
-To define a custom device, create a class that inherits from `NXdevice` and specify the `nx_schema` attribute. This ensures that the device is correctly associated with its corresponding NeXus pydantic schema yml file.
+To define a custom device, create a class that inherits from the `Device` class and decorate it with the `NxSchemaLoader` decorator. Pass the pydantic nexus schema to the decorator in the form of a yml string. This ensures that the device is correctly associated with its corresponding NeXus pydantic schema.
 
 ```python
-class Mono(NXdevice):
+NxSchemaLoader(Mono_nxschema)
+class Mono(Device):
     en: SynAxis = Cpt(SynAxis, name="en")
     grating: Signal = Cpt(Signal, name="grating")
     slit: Signal = Cpt(Signal, name="slit")
-    nx_schema = "nx_schema_mono"
 ```
 
 ---
@@ -373,31 +372,24 @@ class Mono(NXdevice):
 ```python
 from .base import *
 from .beamline import *
-from .baseline import *
 
 from bluesky_nexus.preprocessors.supplemental_metadata import SupplementalMetadata
 from bluesky_nexus.callbacks.nexus_writer import NexusWriter
 from bluesky_nexus.common.logging_utils import setup_nx_logger, logging
 from bluesky_nexus.bluesky_nexus_paths import (
     get_nx_file_dir_path,
-    get_nx_schema_dir_path,
     get_nx_log_file_dir_path,
 )
 
 # Let the preprocessor append NeXus metadata to the start document
-nx_schema_dir_path: str = get_nx_schema_dir_path()
-metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
+metadata = SupplementalMetadata()
 metadata.devices_dictionary: dict = devices_dictionary
-metadata.baseline = baseline
 metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
 RE.preprocessors.append(metadata)
 
 # Let the preprocessor append devices metadata to the start document
-metadata = (
-    SupplementalMetadata()
-)  # No need to pass "nx_schema_dir_path" in case of DEVICE_MD
+metadata = SupplementalMetadata()
 metadata.devices_dictionary: dict = devices_dictionary
-metadata.baseline = baseline
 metadata.md_type = SupplementalMetadata.MetadataType.DEVICE_MD
 RE.preprocessors.append(metadata)
 
@@ -474,10 +466,8 @@ In your script subscribe to the preprocessor and the callback:
 ### Let the preprocessor append ```NeXus metadata``` to the start document
 
   ```python
-  nx_schema_dir_path: str = "Your path to nx_schema directory"
-  metadata = SupplementalMetadata(nx_schema_dir_path=nx_schema_dir_path)
+  metadata = SupplementalMetadata()
   metadata.devices_dictionary: dict = devices_dictionary
-  metadata.baseline = baseline
   metadata.md_type = SupplementalMetadata.MetadataType.NEXUS_MD
   RE.preprocessors.append(metadata)
   ```
@@ -489,7 +479,6 @@ In your script subscribe to the preprocessor and the callback:
       SupplementalMetadata()
   )  # No need to pass "nx_schema_dir_path" in case of DEVICE_MD
   metadata.devices_dictionary: dict = devices_dictionary
-  metadata.baseline = baseline
   metadata.md_type = SupplementalMetadata.MetadataType.DEVICE_MD
   RE.preprocessors.append(metadata)
   ```
@@ -544,13 +533,11 @@ the 'uid' extracted from the start document of the run (start_doc[“uid”]). Y
   ```bash
   -v ${NX_FILE_DIR_PATH}:${_NX_FILE_DIR_PATH} \
   -v ${NX_LOG_FILE_DIR_PATH}:${_NX_LOG_FILE_DIR_PATH} \
-  -v ${NX_SCHEMA_DIR_PATH}:${_NX_SCHEMA_DIR_PATH} \
   ```
 
   ```bash
   --env _NX_FILE_DIR_PATH=${_NX_FILE_DIR_PATH} \
   --env _NX_LOG_FILE_DIR_PATH=${_NX_LOG_FILE_DIR_PATH} \
-  --env _NX_SCHEMA_DIR_PATH=${_NX_SCHEMA_DIR_PATH} \
   ```
 
   The file "/etc/environement" has to contain following definitions of env. variables:
@@ -560,9 +547,6 @@ NX_FILE_DIR_PATH=/home/daniel/bluesky/data/nexus/file
 _NX_FILE_DIR_PATH=/opt/bluesky/nx_file_dir
 NX_LOG_FILE_DIR_PATH=/home/daniel/bluesky/data/nexus/log
 _NX_LOG_FILE_DIR_PATH=/opt/bluesky/nx_log_file_dir
-NX_SCHEMA_DIR_PATH=/home/daniel/bluesky/beamlinetools/beamlinetools/devices/nx_schema
-_NX_SCHEMA_DIR_PATH=/opt/bluesky/nx_schema_dir
-
   ```
 
 Replace in the paths `daniel` by a username.
