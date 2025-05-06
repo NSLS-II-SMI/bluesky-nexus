@@ -195,16 +195,24 @@ def create_device_md(devices_dictionary: dict) -> dict:
 
 # Create nexus metadata
 @measure_time
-def create_nexus_md(devices_dictionary: dict) -> dict:
+def create_nexus_md(devices_dictionary: dict) -> Generator[None, None, dict]:
     """
-    Create a dictionary of metadata with resolved placeholders. If a placeholder cannot
-    be resolved, the entire NXfield containing it is removed.
+    Generate a metadata dictionary with resolved placeholders for a set of devices.
+
+    This function constructs initial metadata,
+    resolves any placeholders within the metadata (yielding intermediate results during resolution),
+    and returns the final cleaned metadata dictionary. If a placeholder cannot be resolved,
+    its containing NXfield is removed.
 
     Args:
         devices_dictionary (dict): A dictionary mapping device names to device instances.
 
+    Yields:
+        Any: Intermediate results from the placeholder resolution process.
+
     Returns:
-        dict: The metadata dictionary with placeholders resolved.
+        dict: The final metadata dictionary after all placeholders have been resolved
+              and unresolved entries have been removed.
     """
 
     metadata_key: str = NX_MD_KEY
@@ -319,7 +327,9 @@ def _resolve_pre_run_placeholders_for_device(device_metadata: dict, device_obj: 
             value.startswith(PRE_RUN_CPT_LABEL) or value.startswith(PRE_RUN_MD_LABEL)
         ):
             # Attempt to resolve the placeholder
-            device_metadata[key] = yield from resolve_pre_run_placeholder_value(value, device_obj)
+            device_metadata[key] = yield from resolve_pre_run_placeholder_value(
+                value, device_obj
+            )
 
 
 def resolve_pre_run_placeholder_value(placeholder: str, device_obj: object) -> Any:
