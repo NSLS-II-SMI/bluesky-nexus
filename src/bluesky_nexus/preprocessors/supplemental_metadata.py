@@ -37,7 +37,6 @@ Dependencies:
     bluesky_nexus: Constants and device model utilities for NeXus metadata handling.
 """
 
-import asyncio
 from enum import Enum, auto
 from itertools import tee
 from typing import Any, Callable, Dict, Generator
