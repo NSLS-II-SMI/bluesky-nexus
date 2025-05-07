@@ -70,8 +70,9 @@ class NexusWriter(CollectThenCompute):
             Processes the input documents, extracts metadata, and creates a NeXus file.
     """
 
-    def __init__(self, nx_file_dir_path=None):
+    def __init__(self, nx_file_dir_path=None, device_name_delimiter="_"):
         super().__init__()  # Initialize the parent class
+        self.device_name_delimiter = device_name_delimiter
         self.nx_file_dir_path = nx_file_dir_path
 
     def __call__(self, name, doc):
@@ -209,7 +210,8 @@ class NexusWriter(CollectThenCompute):
         # If there is NX_MD_KEY in the start_doc_cpy
         if start_doc_cpy[NX_MD_KEY]:
             # Process the placeholders of the nexus_md applying events and descriptors
-            process_nexus_md(start_doc_cpy[NX_MD_KEY], self._descriptors, self._events)
+            process_nexus_md(start_doc_cpy[NX_MD_KEY], self._descriptors, self._events,
+                             delimiter=self.device_name_delimiter)
 
             # Update the dict data with instrument_data
             instrument_data: dict = start_doc_cpy[NX_MD_KEY]
@@ -220,7 +222,7 @@ class NexusWriter(CollectThenCompute):
 
 
 # Define processing of the nexus md
-def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
+def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque, delimiter="_"):
     """
     Process the Nexus metadata by replacing placeholders with actual data from events and descriptors.
     """
@@ -445,7 +447,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     return obj
 
                 # Define object delimiter. It is expected that ophyd-async will use the same delimiter as ophyd
-                obj_delimiter: str = "_"
+                obj_delimiter: str = delimiter
 
                 # Redefine component name as to be read from the blusky documents (with prefixed device name)
                 if (
