@@ -14,6 +14,7 @@ from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
     Field,
     NXattrModel,
+    NXfieldModel,
     NXgroupModel,
     NXfieldModelWithPrePostRunString,
 )
@@ -58,7 +59,7 @@ class NXpositionerModel(NXgroupModel):
     name: Optional[NXfieldModelWithPrePostRunString] = Field(
         None, description="symbolic or mnemonic name (one word)"
     )
-    description: Optional[NXfieldModelWithPrePostRunString] = Field(
+    description: Optional[NXfieldModel] = Field(
         None, description="description of positioner"
     )
     value: Optional[NXfieldModelWithPrePostRunString] = Field(
