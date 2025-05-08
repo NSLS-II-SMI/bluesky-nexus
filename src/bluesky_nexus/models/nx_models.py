@@ -19,6 +19,7 @@ from bluesky_nexus.models.nx_general_model import NXgeneralModel
 from bluesky_nexus.models.nx_monochromator_model import NXmonochromatorModel
 from bluesky_nexus.models.nx_positioner_model import NXpositionerModel
 from bluesky_nexus.models.nx_monitor_model import NXmonitorModel
+from bluesky_nexus.models.nx_detector_group_model import NXdetector_groupModel
 
 __all__ = ["MODEL_NAME_TO_CLASS_MAPPING"]
 
@@ -29,4 +30,5 @@ MODEL_NAME_TO_CLASS_MAPPING = {
     "NXmonochromatorModel": NXmonochromatorModel,
     "NXpositionerModel": NXpositionerModel,
     "NXmonitorModel": NXmonitorModel,
+    "NXdetector_groupModel": NXdetectorModel,
 }
