@@ -9,6 +9,9 @@ Classes:
     - NXdetectorModel: Model for representing detector-related metadata and configuration.
     - NXgeneralModel: General model for grouping metadata and configuration.
     - NXmonochromatorModel: Model for managing monochromator-related metadata and configuration.
+    - NXpositionerModel: Model for representing positioner-related metadata and configuration.
+    - NXmonitorModel: Model for representing monitor-related metadata and configuration.
+    - NXdetector_groupModel: Model for organizing a logical group of detectors in a scientific experiment setup.
 
 Mappings:
     - MODEL_NAME_TO_CLASS_MAPPING: A dictionary mapping model names to their corresponding model classes.
@@ -30,5 +33,5 @@ MODEL_NAME_TO_CLASS_MAPPING = {
     "NXmonochromatorModel": NXmonochromatorModel,
     "NXpositionerModel": NXpositionerModel,
     "NXmonitorModel": NXmonitorModel,
-    "NXdetector_groupModel": NXdetectorModel,
+    "NXdetector_groupModel": NXdetector_groupModel,
 }
