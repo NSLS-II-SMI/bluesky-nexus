@@ -11,6 +11,7 @@
   - [Role of the schema with the model](#role-of-the-schema-with-the-model)
     - [Example of model class](#example-of-model-class)
   - [Unit definition strategy](#unit-definition-strategy)
+  - [Supported pydantic models](#supported-pydantic-models)
   - [Placeholder mechanism](#placeholder-mechanism)
     - [Placeholder syntax](#placeholder-syntax)
   - [Subscription of devices in the baseline](#subscription-of-devices-in-the-baseline)
@@ -292,6 +293,19 @@ The schema supports defining units for device components. The strategy for defin
 
 2. **Device does not provide units**:  
    If the device does not return any units, define the corresponding unit value in the `units` under `attrs`. This ensures that the correct units are explicitly defined for this specific device.
+
+---
+
+## Supported pydantic models
+
+  List of Pydantic models currently supported:
+
+    - `NXdetectorModel`
+    - `NXdetector_groupModel`
+    - `NXgeneralModel`
+    - `NXmonitorModel`
+    - `NXmonochromatorModel`
+    - `NXpositionerModel`
 
 ---
 
