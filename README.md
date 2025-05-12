@@ -395,7 +395,8 @@ RE.preprocessors.append(metadata)
 
 # Subscribe the callback: 'NexusWriter'
 nx_file_dir_path: str = get_nx_file_dir_path()
-nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
+cpt_name_delimiter: str = "_" # Optionally specify a delimiter used in Bluesky documents for device components. If not specified, the default is "_".
+nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path, cpt_name_delimiter = cpt_name_delimiter)
 RE.subscribe(nexus_writer)
 
 # This is an optional setting of the NeXus logger. If the setting is not defined, logging to a log file is deactivated.
@@ -487,7 +488,8 @@ In your script subscribe to the preprocessor and the callback:
 
   ```python
   nx_file_dir_path: str = "Your path to nx_file directory"
-  nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
+  cpt_name_delimiter: str = "_" # Optionally specify a delimiter used in Bluesky documents for device components. If not specified, the default is "_".
+  nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path, cpt_name_delimiter = cpt_name_delimiter)
   RE.subscribe(nexus_writer)
   ```
 

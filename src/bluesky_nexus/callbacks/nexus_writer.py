@@ -53,26 +53,27 @@ from bluesky_nexus.transformation.symbolic_transformation import (
 
 class NexusWriter(CollectThenCompute):
     """
-    A class responsible for writing NeXus files based on the start, stop, event, and descriptor documents.
+    This class handles the extraction of relevant metadata from the documents (start, stop, event, and descriptor documents), processes it, and generates
+    a NeXus file in HDF5 format. It is designed to work within a data collection pipeline, that interacts with a RunEngine and manages data collection, processing, and file writing.
 
-    This class handles the extraction of relevant metadata from the documents, processes it, and creates
-    a NeXus file in HDF5 format. It is designed to be part of a larger system that interacts with a RunEngine
-    and manages data collection, processing, and file writing.
+    Inherits from:
+        CollectThenCompute
 
-    Inherited Methods:
-        - `__init__(nx_file_dir_path=None)`: Initializes the class and optionally sets a directory for saving NeXus files.
-        - `__call__(name, doc)`: Handles incoming documents from the RunEngine, processing them based on their type ('start', 'stop', etc.).
+    Parameters:
+        nx_file_dir_path (str): Path to the directory where NeXus files will be saved.
+        cpt_name_delimiter (str): Delimiter for device component names applied in bluesky documents. Per default: "_" , valid for ophyd devices.
 
-    Methods:
-        - `create_nx_file_path(dir_path: str, file_name: str) -> str`:
-            Creates and validates the file path for the NeXus file based on the directory path and file name.
-        - `compute()`:
-            Processes the input documents, extracts metadata, and creates a NeXus file.
+    Public Methods:
+        - __call__(name, doc): Handles incoming documents from the RunEngine, processing them based on their type ('start', 'stop', etc.).
+        - create_nx_file_path(dir_path, file_name): Constructs and validates the NeXus file path.
+        - compute(): Entry point to trigger NeXus file generation.
+        - generate_nexus_file(): Extracts metadata and writes the NeXus file.
     """
 
-    def __init__(self, nx_file_dir_path=None):
+    def __init__(self, nx_file_dir_path: str, cpt_name_delimiter: str = "_"):
         super().__init__()  # Initialize the parent class
         self.nx_file_dir_path = nx_file_dir_path
+        self.cpt_name_delimiter = cpt_name_delimiter
 
     def __call__(self, name, doc):
         """
@@ -209,7 +210,12 @@ class NexusWriter(CollectThenCompute):
         # If there is NX_MD_KEY in the start_doc_cpy
         if start_doc_cpy[NX_MD_KEY]:
             # Process the placeholders of the nexus_md applying events and descriptors
-            process_nexus_md(start_doc_cpy[NX_MD_KEY], self._descriptors, self._events)
+            process_nexus_md(
+                start_doc_cpy[NX_MD_KEY],
+                self._descriptors,
+                self._events,
+                delimiter=self.cpt_name_delimiter,
+            )
 
             # Update the dict data with instrument_data
             instrument_data: dict = start_doc_cpy[NX_MD_KEY]
@@ -220,7 +226,7 @@ class NexusWriter(CollectThenCompute):
 
 
 # Define processing of the nexus md
-def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
+def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque, delimiter="_"):
     """
     Process the Nexus metadata by replacing placeholders with actual data from events and descriptors.
     """
@@ -445,7 +451,7 @@ def process_nexus_md(nexus_md: dict, descriptors: dict, events: deque):
                     return obj
 
                 # Define object delimiter. It is expected that ophyd-async will use the same delimiter as ophyd
-                obj_delimiter: str = "_"
+                obj_delimiter: str = delimiter
 
                 # Redefine component name as to be read from the blusky documents (with prefixed device name)
                 if (
