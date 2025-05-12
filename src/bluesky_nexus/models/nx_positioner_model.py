@@ -14,12 +14,11 @@ from typing import Optional
 from bluesky_nexus.models.nx_core_models import (
     Field,
     NXattrModel,
-    NXfieldModel,
     NXgroupModel,
     NXfieldModelWithPrePostRunString,
 )
-
 from bluesky_nexus.models.nx_transformations_model import NXtransformationsModel
+
 
 class NXpositionerModel(NXgroupModel):
     """
@@ -54,12 +53,12 @@ class NXpositionerModel(NXgroupModel):
                                                             translation and rotation operations necessary to position
                                                             the component within the instrument.
     """
-    
-    default: NXattrModel = Field(NXattrModel(value="energy"), description="Default.")
+
+    default: NXattrModel = Field(NXattrModel(value="value"), description="Default.")
     name: Optional[NXfieldModelWithPrePostRunString] = Field(
         None, description="symbolic or mnemonic name (one word)"
     )
-    description: Optional[NXfieldModel] = Field(
+    description: Optional[NXfieldModelWithPrePostRunString] = Field(
         None, description="description of positioner"
     )
     value: Optional[NXfieldModelWithPrePostRunString] = Field(
@@ -69,7 +68,8 @@ class NXpositionerModel(NXgroupModel):
         None, description="raw value of positioner - need [n] as may be scanned"
     )
     target_value: Optional[NXfieldModelWithPrePostRunString] = Field(
-        None, description="targeted (commanded) value of positioner - need [n] as may be scanned"
+        None,
+        description="targeted (commanded) value of positioner - need [n] as may be scanned",
     )
     tolerance: Optional[NXfieldModelWithPrePostRunString] = Field(
         None, description="maximum allowable difference between target_value and value"
@@ -87,13 +87,15 @@ class NXpositionerModel(NXgroupModel):
         None, description="time to ramp the velocity up to full speed"
     )
     controller_record: Optional[NXfieldModelWithPrePostRunString] = Field(
-        None, description="Hardware device record, e.g. EPICS process variable, taco/tango..."
+        None,
+        description="Hardware device record, e.g. EPICS process variable, taco/tango...",
     )
     depends_on: Optional[NXfieldModelWithPrePostRunString] = Field(
-        None, description="NeXus positions components by apply a set of translations and rotations"
+        None,
+        description="NeXus positions components by apply a set of translations and rotations",
     )
     TRANSFORMATIONS: Optional[NXtransformationsModel] = Field(
         None,
         description="This is the group recommended for holding the chain of translation and rotation operations"
-                    " necessary to position the component within the instrument.",
+        " necessary to position the component within the instrument.",
     )
