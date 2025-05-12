@@ -9,6 +9,9 @@ Classes:
     - NXdetectorModel: Model for representing detector-related metadata and configuration.
     - NXgeneralModel: General model for grouping metadata and configuration.
     - NXmonochromatorModel: Model for managing monochromator-related metadata and configuration.
+    - NXpositionerModel: Model for representing positioner-related metadata and configuration.
+    - NXmonitorModel: Model for representing monitor-related metadata and configuration.
+    - NXdetector_groupModel: Model for organizing a logical group of detectors in a scientific experiment setup.
 
 Mappings:
     - MODEL_NAME_TO_CLASS_MAPPING: A dictionary mapping model names to their corresponding model classes.
@@ -17,6 +20,9 @@ Mappings:
 from bluesky_nexus.models.nx_detector_model import NXdetectorModel
 from bluesky_nexus.models.nx_general_model import NXgeneralModel
 from bluesky_nexus.models.nx_monochromator_model import NXmonochromatorModel
+from bluesky_nexus.models.nx_positioner_model import NXpositionerModel
+from bluesky_nexus.models.nx_monitor_model import NXmonitorModel
+from bluesky_nexus.models.nx_detector_group_model import NXdetector_groupModel
 
 __all__ = ["MODEL_NAME_TO_CLASS_MAPPING"]
 
@@ -25,4 +31,7 @@ MODEL_NAME_TO_CLASS_MAPPING = {
     "NXdetectorModel": NXdetectorModel,
     "NXgeneralModel": NXgeneralModel,
     "NXmonochromatorModel": NXmonochromatorModel,
+    "NXpositionerModel": NXpositionerModel,
+    "NXmonitorModel": NXmonitorModel,
+    "NXdetector_groupModel": NXdetector_groupModel,
 }
