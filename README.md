@@ -61,7 +61,7 @@ This library employs Pydantic schemas to allow for detailed mapping and customiz
 5. **Data fetching**:
    - Determine when component values should be fetched:
      - **Pre-run**: Based on static metadata or data read from the instrument available before the run
-     - **Post-run**: Based on event documents available after the run.
+     - **Post-run**: Based on event documents and descriptors available after the run.
 
 ### Example of schema yml file
 
