@@ -37,13 +37,12 @@ Dependencies:
     bluesky_nexus: Constants and device model utilities for NeXus metadata handling.
 """
 
-import asyncio
 from enum import Enum, auto
 from itertools import tee
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Generator
 
 from bluesky.preprocessors import SupplementalData, inject_md_wrapper, plan_mutator
-from bluesky.run_engine import Msg
+import bluesky.plan_stubs as bps
 
 from bluesky_nexus.bluesky_nexus_const import (
     DEVICE_INSTANCE_NX_MODEL_ATTRIBUTE_NAME,
@@ -135,6 +134,8 @@ class SupplementalMetadata(SupplementalData):
 
         # Create metadata and inject it into the plan
         metadata: dict = create_metadata(devices_in_plan)
+        if isinstance(metadata, Generator):
+            metadata = (yield from metadata) or {}
         plan = inject_md_wrapper(plan2, metadata)
         return (yield from plan)
 
@@ -194,16 +195,24 @@ def create_device_md(devices_dictionary: dict) -> dict:
 
 # Create nexus metadata
 @measure_time
-def create_nexus_md(devices_dictionary: dict) -> dict:
+def create_nexus_md(devices_dictionary: dict) -> Generator[None, None, dict]:
     """
-    Create a dictionary of metadata with resolved placeholders. If a placeholder cannot
-    be resolved, the entire NXfield containing it is removed.
+    Generate a metadata dictionary with resolved placeholders for a set of devices.
+
+    This function constructs initial metadata,
+    resolves any placeholders within the metadata (yielding intermediate results during resolution),
+    and returns the final cleaned metadata dictionary. If a placeholder cannot be resolved,
+    its containing NXfield is removed.
 
     Args:
         devices_dictionary (dict): A dictionary mapping device names to device instances.
 
+    Yields:
+        Any: Intermediate results from the placeholder resolution process.
+
     Returns:
-        dict: The metadata dictionary with placeholders resolved.
+        dict: The final metadata dictionary after all placeholders have been resolved
+              and unresolved entries have been removed.
     """
 
     metadata_key: str = NX_MD_KEY
@@ -224,7 +233,7 @@ def create_nexus_md(devices_dictionary: dict) -> dict:
     )
 
     # Resolve placeholders in metadata
-    resolve_pre_run_placeholders(metadata[metadata_key], devices_dictionary)
+    yield from resolve_pre_run_placeholders(metadata[metadata_key], devices_dictionary)
 
     # Remove parent keys of: "value":NOT_AVAILABLE_LABEL.
     # This is the case if component value could not be read.
@@ -297,7 +306,7 @@ def resolve_pre_run_placeholders(metadata: dict, devices_dictionary: dict):
         device_obj = devices_dictionary.get(device_name)
 
         # Recursively resolve placeholders in the device's metadata dictionary
-        _resolve_pre_run_placeholders_for_device(device_metadata, device_obj)
+        yield from _resolve_pre_run_placeholders_for_device(device_metadata, device_obj)
 
 
 def _resolve_pre_run_placeholders_for_device(device_metadata: dict, device_obj: object):
@@ -313,12 +322,14 @@ def _resolve_pre_run_placeholders_for_device(device_metadata: dict, device_obj: 
     for key, value in device_metadata.items():
         if isinstance(value, dict):
             # Recursively process nested dictionaries
-            _resolve_pre_run_placeholders_for_device(value, device_obj)
+            yield from _resolve_pre_run_placeholders_for_device(value, device_obj)
         elif isinstance(value, str) and (
             value.startswith(PRE_RUN_CPT_LABEL) or value.startswith(PRE_RUN_MD_LABEL)
         ):
             # Attempt to resolve the placeholder
-            device_metadata[key] = resolve_pre_run_placeholder_value(value, device_obj)
+            device_metadata[key] = yield from resolve_pre_run_placeholder_value(
+                value, device_obj
+            )
 
 
 def resolve_pre_run_placeholder_value(placeholder: str, device_obj: object) -> Any:
@@ -372,16 +383,9 @@ def resolve_pre_run_placeholder_value(placeholder: str, device_obj: object) -> A
                 )
                 return NOT_AVAILABLE_LABEL
 
-        # Retrieve the final component value, assuming it has a `get()` or `get_value()` method
-        if hasattr(component, "get"):
-            return component.get()
-        elif hasattr(component, "get_value"):
-            loop = asyncio.get_running_loop()
-            return loop.run_until_complete(component.get_value())
-        else:
-            raise AttributeError(
-                f"Attribute '{'.'.join(parts)}' of device '{device_obj.name}' does not have a method 'get_value()' or 'get()' to retrieve a value."
-            )
+        # Read the value from the component
+        return (yield from bps.rd(component))
+
     else:
         raise ValueError(
             f"Invalid prefix: '{prefix}' found in the placeholder: '{placeholder}'. Valid placeholder structure: '$pre-run-md:key1: ... keyN-1:keyN' or '$pre-run-cpt:obj1: ... objN-1:objN'"

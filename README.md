@@ -11,6 +11,7 @@
   - [Role of the schema with the model](#role-of-the-schema-with-the-model)
     - [Example of model class](#example-of-model-class)
   - [Unit definition strategy](#unit-definition-strategy)
+  - [Supported pydantic models](#supported-pydantic-models)
   - [Placeholder mechanism](#placeholder-mechanism)
     - [Placeholder syntax](#placeholder-syntax)
   - [Subscription of devices in the baseline](#subscription-of-devices-in-the-baseline)
@@ -60,7 +61,7 @@ This library employs Pydantic schemas to allow for detailed mapping and customiz
 5. **Data fetching**:
    - Determine when component values should be fetched:
      - **Pre-run**: Based on static metadata or data read from the instrument available before the run
-     - **Post-run**: Based on event documents available after the run.
+     - **Post-run**: Based on event documents and descriptors available after the run.
 
 ### Example of schema yml file
 
@@ -295,6 +296,19 @@ The schema supports defining units for device components. The strategy for defin
 
 ---
 
+## Supported pydantic models
+
+  List of Pydantic models currently supported:
+
+    - `NXdetectorModel`
+    - `NXdetector_groupModel`
+    - `NXgeneralModel`
+    - `NXmonitorModel`
+    - `NXmonochromatorModel`
+    - `NXpositionerModel`
+
+---
+
 ## Placeholder mechanism
 
 The **bluesky_nexus** library uses placeholders to manage and organize data fetched during different phases of the run. These placeholders are incorporated into the `nexus_md` dictionary in the `start` document and are filled during the pre-run or post-run phases.
@@ -395,7 +409,8 @@ RE.preprocessors.append(metadata)
 
 # Subscribe the callback: 'NexusWriter'
 nx_file_dir_path: str = get_nx_file_dir_path()
-nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
+cpt_name_delimiter: str = "_" # Optionally specify a delimiter used in Bluesky documents to separate device components. If not specified, the default is "_".
+nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path, cpt_name_delimiter = cpt_name_delimiter)
 RE.subscribe(nexus_writer)
 
 # This is an optional setting of the NeXus logger. If the setting is not defined, logging to a log file is deactivated.
@@ -487,7 +502,8 @@ In your script subscribe to the preprocessor and the callback:
 
   ```python
   nx_file_dir_path: str = "Your path to nx_file directory"
-  nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path)
+  cpt_name_delimiter: str = "_" # Optionally specify a delimiter used in Bluesky documents to separate device components. If not specified, the default is "_".
+  nexus_writer = NexusWriter(nx_file_dir_path=nx_file_dir_path, cpt_name_delimiter = cpt_name_delimiter)
   RE.subscribe(nexus_writer)
   ```
 
