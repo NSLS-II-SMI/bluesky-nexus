@@ -7,7 +7,7 @@ This module provides utilities to manage, validate, and inject supplemental meta
 Key Features:
 
     Dynamically generate metadata for devices participating in a plan.
-    Validate and filter devices based on their usage in the plan or baseline subscription.
+    Validate and filter devices based on their usage in the plan.
     Support for placeholder resolution in NeXus metadata, handling missing data gracefully.
     Caching of plans to ensure non-exhaustible replayable plans.
     Utilities for metadata extraction, processing, and validation.
@@ -62,10 +62,10 @@ class SupplementalMetadata(SupplementalData):
     """
     A class to manage and inject supplemental metadata into a Bluesky plan.
 
-    This class checks the devices participating in the plan and generates
-    metadata for the specified type (DEVICE_MD or NEXUS_MD). It ensures
-    that devices in the 'devices_dictionary' are either used in the plan
-    or are part of the baseline, and injects metadata accordingly.
+    This class checks the devices participating in the plan (run + baseline + silent)
+    and generates metadata for the specified type (DEVICE_MD or NEXUS_MD). It ensures
+    that devices in the 'devices_dictionary' are either used in the run
+    or are part of the baseline or silent devices, and injects metadata accordingly.
     """
 
     class MetadataType(Enum):
@@ -97,11 +97,6 @@ class SupplementalMetadata(SupplementalData):
                 "The 'devices_dictionary' attribute must be set before calling the instance."
             )
 
-        if not hasattr(self, "baseline"):
-            raise AttributeError(
-                "The 'baseline' attribute must be set before calling the instance."
-            )
-
         if not hasattr(self, "md_type"):
             raise AttributeError(
                 "The 'md_type' attribute must be set before calling the instance."
@@ -127,12 +122,11 @@ class SupplementalMetadata(SupplementalData):
         checker = PlanDeviceChecker(self.devices_dictionary)
         checker_result = checker.validate_plan_devices(plan1)
 
-        # Define a dictionary of devices taking part in the plan. (It includes devices not taking part in a run but subscribed to the baseline.)
+        # Define a dictionary of devices taking part in the plan. (It includes devices not taking part in a RUN but subscribed to the baseline or silent devices)
         devices_in_plan: dict = {
             name: dev
             for name, dev in self.devices_dictionary.items()
-            if dev not in checker_result["unused_devices"].values()
-            or dev in self.baseline
+            if dev in checker_result["used_devices"].values()
         }
 
         # Assign to all the devices contained in 'devices_in_plan' instances of pydantic models

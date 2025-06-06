@@ -34,6 +34,11 @@ def assign_pydantic_model_instance(devices_dictionary: dict):
     For each device in devices_dictionary assign a pydantic model instance to it
     """
 
+    if not devices_dictionary:
+        logger.warning(
+            "Assignment of pydantic model instances to devices is not possible since 'devices_dictionary' is empty."
+        )
+
     for dev_instance in devices_dictionary.values():
         # Each device instance has a schema content that is assigned to it as a attribute 'nx_schema'
         schema_content: dict = read_attribute(
@@ -52,7 +57,11 @@ def assign_pydantic_model_instance(devices_dictionary: dict):
                 schema_content
             )  # Convert dictionary to JSON string
             logger.warning(
-                f"Pydantic Nexus schema content for device '{dev_instance.name}' was None or empty. Defaulting to: {schema_content_str}"
+                f"Pydantic NeXus schema content for device: '{dev_instance.name}' was None or empty. Defaulting to: {schema_content_str}"
+            )
+        else:
+            logger.debug(
+                f"Pydantic NeXus schema content for device: '{dev_instance.name}' found as expected (it is not None or not empty)."
             )
 
         # Read model name from the schema content
