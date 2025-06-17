@@ -11,6 +11,7 @@ Functions/decorators:
 
 import time
 import yaml
+import os
 
 from bluesky_nexus.common.logging_utils import logger
 
@@ -47,7 +48,6 @@ def measure_time(func):
         return result
 
     return measure_time_wrapper
-
 
 def NxSchemaLoader(yaml_string):
     """
@@ -90,6 +90,14 @@ def NxSchemaLoader(yaml_string):
         raise ValueError(
             f"Provided YAML string must be a non-empty string.  Received: {repr(yaml_string[:30])}..."
         )
+
+    if os.path.isfile(yaml_string):
+        # If the input is a file path, read the content of the file
+        try:
+            with open(yaml_string, 'r') as file:
+                yaml_string = file.read()
+        except Exception as e:
+            raise ValueError(f"Error reading YAML file `{yaml_string}`: {e}")
 
     def decorator(cls):
         try:
